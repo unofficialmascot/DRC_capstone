@@ -13,11 +13,21 @@ async function applyMigration() {
 
      const client = await pool.connect();
     
-    const sql = await readFile("./migrations/0001_normalize_schema.sql", "utf-8");
+    const migrations = [
+      "./migrations/0006_add_gender_is_pwd.sql",
+      "./migrations/0007_create_course_completion.sql",
+      "./migrations/0008_backfill_gender_is_pwd.sql"
+    ];
     
-    console.log("🔄 Starting database migration...");
-    await client.query(sql);
-    console.log("✅ Migration completed successfully!");
+    console.log("🔄 Starting database migrations...");
+    for (const migrationFile of migrations) {
+      const sql = await readFile(migrationFile, "utf-8");
+      console.log(`  Applying ${migrationFile}...`);
+      await client.query(sql);
+      console.log(`  ✅ ${migrationFile} completed`);
+    }
+    
+    console.log("✅ All migrations completed successfully!");
     
     client.release();
     await pool.end();
@@ -27,5 +37,6 @@ async function applyMigration() {
     process.exit(1);
   }
 }
+
 
 applyMigration();

@@ -9,8 +9,8 @@ ALTER TABLE users DROP COLUMN IF EXISTS username;
 
 -- Step 1: Create the employees table
 CREATE TABLE IF NOT EXISTS employees (
-  employee_id TEXT PRIMARY KEY,
-  user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  employee_id TEXT UNIQUE,
   designation TEXT,
   department TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -34,8 +34,8 @@ DROP TABLE IF EXISTS scholar_supervisors CASCADE;
 DROP TABLE IF EXISTS scholars CASCADE;
 
 CREATE TABLE scholars (
-  scholar_id TEXT PRIMARY KEY,
-  user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  scholar_id TEXT UNIQUE,
   batch TEXT,
   status TEXT DEFAULT 'Active',
   department TEXT,
@@ -45,8 +45,8 @@ CREATE TABLE scholars (
   phase TEXT,
   programme TEXT,
   location TEXT,
-  supervisor_id TEXT REFERENCES employees(employee_id),
-  co_supervisor_id TEXT REFERENCES employees(employee_id),
+  supervisor_user_id INTEGER REFERENCES users(id),
+  co_supervisor_user_id INTEGER REFERENCES users(id),
   father_name TEXT,
   parent_mobile TEXT,
   aadhaar TEXT,
@@ -63,17 +63,17 @@ CREATE TABLE scholars (
 -- Step 5: Recreate rac_members table
 CREATE TABLE rac_members (
   id SERIAL PRIMARY KEY,
-  scholar_id TEXT NOT NULL REFERENCES scholars(scholar_id) ON DELETE CASCADE,
-  employee_id TEXT NOT NULL REFERENCES employees(employee_id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  member_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   member_role TEXT NOT NULL,
   assigned_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(scholar_id, employee_id)
+  UNIQUE(user_id, member_user_id)
 );
 
 -- Step 6: Recreate applications table
 CREATE TABLE applications (
   id SERIAL PRIMARY KEY,
-  scholar_id TEXT NOT NULL REFERENCES scholars(scholar_id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   type TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'Pending',
   current_stage TEXT NOT NULL DEFAULT 'supervisor',
@@ -86,7 +86,7 @@ CREATE TABLE applications (
 CREATE TABLE application_reviews (
   id SERIAL PRIMARY KEY,
   application_id INTEGER NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
-  reviewer_id TEXT NOT NULL REFERENCES employees(employee_id) ON DELETE CASCADE,
+  reviewer_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   stage TEXT NOT NULL,
   decision TEXT NOT NULL,
   remarks TEXT NOT NULL,
@@ -96,12 +96,12 @@ CREATE TABLE application_reviews (
 -- Step 8: Recreate research_progress table
 CREATE TABLE research_progress (
   id SERIAL PRIMARY KEY,
-  scholar_id TEXT NOT NULL REFERENCES scholars(scholar_id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   completed_reviews INTEGER DEFAULT 0,
   pending_reports INTEGER DEFAULT 0,
   publications INTEGER DEFAULT 0,
   last_review_date TIMESTAMP,
-  UNIQUE(scholar_id)
+  UNIQUE(user_id)
 );
 
 -- Step 9: Restore scholar data (if any exists)

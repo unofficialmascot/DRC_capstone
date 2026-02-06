@@ -35,8 +35,7 @@ CREATE INDEX "idx_users_email" ON "users" ("email");
 
 -- Create scholars table for scholar-specific data
 CREATE TABLE "scholars" (
-  "id" SERIAL PRIMARY KEY,
-  "user_id" INTEGER NOT NULL UNIQUE REFERENCES "users"("id") ON DELETE CASCADE,
+  "user_id" INTEGER PRIMARY KEY REFERENCES "users"("id") ON DELETE CASCADE,
   "scholar_id" TEXT UNIQUE,
   "batch" TEXT,
   "status" TEXT DEFAULT 'Active',
@@ -66,31 +65,31 @@ CREATE INDEX "idx_scholars_scholar_id" ON "scholars" ("scholar_id");
 -- Create supervisor assignments table
 CREATE TABLE "scholar_supervisors" (
   "id" SERIAL PRIMARY KEY,
-  "scholar_id" INTEGER NOT NULL REFERENCES "scholars"("id") ON DELETE CASCADE,
+  "user_id" INTEGER NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
   "supervisor_id" INTEGER NOT NULL REFERENCES "users"("id") ON DELETE RESTRICT,
   "is_primary" BOOLEAN DEFAULT TRUE,
   "assigned_on" TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX "idx_scholar_supervisors_scholar_id" ON "scholar_supervisors" ("scholar_id");
+CREATE INDEX "idx_scholar_supervisors_user_id" ON "scholar_supervisors" ("user_id");
 CREATE INDEX "idx_scholar_supervisors_supervisor_id" ON "scholar_supervisors" ("supervisor_id");
 
 -- Create RAC members table for DRC/IRC/DoAA associations
 CREATE TABLE "rac_members" (
   "id" SERIAL PRIMARY KEY,
-  "scholar_id" INTEGER NOT NULL REFERENCES "scholars"("id") ON DELETE CASCADE,
-  "user_id" INTEGER NOT NULL REFERENCES "users"("id") ON DELETE RESTRICT,
+  "user_id" INTEGER NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+  "member_user_id" INTEGER NOT NULL REFERENCES "users"("id") ON DELETE RESTRICT,
   "member_role" TEXT NOT NULL, -- 'drc', 'irc', 'doaa'
   "assigned_on" TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX "idx_rac_members_scholar_id" ON "rac_members" ("scholar_id");
 CREATE INDEX "idx_rac_members_user_id" ON "rac_members" ("user_id");
+CREATE INDEX "idx_rac_members_member_user_id" ON "rac_members" ("member_user_id");
 
 -- Recreate applications table
 CREATE TABLE "applications" (
   "id" SERIAL PRIMARY KEY,
-  "scholar_id" INTEGER NOT NULL,
+  "user_id" INTEGER NOT NULL,
   "type" TEXT NOT NULL,
   "status" TEXT NOT NULL DEFAULT 'Pending',
   "current_stage" TEXT NOT NULL DEFAULT 'drc',
@@ -99,7 +98,7 @@ CREATE TABLE "applications" (
   "final_outcome" TEXT
 );
 
-CREATE INDEX "idx_applications_scholar_id" ON "applications" ("scholar_id");
+CREATE INDEX "idx_applications_user_id" ON "applications" ("user_id");
 
 -- Recreate application_reviews table
 CREATE TABLE "application_reviews" (
@@ -117,14 +116,14 @@ CREATE INDEX "idx_application_reviews_application_id" ON "application_reviews" (
 -- Recreate research_progress table
 CREATE TABLE "research_progress" (
   "id" SERIAL PRIMARY KEY,
-  "scholar_id" INTEGER NOT NULL,
+  "user_id" INTEGER NOT NULL,
   "completed_reviews" INTEGER DEFAULT 0,
   "pending_reports" INTEGER DEFAULT 0,
   "publications" INTEGER DEFAULT 0,
   "last_review_date" TIMESTAMP
 );
 
-CREATE INDEX "idx_research_progress_scholar_id" ON "research_progress" ("scholar_id");
+CREATE INDEX "idx_research_progress_user_id" ON "research_progress" ("user_id");
 
 -- Recreate notices table
 CREATE TABLE "notices" (

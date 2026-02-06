@@ -1,0 +1,92 @@
+{
+  "extensionEligibilityRules": {
+    "M": {
+      "gender": "M",
+      "minYearsCompleted": 4,
+      "maxExtensionYears": 3,
+      "minRacMeetings": 3,
+      "requiresCoursesCompletion": true,
+      "requiresNoFeeArrears": true,
+      "requiresNoPreTalk": true,
+      "allowedExtensionPeriods": ["6_months", "1_year"]
+    },
+    "F": {
+      "gender": "F",
+      "minYearsCompleted": 4,
+      "maxExtensionYears": 5,
+      "minRacMeetings": 3,
+      "requiresCoursesCompletion": true,
+      "requiresNoFeeArrears": true,
+      "requiresNoPreTalk": true,
+      "allowedExtensionPeriods": ["6_months", "1_year"]
+    },
+    "PWD": {
+      "gender": "PWD",
+      "minYearsCompleted": 4,
+      "maxExtensionYears": 7,
+      "minRacMeetings": 3,
+      "requiresCoursesCompletion": true,
+      "requiresNoFeeArrears": true,
+      "requiresNoPreTalk": true,
+      "allowedExtensionPeriods": ["6_months", "1_year"]
+    }
+  },
+  "requiredDocuments": {
+    "Extension": [
+      {
+        "type": "admission_letter",
+        "name": "Copy of Admission Letter",
+        "description": "Original or certified copy of PhD admission letter",
+        "isMandatory": true
+      },
+      {
+        "type": "course_marks_memo",
+        "name": "Marks Memo of Course Work",
+        "description": "Official marks memo showing all course work completed",
+        "isMandatory": true
+      },
+      {
+        "type": "permission_letter_extension",
+        "name": "Permission Letter - Previous Extension (if any)",
+        "description": "If extension was taken earlier, provide the permission letter",
+        "isMandatory": false
+      },
+      {
+        "type": "permission_letter_title_change",
+        "name": "Permission Letter - Title/Topic Change (if any)",
+        "description": "If research title was changed, provide the permission letter",
+        "isMandatory": false
+      },
+      {
+        "type": "permission_letter_supervisor_change",
+        "name": "Permission Letter - Supervisor/Co-Supervisor Change (if any)",
+        "description": "If supervisor changed, provide the permission letter",
+        "isMandatory": false
+      },
+      {
+        "type": "fee_receipts",
+        "name": "Copy of All Fee Receipts",
+        "description": "All fee payment receipts from date of joining onwards",
+        "isMandatory": true
+      },
+      {
+        "type": "progress_report",
+        "name": "Progress Report",
+        "description": "Recent progress report on research work",
+        "isMandatory": true
+      },
+      {
+        "type": "journal_publications",
+        "name": "List of Journal Publications",
+        "description": "List of publications in journals with copies/links",
+        "isMandatory": true
+      },
+      {
+        "type": "conference_publications",
+        "name": "Conference/Seminar Publications",
+        "description": "List of publications in conferences/seminars with certificates and abstracts",
+        "isMandatory": true
+      }
+    ]
+  }
+}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import "../styles/gscholar.css";
 
 type ScholarPage = "profile" | "applications" | "research" | "fees" | "dochub" | "noticeboard";
@@ -222,7 +223,7 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
         default: return <ScholarProfile user={user} />;
       }
     } else if (user.role === "supervisor") {
-      return <SupervisorDashboard />;
+      return <SupervisorDashboard user={user} />;
     } else {
       switch (reviewerPage) {
         case "dashboard": return <ReviewerDashboard role={user.role} />;
@@ -718,16 +719,75 @@ function ScholarProfile({ user }: { user: User }) {
   );
 }
 
+interface EligibilityStatus {
+  isEligible: boolean;
+  issues: string[];
+  warnings: string[];
+  details: {
+    yearsCompleted: number;
+    racMeetingsCount: number;
+    hasPreTalk: boolean;
+    coursesCompleted: boolean;
+    feeArrears: number;
+    currentExtensions: number;
+    maxAllowedExtensions: number;
+  };
+}
+
+interface ExtensionRequirements {
+  minYearsRequired: number;
+  minRacMeetings: number;
+  courseCompletionRequired: boolean;
+  noFeeArrearsRequired: boolean;
+}
+
 function ScholarApplications({ user }: { user: User }) {
   const [view, setView] = useState<"options" | "apply" | "track">("options");
   const [formType, setFormType] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: applications = [], isLoading } = useQuery<Application[]>({
     queryKey: ["/api/applications", { scholarId: user.scholarId }],
     queryFn: () => fetch(`/api/applications?scholarId=${user.scholarId}`).then(res => res.json())
   });
+
+  const handleExtensionClick = async () => {
+    try {
+      const res = await fetch(`/api/extensions/check-eligibility/${user.scholarId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.eligibility.isEligible) {
+          // Eligible - proceed with form
+          setView("apply");
+          setFormType("extension");
+        } else {
+          // Not eligible - show red toast and don't proceed
+          const issues = data.eligibility.issues || [];
+          const message = issues.length > 0 ? issues[0] : "You are not eligible for PhD extension";
+          toast({
+            title: "Cannot Apply for Extension",
+            description: message,
+            variant: "destructive"
+          });
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Unable to check eligibility",
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to check eligibility",
+        variant: "destructive"
+      });
+      console.error("Error checking eligibility:", error);
+    }
+  };
 
   const submitMutation = useMutation({
     mutationFn: async (data: { type: string; details: Record<string, unknown> }) => {
@@ -776,7 +836,7 @@ function ScholarApplications({ user }: { user: User }) {
           <div className="dropdown-content" style={{ display: "block", position: "relative" }}>
             <button onClick={() => setFormType("supervisor")} data-testid="button-supervisor-change">Change of Supervisor</button>
             <button onClick={() => setFormType("pretalk")} data-testid="button-pretalk">Apply for Pre-talk</button>
-            <button onClick={() => setFormType("extension")} data-testid="button-extension">Extension of Ph.D Duration</button>
+            <button onClick={handleExtensionClick} data-testid="button-extension">Extension of Ph.D Duration</button>
             <button onClick={() => setFormType("reregistration")} data-testid="button-reregistration">Ph.D Re-Registration</button>
           </div>
           <button className="submit-btn" onClick={() => setView("options")} style={{ marginTop: "20px", background: "#6c757d" }} data-testid="button-back-options">Back to Options</button>
@@ -959,9 +1019,9 @@ function ReviewerApplications({ user }: { user: User }) {
     queryFn: () => fetch("/api/users").then(res => res.json())
   });
 
-  const getScholarName = (scholarId: number) => {
-    const scholar = allUsers.find(u => u.id === scholarId);
-    return scholar?.name || `Scholar #${scholarId}`;
+  const getScholarName = (scholarId: string) => {
+    const scholar = allUsers.find(u => u.scholarId === scholarId);
+    return scholar?.name || scholarId || "Unknown Scholar";
   };
 
   const reviewMutation = useMutation({
@@ -1126,7 +1186,6 @@ function ExtensionForm({ user, onSubmit, onBack, isSubmitting }: { user: User; o
   const [formData, setFormData] = useState({
     candidateName: user.name,
     registrationDate: user.joiningDate || "",
-    durationEligible: "5 years",
     extensionDuration: "",
     reason: "",
     timeline: ""
@@ -1136,10 +1195,10 @@ function ExtensionForm({ user, onSubmit, onBack, isSubmitting }: { user: User; o
       <div style={{ textAlign: "center", marginBottom: "25px" }}>
         <div style={{ fontSize: "18px", fontWeight: "bold", color: "#0b6a55" }}>GANDHI INSTITUTE OF TECHNOLOGY AND MANAGEMENT (GITAM)</div>
       </div>
+
       <div className="form-title">Application for Extension of Ph.D. Program Duration</div>
       <div className="form-group"><label>Name of the Candidate</label><input type="text" value={formData.candidateName} onChange={(e) => setFormData({ ...formData, candidateName: e.target.value })} /></div>
       <div className="form-group"><label>Date of Registration</label><input type="text" value={formData.registrationDate} onChange={(e) => setFormData({ ...formData, registrationDate: e.target.value })} /></div>
-      <div className="form-group"><label>Duration Eligible</label><input type="text" value={formData.durationEligible} onChange={(e) => setFormData({ ...formData, durationEligible: e.target.value })} /></div>
       <div className="form-group"><label>Required Extension Duration</label><input type="text" value={formData.extensionDuration} onChange={(e) => setFormData({ ...formData, extensionDuration: e.target.value })} placeholder="e.g., 6 months" /></div>
       <div className="form-group"><label>Reason for Extension</label><textarea value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })} placeholder="Explain why you need the extension" style={{ height: "80px" }} /></div>
       <div className="form-group"><label>Expected Timeline</label><textarea value={formData.timeline} onChange={(e) => setFormData({ ...formData, timeline: e.target.value })} placeholder="When do you expect to complete?" style={{ height: "80px" }} /></div>
@@ -1259,14 +1318,143 @@ function ScholarNoticeBoard() {
   );
 }
 
-function SupervisorDashboard() {
+function SupervisorDashboard({ user }: { user: User }) {
+  const [supervisorTab, setSupervisorTab] = useState<"scholars" | "applications">("scholars");
+  const { toast } = useToast();
+
+  const { data: scholars = [], isLoading: isLoadingScholars } = useQuery({
+    queryKey: ["/api/supervisors/scholars"],
+    queryFn: () => fetch("/api/supervisors/scholars").then(res => {
+      if (!res.ok) throw new Error("Failed to fetch scholars");
+      return res.json();
+    }),
+    enabled: supervisorTab === "scholars"
+  });
+
+  const { data: applications = [], isLoading: isLoadingApplications } = useQuery({
+    queryKey: ["/api/supervisors/applications"],
+    queryFn: () => fetch("/api/supervisors/applications").then(res => {
+      if (!res.ok) throw new Error("Failed to fetch applications");
+      return res.json();
+    }),
+    enabled: supervisorTab === "applications"
+  });
+
   return (
     <div style={{ padding: "20px" }}>
       <h2 style={{ color: "#0b6a55", marginBottom: "20px" }}>Supervisor Dashboard</h2>
-      <div className="stats-container">
-        <div className="stat-card"><div className="stat-info"><div className="stat-label">Assigned Scholars</div><div className="stat-value">5</div></div><div className="stat-icon" style={{ color: "#0b6a55" }}>👥</div></div>
-        <div className="stat-card"><div className="stat-info"><div className="stat-label">Pending Reports</div><div className="stat-value">2</div></div><div className="stat-icon" style={{ color: "#f39c12" }}>📄</div></div>
+      
+      <div style={{ marginBottom: "20px", borderBottom: "2px solid #0b6a55" }}>
+        <button 
+          onClick={() => setSupervisorTab("scholars")}
+          style={{
+            padding: "12px 20px",
+            marginRight: "10px",
+            background: supervisorTab === "scholars" ? "#0b6a55" : "#f0f0f0",
+            color: supervisorTab === "scholars" ? "white" : "#333",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontWeight: "bold"
+          }}
+        >
+          👥 My Scholars ({scholars.length})
+        </button>
+        <button 
+          onClick={() => setSupervisorTab("applications")}
+          style={{
+            padding: "12px 20px",
+            background: supervisorTab === "applications" ? "#0b6a55" : "#f0f0f0",
+            color: supervisorTab === "applications" ? "white" : "#333",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontWeight: "bold"
+          }}
+        >
+          📋 Applications ({applications.length})
+        </button>
       </div>
+
+      {supervisorTab === "scholars" && (
+        <div>
+          {isLoadingScholars ? (
+            <div style={{ textAlign: "center", padding: "40px" }}>Loading scholars...</div>
+          ) : scholars.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>No scholars assigned to you yet.</div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "20px" }}>
+              {scholars.map((scholar: any) => (
+                <div key={scholar.id} style={{
+                  background: "white",
+                  border: "1px solid #ddd",
+                  borderRadius: "8px",
+                  padding: "20px",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+                }}>
+                  <div style={{ marginBottom: "15px", borderBottom: "2px solid #0b6a55", paddingBottom: "10px" }}>
+                    <h3 style={{ margin: "0 0 5px 0", color: "#0b6a55" }}>{scholar.name}</h3>
+                    <p style={{ margin: "5px 0", color: "#666", fontSize: "14px" }}>
+                      <strong>Scholar ID:</strong> {scholar.scholarId}
+                    </p>
+                  </div>
+                  <div style={{ fontSize: "14px", color: "#333" }}>
+                    <p style={{ margin: "8px 0" }}><strong>Department:</strong> {scholar.department || "N/A"}</p>
+                    <p style={{ margin: "8px 0" }}><strong>Research Area:</strong> {scholar.researchArea || "N/A"}</p>
+                    <p style={{ margin: "8px 0" }}><strong>Joining Date:</strong> {scholar.joiningDate ? new Date(scholar.joiningDate).toLocaleDateString() : "N/A"}</p>
+                    <p style={{ margin: "8px 0" }}><strong>Status:</strong> <span style={{ color: "#27ae60", fontWeight: "bold" }}>{scholar.status || "Active"}</span></p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {supervisorTab === "applications" && (
+        <div>
+          {isLoadingApplications ? (
+            <div style={{ textAlign: "center", padding: "40px" }}>Loading applications...</div>
+          ) : applications.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>No applications from your scholars yet.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+              {applications.map((app: any) => (
+                <div key={app.id} style={{
+                  background: "white",
+                  border: "1px solid #ddd",
+                  borderRadius: "8px",
+                  padding: "20px",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "15px" }}>
+                    <div>
+                      <h3 style={{ margin: "0 0 5px 0", color: "#0b6a55" }}>{app.type}</h3>
+                      <p style={{ margin: "5px 0", color: "#666", fontSize: "14px" }}>
+                        Scholar ID: {app.scholarId}
+                      </p>
+                    </div>
+                    <span style={{
+                      padding: "5px 12px",
+                      borderRadius: "20px",
+                      fontSize: "12px",
+                      fontWeight: "bold",
+                      background: app.status === "Approved" ? "#d4edda" : app.status === "Rejected" ? "#f8d7da" : "#e2e3e5",
+                      color: app.status === "Approved" ? "#155724" : app.status === "Rejected" ? "#721c24" : "#383d41"
+                    }}>
+                      {app.status}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "14px", color: "#666" }}>
+                    <p style={{ margin: "5px 0" }}><strong>Current Stage:</strong> {app.currentStage.toUpperCase()}</p>
+                    <p style={{ margin: "5px 0" }}><strong>Submitted:</strong> {new Date(app.submissionDate).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

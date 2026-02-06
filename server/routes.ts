@@ -1,15 +1,15 @@
 import type { Express } from "express";
 import type { Server } from "http";
-import { storage } from "./storage";
 import { api } from "../shared/routes.js";
 import { z } from "zod";
-import { verifyPassword } from "./storage";
-import {
-  evaluateWorkflowDecision,
-  getWorkflowDefinition,
-  isRoleAuthorized,
-  type WorkflowStage,
-} from "./workflow";
+import { authService } from "./services/authService";
+import { userService } from "./services/userService";
+import { applicationService } from "./services/applicationService";
+import { reviewService } from "./services/reviewService";
+import { researchProgressService } from "./services/researchProgressService";
+import { seedService } from "./services/seedService";
+import { extensionEligibilityService } from "./services/extensionEligibilityService";
+import { applicationDocumentService } from "./services/applicationDocumentService";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -29,39 +29,11 @@ export async function registerRoutes(
         })
         .parse(req.body);
 
-      const scholarId = input.scholarId?.trim().toUpperCase();
-      const employeeId = input.employeeId?.trim().toUpperCase();
-
-      let user;
-      if (scholarId) {
-        user = await storage.getUserByScholarId(scholarId);
-      } else if (employeeId) {
-        user = await storage.getUserByEmployeeId(employeeId);
-      }
-
-      if (!user) {
-        return res
-          .status(401)
-          .json({ message: "Invalid ID or password" });
-      }
-
-      let passwordValid = await verifyPassword(input.password, user.password);
-      if (!passwordValid && user.password === input.password) {
-        await storage.updateUser(user.id, { password: input.password });
-        passwordValid = true;
-      }
-
-      if (!passwordValid) {
-        return res
-          .status(401)
-          .json({ message: "Invalid ID or password" });
-      }
-
+      const user = await authService.login(input);
       req.session.userId = user.id;
-      const { password: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
-    } catch (error) {
-      res.status(400).json({ message: "Invalid input" });
+      res.json(user);
+    } catch (error: any) {
+      res.status(401).json({ message: error.message || "Invalid input" });
     }
   });
 
@@ -78,109 +50,118 @@ export async function registerRoutes(
     if (!req.session.userId) {
       return res.status(401).json({ message: "Not authenticated" });
     }
-    const user = await storage.getUserWithScholar(req.session.userId);
-    if (!user) {
-      return res.status(401).json({ message: "User not found" });
+    try {
+      const user = await authService.getCurrentUser(req.session.userId);
+      res.json(user);
+    } catch (error: any) {
+      res.status(401).json({ message: error.message || "User not found" });
     }
-    const { password: _, ...userWithoutPassword } = user;
-    res.json(userWithoutPassword);
   });
 
   // === USERS ===
   app.get(api.users.get.path, async (req, res) => {
-    const user = await storage.getUserWithScholar(Number(req.params.id));
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    try {
+      const user = await userService.getUserById(Number(req.params.id));
+      res.json(user);
+    } catch (error: any) {
+      res.status(404).json({ message: error.message || "User not found" });
     }
-    const { password: _, ...userWithoutPassword } = user;
-    res.json(userWithoutPassword);
   });
 
   app.get("/api/users", async (req, res) => {
-    const users = await storage.getAllUsers();
-    res.json(
-      users.map((u) => {
-        const { password: _, ...rest } = u;
-        return rest;
-      }),
-    );
+    try {
+      const users = await userService.getAllUsers();
+      res.json(users);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to fetch users" });
+    }
   });
 
   app.put(api.users.update.path, async (req, res) => {
     try {
       const updates = api.users.update.input.parse(req.body);
-      const updatedUser = await storage.updateUser(
+      const updatedUser = await userService.updateUser(
         Number(req.params.id),
         updates,
       );
-      const { password: _, ...userWithoutPassword } = updatedUser;
-      res.json(userWithoutPassword);
-    } catch (error) {
-      res.status(400).json({ message: "Invalid input" });
+      res.json(updatedUser);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Invalid input" });
     }
   });
 
   // === APPLICATIONS ===
   app.get(api.applications.list.path, async (req, res) => {
-    const scholarId = req.query.scholarId
-      ? String(req.query.scholarId)
-      : undefined;
-    const apps = await storage.getApplications(scholarId);
-    res.json(apps);
+    try {
+      const scholarId = req.query.scholarId
+        ? String(req.query.scholarId)
+        : undefined;
+      const apps = await applicationService.getApplications(scholarId);
+      res.json(apps);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to fetch applications" });
+    }
   });
 
   app.get("/api/applications/stage/:stage", async (req, res) => {
-    const stage = req.params.stage;
+    try {
+      const stage = req.params.stage;
 
-    if (stage === "supervisor") {
-      if (!req.session.userId) {
-        return res.status(401).json({ message: "Not authenticated" });
+      if (stage === "supervisor") {
+        if (!req.session.userId) {
+          return res.status(401).json({ message: "Not authenticated" });
+        }
+
+        const user = await userService.getUserById(req.session.userId);
+        if (user.role === "supervisor") {
+          // TODO: Get employee ID for this supervisor user
+          // For now, we'll return empty array until employee mapping is set up
+          return res.json([]);
+        }
       }
 
-      const user = await storage.getUser(req.session.userId);
-      if (!user) {
-        return res.status(401).json({ message: "User not found" });
-      }
-
-      if (user.role === "supervisor") {
-        // TODO: Get employee ID for this supervisor user
-        // For now, we'll return empty array until employee mapping is set up
-        return res.json([]);
-      }
+      const apps = await applicationService.getApplicationsByStage(stage);
+      res.json(apps);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to fetch applications" });
     }
-
-    const apps = await storage.getApplicationsByStage(stage);
-    res.json(apps);
   });
 
   app.get("/api/applications/:id", async (req, res) => {
-    const app = await storage.getApplicationById(Number(req.params.id));
-    if (!app) {
-      return res.status(404).json({ message: "Application not found" });
+    try {
+      const app = await applicationService.getApplicationById(
+        Number(req.params.id),
+      );
+      res.json(app);
+    } catch (error: any) {
+      res.status(404).json({ message: error.message || "Application not found" });
     }
-    res.json(app);
   });
 
   app.post(api.applications.create.path, async (req, res) => {
     try {
       const input = api.applications.create.input.parse(req.body);
-      const newApp = await storage.createApplication({
-        ...input,
-        currentStage: "supervisor",
-        status: "Pending",
-      });
+      const newApp = await applicationService.createApplication(
+        input.scholarId,
+        input.type,
+        input.details,
+      );
       res.status(201).json(newApp);
-    } catch (error) {
-      res.status(400).json({ message: "Invalid input" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Invalid input" });
     }
   });
 
   // === APPLICATION REVIEWS ===
   app.get("/api/applications/:id/reviews", async (req, res) => {
-    const reviews = await storage.getReviewsForApplication(
-      Number(req.params.id),
-    );
-    res.json(reviews);
+    try {
+      const reviews = await reviewService.getReviewsForApplication(
+        Number(req.params.id),
+      );
+      res.json(reviews);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to fetch reviews" });
+    }
   });
 
   app.post("/api/applications/:id/review", async (req, res) => {
@@ -193,309 +174,179 @@ export async function registerRoutes(
         })
         .parse(req.body);
 
-      const applicationId = Number(req.params.id);
-      const application = await storage.getApplicationById(applicationId);
+      const result = await reviewService.submitReview(
+        Number(req.params.id),
+        reviewInput,
+      );
 
-      if (!application) {
-        return res.status(404).json({ message: "Application not found" });
-      }
+      res.json(result);
+    } catch (error: any) {
+      res.status(error.message.includes("not found") ? 404 : error.message.includes("not authorized") || error.message.includes("not assigned") ? 403 : 400).json({
+        message: error.message || "Invalid input",
+      });
+    }
+  });
 
-      if (application.status !== "Pending") {
-        return res
-          .status(400)
-          .json({ message: "Application is no longer pending" });
-      }
+  // === EXTENSION APPLICATIONS ===
 
-      const reviewer = await storage.getEmployee(reviewInput.reviewerId);
-      if (!reviewer) {
-        return res.status(404).json({ message: "Reviewer not found" });
-      }
+  // Check extension eligibility for a scholar
+  app.get("/api/extensions/check-eligibility/:scholarId", async (req, res) => {
+    try {
+      const scholarId = req.params.scholarId;
+      const eligibility = await extensionEligibilityService.checkExtensionEligibility(
+        scholarId,
+      );
+      const requiredDocs = await extensionEligibilityService.getRequiredDocumentsForExtension(
+        scholarId,
+      );
 
-      const workflow = getWorkflowDefinition(application.type);
-      const currentStage = application.currentStage as WorkflowStage;
+      res.json({
+        eligibility,
+        requiredDocuments: requiredDocs,
+      });
+    } catch (error: any) {
+      res
+        .status(error.message.includes("not found") ? 404 : 400)
+        .json({ message: error.message || "Failed to check eligibility" });
+    }
+  });
 
-      if (!workflow.stages.includes(currentStage)) {
-        return res.status(400).json({ message: "Invalid workflow stage" });
-      }
+  // Create an extension application
+  app.post("/api/extensions/create", async (req, res) => {
+    try {
+      const input = z
+        .object({
+          scholarId: z.number(),
+          extensionPeriod: z.enum(["6_months", "1_year"]),
+          reason: z.string().optional(),
+        })
+        .parse(req.body);
 
-      // TODO: Implement proper reviewer role checking with updated schema
-      // if (!isRoleAuthorized(workflow, currentStage, reviewer.role)) {
-      //   return res
-      //     .status(403)
-      //     .json({ message: "Reviewer not authorized for this stage" });
-      // }
+      const result = await applicationService.createExtensionApplication(
+        input.scholarId,
+        input.extensionPeriod,
+        { reason: input.reason },
+      );
 
-      if (currentStage === "supervisor") {
-        const isAssigned = await storage.isSupervisorForScholar(
-          reviewInput.reviewerId,
-          application.scholarId,
-        );
+      res.status(201).json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to create extension application" });
+    }
+  });
 
-        if (!isAssigned) {
-          return res.status(403).json({
-            message: "Supervisor not assigned to this scholar",
-          });
-        }
-      }
+  // Upload document for application
+  app.post("/api/applications/:id/upload-document", async (req, res) => {
+    try {
+      const input = z
+        .object({
+          documentType: z.string(),
+          fileName: z.string(),
+          fileUrl: z.string(),
+          fileSize: z.number().optional(),
+          mimeType: z.string().optional(),
+          uploadedBy: z.number(),
+        })
+        .parse(req.body);
 
-      const review = await storage.createReview({
-        applicationId,
-        reviewerId: reviewInput.reviewerId,
-        stage: application.currentStage,
-        decision: reviewInput.decision,
-        remarks: reviewInput.remarks,
+      const document = await applicationDocumentService.uploadDocument({
+        applicationId: parseInt(req.params.id, 10),
+        ...input,
       });
 
-      const workflowResult = evaluateWorkflowDecision(workflow, {
-        currentStage,
-        decision: reviewInput.decision,
-      });
+      res.status(201).json(document);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to upload document" });
+    }
+  });
 
-      if (workflowResult.isTerminal && workflowResult.finalOutcome === "Approved") {
-        await applyApprovedChanges(application);
-      }
+  // Get all documents for an application
+  app.get("/api/applications/:id/documents", async (req, res) => {
+    // Document storage is handled by external document database; endpoint deprecated for now
+    res.status(501).json({ message: "Document endpoints are disabled. Document store will be integrated later." });
+  });
 
-      const updatedApp = await storage.updateApplication(applicationId, {
-        currentStage: workflowResult.nextStage,
-        status: workflowResult.status,
-        finalOutcome: workflowResult.finalOutcome,
-      });
+  // Get document checklist status
+  app.get("/api/applications/:id/document-checklist", async (req, res) => {
+    res.status(501).json({ message: "Document endpoints are disabled. Document store will be integrated later." });
+  });
 
-      res.json({ review, application: updatedApp });
-    } catch (error) {
-      console.error("Review error:", error);
-      res.status(400).json({ message: "Invalid input" });
+  // Get documents for reviewer
+  app.get("/api/applications/:id/documents-for-review", async (req, res) => {
+    res.status(501).json({ message: "Document endpoints are disabled. Document store will be integrated later." });
+  });
+
+  // Verify a document
+  app.post("/api/applications/:appId/verify-document/:docId", async (req, res) => {
+    res.status(501).json({ message: "Document endpoints are disabled. Document store will be integrated later." });
+  });
+
+  // Submit extension application for review
+  app.post("/api/extensions/:id/submit", async (req, res) => {
+    try {
+      const applicationId = parseInt(req.params.id, 10);
+      const app = await applicationService.submitExtensionApplication(applicationId);
+      res.json(app);
+    } catch (error: any) {
+      res
+        .status(error.message.includes("cannot be submitted") ? 400 : 500)
+        .json({ message: error.message || "Failed to submit application" });
     }
   });
 
   // === STATS ===
   app.get(api.stats.get.path, async (req, res) => {
-    const stats = await storage.getResearchProgress(
-      String(req.params.scholarId),
-    );
-    if (!stats) {
-      return res.json({
-        completedReviews: 0,
-        pendingReports: 0,
-        publications: 0,
-      });
+    try {
+      const stats = await researchProgressService.getResearchProgress(
+        String(req.params.scholarId),
+      );
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to fetch stats" });
     }
-    res.json(stats);
+  });
+
+  // === SUPERVISOR ENDPOINTS ===
+  // Get scholars under a supervisor
+  app.get("/api/supervisors/scholars", async (req, res) => {
+    try {
+      const user = (req as any).user;
+      if (!user || !user.id) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const scholars = await storage.getScholarsBySupervisor(user.id);
+      res.json(scholars);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to fetch scholars" });
+    }
+  });
+
+  // Get applications for scholars under this supervisor
+  app.get("/api/supervisors/applications", async (req, res) => {
+    try {
+      const user = (req as any).user;
+      if (!user || !user.id) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const scholarIdParam = req.query.scholarId as string | undefined;
+
+      if (scholarIdParam) {
+        // Get applications for a specific scholar
+        const apps = await applicationService.getApplications(scholarIdParam);
+        res.json(apps);
+      } else {
+        // Get all applications for scholars under this supervisor
+        const apps = await storage.getApplicationsForSupervisor(String(user.id));
+        res.json(apps);
+      }
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to fetch applications" });
+    }
   });
 
   // === SEED DATA ===
-  await seedData();
+  await seedService.seedDatabase();
 
   return httpServer;
-}
-
-async function applyApprovedChanges(application: {
-  scholarId: string;
-  type: string;
-  details: unknown;
-}) {
-  const details = application.details as Record<string, unknown>;
-
-  if (application.type === "Supervisor Change" && details?.proposedSupervisor) {
-    // Supervisor assignments are now in scholarSupervisors table
-    // This would need to be updated through a different endpoint
-    console.log(`Supervisor change approved: ${details.proposedSupervisor}`);
-  }
-
-  if (application.type === "Extension" && details?.extensionDuration) {
-    // Could update phase or other fields based on extension approval
-    console.log(
-      `Extension approved for scholar ${application.scholarId}: ${details.extensionDuration}`,
-    );
-  }
-}
-
-async function seedData() {
-  try {
-    // Try to check if data already exists - will fail if columns don't exist yet
-    const existingScholar = await storage.getUserByScholarId("GITAM-SCH-2020-118").catch(() => null);
-    if (existingScholar) return;
-  } catch (_err) {
-    // If check fails due to schema mismatch, continue with seeding
-    console.log("Note: Schema migration may be pending. Continuing with application startup...");
-  }
-
-  try {
-    console.log("Seeding database with dummy accounts...");
-
-    // Create Scholar 1 User
-    const scholar1User = await storage.createUser({
-      password: "password123",
-      role: "scholar",
-      name: "Thirupathi Kumar",
-      email: "thirupathi@gitam.in",
-      phone: "9876543210",
-    });
-
-    const scholar1Profile = await storage.createScholarProfile({
-      userId: scholar1User.id,
-      scholarId: "GITAM-SCH-2020-118",
-      batch: "June 2022",
-      status: "Active",
-      department: "Computer Science",
-      researchArea: "Applied Machine Learning",
-      researchTitle: "Context-Aware Diagnosis for Healthcare Records",
-      joiningDate: "2020-08-15",
-      phase: "Phase I",
-      programme: "Full Time",
-      location: "Visakhapatnam",
-      fatherName: "Ramakrishna Kumar",
-      parentMobile: "9876500011",
-      aadhaar: "1234-5678-9012",
-      nationality: "Indian",
-      address: "D.No. 9-14, MVP Colony, Visakhapatnam",
-      tenthBoard: "CBSE",
-      tenthPercentage: "92%",
-      interBoard: "State Board",
-      interPercentage: "89%",
-    });
-    
-    // Create Scholar 2 User
-    const scholar2User = await storage.createUser({
-      password: "password123",
-      role: "scholar",
-      name: "Priya Reddy",
-      email: "priya.reddy@gitam.in",
-      phone: "9876543220",
-    });
-
-    const scholar2Profile = await storage.createScholarProfile({
-      userId: scholar2User.id,
-      scholarId: "GITAM-SCH-2021-204",
-      batch: "June 2023",
-      status: "Active",
-      department: "Biotechnology",
-      researchArea: "Molecular Biology",
-      researchTitle: "RNA Signatures in Pediatric Care",
-      joiningDate: "2021-07-21",
-      phase: "Phase II",
-      programme: "Full Time",
-      location: "Hyderabad",
-      fatherName: "Prabhakar Reddy",
-      parentMobile: "9876500022",
-      aadhaar: "2345-6789-0123",
-      nationality: "Indian",
-      address: "Plot 12, Jubilee Hills, Hyderabad",
-      tenthBoard: "ICSE",
-      tenthPercentage: "91%",
-      interBoard: "State Board",
-      interPercentage: "88%",
-    });
-
-    // Create Supervisor User
-    const supervisorUser = await storage.createUser({
-      password: "password123",
-      role: "supervisor",
-      name: "Dr. Ramesh Kumar",
-      email: "ramesh.kumar@gitam.edu",
-      phone: "9876543230",
-    });
-
-    // Create Employee record for Supervisor
-    const supervisorEmployee = await storage.createEmployee({
-      employeeId: "EMP-SUPERVISOR-001",
-      userId: supervisorUser.id,
-      designation: "Associate Professor",
-      department: "Computer Science",
-    });
-
-    // Update scholars with supervisor assignments
-    // Note: This would require an updateScholar method - for now, this is documented
-
-    // Create DRC member User
-    const drcUser = await storage.createUser({
-      password: "password123",
-      role: "drc",
-      name: "Dr. Lakshmi Narayana",
-      email: "lakshmi.drc@gitam.edu",
-      phone: "9876543240",
-    });
-
-    const drcEmployee = await storage.createEmployee({
-      employeeId: "EMP-DRC-001",
-      userId: drcUser.id,
-      designation: "Professor",
-      department: "Computer Science",
-    });
-
-    // Create IRC member User
-    const ircUser = await storage.createUser({
-      password: "password123",
-      role: "irc",
-      name: "Dr. Venkatesh Rao",
-      email: "venkatesh.irc@gitam.edu",
-      phone: "9876543250",
-    });
-
-    const ircEmployee = await storage.createEmployee({
-      employeeId: "EMP-IRC-001",
-      userId: ircUser.id,
-      designation: "Associate Professor",
-      department: "Biotechnology",
-    });
-
-    // Create DoAA officer User
-    const doaaUser = await storage.createUser({
-      password: "password123",
-      role: "doaa",
-      name: "Prof. Srinivas Reddy",
-      email: "srinivas.doaa@gitam.edu",
-      phone: "9876543260",
-    });
-
-    const doaaEmployee = await storage.createEmployee({
-      employeeId: "EMP-DOAA-001",
-      userId: doaaUser.id,
-      designation: "Professor",
-      department: "Administration",
-    });
-
-    // Add sample application for scholar1
-    await storage.createApplication({
-      scholarId: scholar1Profile.scholarId,
-      type: "Extension",
-      status: "Pending",
-      currentStage: "supervisor",
-      details: {
-        candidateName: "Thirupathi Kumar",
-        registrationDate: "15-08-2020",
-        durationEligible: "5 years",
-        extensionDuration: "6 months",
-        reason: "Additional time needed for experimental validation",
-        timeline:
-          "Complete experiments by June 2026, thesis submission by December 2026",
-      },
-    });
-
-    // Add research progress for scholars
-    await storage.createResearchProgress({
-      scholarId: scholar1Profile.scholarId,
-      completedReviews: 4,
-      pendingReports: 1,
-      publications: 3,
-    });
-
-    await storage.createResearchProgress({
-      scholarId: scholar2Profile.scholarId,
-      completedReviews: 2,
-      pendingReports: 0,
-      publications: 1,
-    });
-
-    console.log("Seeding complete! Created accounts:");
-    console.log("  - GITAM-SCH-2020-118 / password123 (Scholar)");
-    console.log("  - GITAM-SCH-2021-204 / password123 (Scholar)");
-    console.log("  - EMP-SUPERVISOR-001 / password123 (Supervisor)");
-    console.log("  - EMP-DRC-001 / password123 (DRC Member)");
-    console.log("  - EMP-IRC-001 / password123 (IRC Member)");
-    console.log("  - EMP-DOAA-001 / password123 (DoAA Officer)");
-  } catch (seedErr: any) {
-    console.error("Error during seed:", seedErr.message);
-    console.log("This may be due to pending schema migrations. Run 'npm run db:push' to apply schema changes.");
-  }
 }

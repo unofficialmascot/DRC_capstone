@@ -3,19 +3,33 @@ import {
   users, 
   scholars,
   employees,
-  racMembers,
+  scholarRacMembers,
   applications, 
+    racReviews,
   researchProgress, 
   applicationReviews,
+  scholarEducationBackground,
+  scholarReviews,
+  scholarPersonalDetails,
+  scholarAddress,
+  scholarSupervisors,
+  applicationAttachments,
+  applicationRequiredDocuments,
+  applicationReviewerChecklist,
+  courseCompletion,
+  scholarFeeDemand,
+  feePayments,
   type Scholar,
   type User, 
   type InsertUser, 
   type Application, 
   type InsertApplication,
   type ApplicationReview,
-  type InsertApplicationReview
+  type InsertApplicationReview,
+  type InsertApplicationAttachment,
+  type ApplicationAttachment,
 } from "@shared/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, count } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 export interface IStorage {
@@ -33,7 +47,7 @@ export interface IStorage {
   createEmployee(emp: typeof employees.$inferInsert): Promise<typeof employees.$inferSelect>;
   
   // Applications
-  getApplications(scholarId?: string): Promise<Application[]>;
+  getApplications(scholarId?: number): Promise<Application[]>;
   getApplicationById(id: number): Promise<Application | undefined>;
   getApplicationsByStage(stage: string): Promise<Application[]>;
   getApplicationsForSupervisor(employeeId: string): Promise<Application[]>;
@@ -44,6 +58,7 @@ export interface IStorage {
   getReviewsForApplication(applicationId: number): Promise<ApplicationReview[]>;
   createReview(review: InsertApplicationReview): Promise<ApplicationReview>;
   isSupervisorForScholar(employeeId: string, scholarId: string): Promise<boolean>;
+  getScholarsBySupervisor(supervisorId: number | string): Promise<(typeof scholars.$inferSelect & Partial<User>)[]>;
   createScholarProfile(
     profile: typeof scholars.$inferInsert,
   ): Promise<typeof scholars.$inferSelect>;
@@ -142,9 +157,9 @@ export class DatabaseStorage implements IStorage {
     return newEmp;
   }
 
-  async getApplications(scholarId?: string): Promise<Application[]> {
+  async getApplications(scholarId?: number): Promise<Application[]> {
     if (scholarId) {
-      return db.select().from(applications).where(eq(applications.scholarId, scholarId)).orderBy(desc(applications.submissionDate));
+      return db.select().from(applications).where(eq(applications.userId, scholarId)).orderBy(desc(applications.submissionDate));
     }
     return db.select().from(applications).orderBy(desc(applications.submissionDate));
   }
@@ -161,31 +176,32 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getApplicationsForSupervisor(employeeId: string): Promise<Application[]> {
+    // Get the supervisor's user ID from the employee record
+    const [supervisor] = await db
+      .select()
+      .from(employees)
+      .where(eq(employees.employeeId, employeeId));
+
+    if (!supervisor) return [];
+
+    // Get applications where the supervisor is assigned to the scholar
     const results = await db
       .select()
       .from(applications)
       .innerJoin(
-        scholars,
-        and(
-          eq(scholars.scholarId, applications.scholarId)
-        ),
+        scholarSupervisors,
+        eq(scholarSupervisors.userId, applications.userId),
       )
       .where(
         and(
           eq(applications.currentStage, "supervisor"),
           eq(applications.status, "Pending"),
-          // Supervisor is either primary or co-supervisor
+          eq(scholarSupervisors.supervisorId, supervisor.userId),
         ),
       )
       .orderBy(desc(applications.submissionDate));
 
-    // Filter for this specific supervisor
-    return results
-      .filter(result => 
-        result.scholars.supervisorId === employeeId || 
-        result.scholars.coSupervisorId === employeeId
-      )
-      .map((result) => result.applications);
+    return results.map((result) => result.applications);
   }
 
   async createApplication(app: InsertApplication): Promise<Application> {
@@ -210,13 +226,35 @@ export class DatabaseStorage implements IStorage {
   }
 
   async isSupervisorForScholar(employeeId: string, scholarId: string): Promise<boolean> {
-    const [scholar] = await db
+    const [supervisorRecord] = await db
       .select()
-      .from(scholars)
-      .where(eq(scholars.scholarId, scholarId));
+      .from(scholarSupervisors)
+      .innerJoin(scholars, eq(scholars.id, scholarSupervisors.scholarId))
+      .where(and(
+        eq(scholars.scholarId, scholarId),
+        eq(scholarSupervisors.supervisorId, parseInt(employeeId))
+      ));
 
-    if (!scholar) return false;
-    return scholar.supervisorId === employeeId || scholar.coSupervisorId === employeeId;
+    return !!supervisorRecord;
+  }
+
+  async getScholarsBySupervisor(supervisorId: number | string): Promise<(typeof scholars.$inferSelect & Partial<User>)[]> {
+    const numericId = typeof supervisorId === 'string' ? parseInt(supervisorId) : supervisorId;
+    
+    const results = await db
+      .select({
+        scholar: scholars,
+        user: users
+      })
+      .from(scholars)
+      .innerJoin(users, eq(users.id, scholars.userId))
+      .innerJoin(scholarSupervisors, eq(scholarSupervisors.userId, scholars.userId))
+      .where(eq(scholarSupervisors.supervisorId, numericId));
+    
+    return results.map(r => ({
+      ...r.scholar,
+      ...r.user
+    }));
   }
 
   async createScholarProfile(
@@ -227,7 +265,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getResearchProgress(scholarId: string): Promise<typeof researchProgress.$inferSelect | undefined> {
-    const [stats] = await db.select().from(researchProgress).where(eq(researchProgress.scholarId, scholarId));
+    // Convert scholarId string to number for lookup
+    const numericId = parseInt(scholarId, 10);
+    const [stats] = await db.select().from(researchProgress).where(eq(researchProgress.userId, numericId));
     return stats;
   }
 
@@ -235,10 +275,134 @@ export class DatabaseStorage implements IStorage {
     const [newStats] = await db.insert(researchProgress).values(stats).returning();
     return newStats;
   }
+
+  // === SCHOLAR HELPER METHODS ===
+  async getScholarById(id: number): Promise<typeof scholars.$inferSelect | undefined> {
+    const [scholar] = await db.select().from(scholars).where(eq(scholars.userId, id));
+    return scholar;
+  }
+
+  async getScholarByScholarId(scholarId: string): Promise<typeof scholars.$inferSelect | undefined> {
+    const [scholar] = await db.select().from(scholars).where(eq(scholars.scholarId, scholarId));
+    return scholar;
+  }
+
+  async getScholarPersonalDetails(scholarId: number) {
+    const [details] = await db.select().from(scholarPersonalDetails).where(eq(scholarPersonalDetails.userId, scholarId));
+    return details;
+  }
+
+  async createScholarPersonalDetails(details: typeof scholarPersonalDetails.$inferInsert) {
+    const [newDetails] = await db.insert(scholarPersonalDetails).values(details).returning();
+    return newDetails;
+  }
+
+  async createCourseCompletion(record: any) {
+    const [newRec] = await db.insert(courseCompletion).values(record).returning();
+    return newRec;
+  }
+
+  async createScholarFeeDemand(record: any) {
+    const [newRec] = await db.insert(scholarFeeDemand).values(record).returning();
+    return newRec;
+  }
+
+  async createFeePayment(record: any) {
+    const [newRec] = await db.insert(feePayments).values(record).returning();
+    return newRec;
+  }
+
+  // === APPLICATION ATTACHMENT METHODS ===
+  async createApplicationAttachment(attachment: InsertApplicationAttachment): Promise<ApplicationAttachment> {
+    const [newAttachment] = await db.insert(applicationAttachments).values(attachment).returning();
+    return newAttachment;
+  }
+
+  async getApplicationAttachments(applicationId: number): Promise<ApplicationAttachment[]> {
+    return db.select().from(applicationAttachments).where(eq(applicationAttachments.applicationId, applicationId)).orderBy(applicationAttachments.uploadedOn);
+  }
+
+  async getApplicationAttachmentsByType(applicationId: number, documentType: string): Promise<ApplicationAttachment[]> {
+    return db.select().from(applicationAttachments).where(and(eq(applicationAttachments.applicationId, applicationId), eq(applicationAttachments.documentType, documentType)));
+  }
+
+  async updateApplicationAttachmentVerification(attachmentId: number, verifiedBy: number, isVerified: boolean, verificationNotes?: string) {
+    return db.update(applicationAttachments).set({ isVerified, verifiedBy, verificationNotes, verifiedOn: new Date() }).where(eq(applicationAttachments.id, attachmentId)).returning();
+  }
+
+  async deleteApplicationAttachment(attachmentId: number, uploadedBy: number) {
+    // Only allow deletion by the uploader
+    return db.delete(applicationAttachments).where(and(eq(applicationAttachments.id, attachmentId), eq(applicationAttachments.uploadedBy, uploadedBy))).returning();
+  }
+
+  // === REQUIRED DOCUMENTS METHODS ===
+  async getApplicationRequiredDocuments(applicationType: string) {
+    return db.select().from(applicationRequiredDocuments).where(eq(applicationRequiredDocuments.applicationType, applicationType)).orderBy(applicationRequiredDocuments.sortOrder);
+  }
+
+  async createApplicationRequiredDocument(applicationType: string, documentType: string, displayName: string, isMandatory: boolean = true, description?: string) {
+    const [doc] = await db.insert(applicationRequiredDocuments).values({ applicationType, documentType, displayName, description, isMandatory }).returning();
+    return doc;
+  }
+
+  // === REVIEWER CHECKLIST METHODS ===
+  async updateApplicationReviewerChecklist(applicationId: number, reviewerId: number, reviewStage: string, updates: Record<string, any>) {
+    const existing = await db.select().from(applicationReviewerChecklist).where(and(eq(applicationReviewerChecklist.applicationId, applicationId), eq(applicationReviewerChecklist.reviewerId, reviewerId), eq(applicationReviewerChecklist.reviewStage, reviewStage)));
+
+    if (existing.length > 0) {
+      return db.update(applicationReviewerChecklist).set(updates).where(and(eq(applicationReviewerChecklist.applicationId, applicationId), eq(applicationReviewerChecklist.reviewerId, reviewerId), eq(applicationReviewerChecklist.reviewStage, reviewStage))).returning();
+    } else {
+      const [newChecklist] = await db.insert(applicationReviewerChecklist).values({ applicationId, reviewerId, reviewStage, ...updates }).returning();
+      return [newChecklist];
+    }
+  }
+
+  // === EXTENSION HELPER METHODS ===
+  async countRacMeetings(scholarId: number): Promise<number> {
+    const result = await db.select({ count: count() }).from(racReviews).where(eq(racReviews.userId, scholarId));
+    return result[0]?.count || 0;
+  }
+
+
+  async checkIfPreTalkDone(scholarId: number): Promise<boolean> {
+    // Check if there's a "Pre-Talk" or similar completion record
+    // This would depend on your specific tracking
+    // For now, returning false as placeholder
+    return false;
+
+  }
+  async checkCourseCompletion(scholarId: number): Promise<boolean> {
+    const [record] = await db.select().from(courseCompletion).where(eq(courseCompletion.userId, scholarId));
+    if (!record) return false;
+    return Boolean(record.completed);
+  }
+
+  async calculateFeeArrears(numericScholarId: number): Promise<number> {
+    // Calculate total arrears from scholar_fee_demand and subtract completed payments
+    // Accepts numeric scholar ID to avoid nested lookups
+    const demands = await db.select().from(scholarFeeDemand).where(eq(scholarFeeDemand.userId, numericScholarId));
+    let totalDemand = 0;
+    for (const d of demands) {
+      totalDemand += Number(d.arrearsAmount || 0) + Number(d.annualFee || 0);
+    }
+
+    const payments = await db.select().from(feePayments).where(and(eq(feePayments.userId, numericScholarId), eq(feePayments.paymentStatus, 'COMPLETED')));
+    let totalPaid = 0;
+    for (const p of payments) {
+      totalPaid += Number(p.amountPaid || 0);
+    }
+
+    const arrears = totalDemand - totalPaid;
+    return arrears > 0 ? arrears : 0;
+  }
+
+  async countApprovedExtensions(scholarId: string): Promise<number> {
+    const result = await db.select({ count: count() }).from(applications).where(and(eq(applications.userId, scholarId), eq(applications.type, "Extension"), eq(applications.finalOutcome, "Approved")));
+    return result[0]?.count || 0;
+  }
 }
 
 export const storage = new DatabaseStorage();
-
 // Helper function to verify password
 export async function verifyPassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
   return bcrypt.compare(plainPassword, hashedPassword);

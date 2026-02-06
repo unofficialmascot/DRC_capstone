@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useApplications, useCreateApplication } from "@/hooks/use-applications";
+import { apiRequest } from "@/lib/queryClient";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +22,21 @@ import { FilePlus, FileClock, AlertCircle, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
+interface User {
+  id: number;
+  scholarId?: string;
+  name: string;
+  role: string;
+  email: string;
+  // Scholar-related fields (included when fetched from /users/:id)
+  userId?: number;
+  batch?: string;
+  status?: string;
+  department?: string;
+  researchArea?: string;
+  researchTitle?: string;
+}
+
 const APPLICATION_TYPES = [
   { id: "Leave", label: "Leave Application", icon: FileClock, color: "bg-blue-500" },
   { id: "Extension", label: "Extension Request", icon: Calendar, color: "bg-purple-500" },
@@ -30,18 +47,24 @@ const APPLICATION_TYPES = [
 export default function Applications() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [reason, setReason] = useState("");
-  
-  const { data: applications, isLoading } = useApplications(1);
-  const createApplication = useCreateApplication();
   const { toast } = useToast();
 
+  // Get current user
+  const { data: user } = useQuery({
+    queryKey: ["/api/auth/me"],
+    queryFn: () => apiRequest("GET", "/api/auth/me").then(res => res.json()),
+  });
+
+  // Get applications for current user's scholar ID
+  const { data: applications, isLoading } = useApplications(user?.id?.toString());
+  const createApplication = useCreateApplication();
+
   const handleApply = () => {
-    if (!selectedType) return;
+    if (!selectedType || !user?.id) return;
     
     createApplication.mutate({
-      scholarId: 1,
+      scholarId: user.id,
       type: selectedType,
-      status: "Pending",
       details: { reason },
     }, {
       onSuccess: () => {
@@ -52,11 +75,11 @@ export default function Applications() {
         setSelectedType(null);
         setReason("");
       },
-      onError: () => {
+      onError: (error) => {
         toast({
           variant: "destructive",
           title: "Submission Failed",
-          description: "Could not submit application. Please try again.",
+          description: `${(error as Error).message || "Could not submit application. Please try again."}`,
         });
       }
     });
@@ -157,8 +180,8 @@ export default function Applications() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="scholarId">Scholar ID</Label>
-              <Input id="scholarId" value="123456789" disabled className="bg-slate-50" />
+              <Label htmlFor="scholarCode">Scholar Code</Label>
+              <Input id="scholarCode" value={user?.scholarId || ""} disabled className="bg-slate-50" />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="reason">Reason / Description</Label>
@@ -175,7 +198,7 @@ export default function Applications() {
             <Button variant="outline" onClick={() => setSelectedType(null)}>Cancel</Button>
             <Button 
               onClick={handleApply} 
-              disabled={!reason || createApplication.isPending}
+              disabled={!reason || createApplication.isPending || !user?.id}
               className="bg-primary hover:bg-primary/90"
             >
               {createApplication.isPending ? "Submitting..." : "Submit Application"}

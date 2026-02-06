@@ -25,7 +25,7 @@ export const api = {
       method: 'GET' as const,
       path: '/api/applications',
       input: z.object({
-        scholarId: z.coerce.string().optional(),
+        userId: z.coerce.string().optional(),
       }).optional(),
       responses: {
         200: z.array(insertApplicationSchema),
@@ -65,7 +65,7 @@ export const api = {
   stats: {
     get: {
       method: 'GET' as const,
-      path: '/api/stats/:scholarId',
+      path: '/api/stats/:userId',
       responses: {
         200: z.object({
           completedReviews: z.number(),
