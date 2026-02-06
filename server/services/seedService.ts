@@ -53,110 +53,203 @@ export class SeedService {
 
       await storage.createCourseCompletion({ userId: profile.userId, completed: payload.completed || false }).catch(() => null);
       await storage.createScholarFeeDemand({ userId: profile.userId, academicYear: payload.academicYear || '2024-2025', arrearsAmount: payload.arrearsAmount || 0, annualFee: payload.annualFee || 0 }).catch(() => null);
+
+      return { user, profile };
     };
 
-    // Seed a few sample scholars
-    const scholarsToSeed = [
-      {
-        name: "Thirupathi Kumar",
-        email: "thirupathi@gitam.in",
-        phone: "9876543210",
-        scholarId: "GITAM-SCH-2020-118",
-        batch: "June 2022",
-        status: "Active",
-        department: "Computer Science",
-        researchArea: "Applied Machine Learning",
-        researchTitle: "Context-Aware Diagnosis for Healthcare Records",
-        joiningDate: "2020-08-15",
-        phase: "Phase I",
-        programme: "Full Time",
-        location: "Visakhapatnam",
-        dateOfBirth: "1993-04-12",
-        nationality: "Indian",
-        fatherName: "Rama Rao",
-        aadhaarNumber: "123412341234",
-        studentMobile: "9876543210",
-        parentMobile: "9876500000",
-        studentEmail: "thirupathi@gitam.in",
-        gender: "Male",
-        isPwd: false,
-        completed: false,
-        academicYear: '2024-2025',
-        annualFee: 50000,
-      },
-      {
-        name: "Priya Reddy",
-        email: "priya.reddy@gitam.in",
-        phone: "9876543220",
-        scholarId: "GITAM-SCH-2021-204",
-        batch: "June 2023",
-        status: "Active",
-        department: "Biotechnology",
-        researchArea: "Molecular Biology",
-        researchTitle: "RNA Signatures in Pediatric Care",
-        joiningDate: "2021-07-21",
-        phase: "Phase II",
-        programme: "Full Time",
-        location: "Hyderabad",
-        dateOfBirth: "1995-11-02",
-        nationality: "Indian",
-        fatherName: "Suresh Reddy",
-        aadhaarNumber: "432143214321",
-        studentMobile: "9876543220",
-        parentMobile: "9876500001",
-        studentEmail: "priya.reddy@gitam.in",
-        gender: "Female",
-        isPwd: false,
-        completed: true,
-        academicYear: '2024-2025',
-        annualFee: 50000,
-      },
-      {
-        name: "Arvind Kumar Singh",
-        email: "arvind.singh@gitam.in",
-        phone: "9876543221",
-        scholarId: "GITAM-SCH-2019-087",
-        batch: "June 2021",
-        status: "Active",
-        department: "Physics",
-        researchArea: "Quantum Computing",
-        researchTitle: "Quantum Error Correction in Topological Systems",
-        joiningDate: "2019-06-10",
-        phase: "Phase III",
-        programme: "Full Time",
-        location: "Hyderabad",
-        dateOfBirth: "1992-03-25",
-        nationality: "Indian",
-        fatherName: "Hari Singh",
-        aadhaarNumber: "567856785678",
-        studentMobile: "9876543221",
-        parentMobile: "9876500002",
-        studentEmail: "arvind.singh@gitam.in",
-        gender: "Male",
-        isPwd: true,
-        completed: true,
-        academicYear: '2024-2025',
-        annualFee: 50000,
-      }
-    ];
+    try {
+      // Seed a few sample scholars
+      const scholarsToSeed = [
+        {
+          name: "Thirupathi Kumar",
+          email: "thirupathi@gitam.in",
+          phone: "9876543210",
+          scholarId: "GITAM-SCH-2020-118",
+          batch: "June 2022",
+          status: "Active",
+          department: "Computer Science",
+          researchArea: "Applied Machine Learning",
+          researchTitle: "Context-Aware Diagnosis for Healthcare Records",
+          joiningDate: "2020-08-15",
+          phase: "Phase I",
+          programme: "Full Time",
+          location: "Visakhapatnam",
+          dateOfBirth: "1993-04-12",
+          nationality: "Indian",
+          fatherName: "Rama Rao",
+          aadhaarNumber: "123412341234",
+          studentMobile: "9876543210",
+          parentMobile: "9876500000",
+          studentEmail: "thirupathi@gitam.in",
+          gender: "Male",
+          isPwd: false,
+          completed: false,
+          academicYear: "2024-2025",
+          annualFee: 50000,
+        },
+        {
+          name: "Priya Reddy",
+          email: "priya.reddy@gitam.in",
+          phone: "9876543220",
+          scholarId: "GITAM-SCH-2021-204",
+          batch: "June 2023",
+          status: "Active",
+          department: "Biotechnology",
+          researchArea: "Molecular Biology",
+          researchTitle: "RNA Signatures in Pediatric Care",
+          joiningDate: "2021-07-21",
+          phase: "Phase II",
+          programme: "Full Time",
+          location: "Hyderabad",
+          dateOfBirth: "1995-11-02",
+          nationality: "Indian",
+          fatherName: "Suresh Reddy",
+          aadhaarNumber: "432143214321",
+          studentMobile: "9876543220",
+          parentMobile: "9876500001",
+          studentEmail: "priya.reddy@gitam.in",
+          gender: "Female",
+          isPwd: false,
+          completed: true,
+          academicYear: "2024-2025",
+          annualFee: 50000,
+        },
+        {
+          name: "Arvind Kumar Singh",
+          email: "arvind.singh@gitam.in",
+          phone: "9876543221",
+          scholarId: "GITAM-SCH-2019-087",
+          batch: "June 2021",
+          status: "Active",
+          department: "Physics",
+          researchArea: "Quantum Computing",
+          researchTitle: "Quantum Error Correction in Topological Systems",
+          joiningDate: "2019-06-10",
+          phase: "Phase III",
+          programme: "Full Time",
+          location: "Hyderabad",
+          dateOfBirth: "1992-03-25",
+          nationality: "Indian",
+          fatherName: "Hari Singh",
+          aadhaarNumber: "567856785678",
+          studentMobile: "9876543221",
+          parentMobile: "9876500002",
+          studentEmail: "arvind.singh@gitam.in",
+          gender: "Male",
+          isPwd: true,
+          completed: true,
+          academicYear: "2024-2025",
+          annualFee: 50000,
+        },
+        {
+          name: "Neha Sharma",
+          email: "neha.sharma@gitam.in",
+          phone: "9876543222",
+          scholarId: "GITAM-SCH-2023-156",
+          batch: "June 2024",
+          status: "Active",
+          department: "Chemistry",
+          researchArea: "Organic Synthesis",
+          researchTitle: "Sustainable Catalyst Design",
+          joiningDate: "2023-08-12",
+          phase: "Phase I",
+          programme: "Full Time",
+          location: "Visakhapatnam",
+          dateOfBirth: "1997-01-19",
+          nationality: "Indian",
+          fatherName: "Rajesh Sharma",
+          aadhaarNumber: "888812341234",
+          studentMobile: "9876543222",
+          parentMobile: "9876500003",
+          studentEmail: "neha.sharma@gitam.in",
+          gender: "Female",
+          isPwd: false,
+          completed: false,
+          academicYear: "2024-2025",
+          annualFee: 50000,
+        },
+        {
+          name: "Ravi Malhotra",
+          email: "ravi.malhotra@gitam.in",
+          phone: "9876543223",
+          scholarId: "GITAM-SCH-2020-142",
+          batch: "June 2022",
+          status: "Active",
+          department: "Mechanical Engineering",
+          researchArea: "Energy Systems",
+          researchTitle: "Hybrid Thermal Storage",
+          joiningDate: "2020-06-28",
+          phase: "Phase II",
+          programme: "Full Time",
+          location: "Hyderabad",
+          dateOfBirth: "1994-09-07",
+          nationality: "Indian",
+          fatherName: "Mahesh Malhotra",
+          aadhaarNumber: "999912341234",
+          studentMobile: "9876543223",
+          parentMobile: "9876500004",
+          studentEmail: "ravi.malhotra@gitam.in",
+          gender: "Male",
+          isPwd: false,
+          completed: true,
+          academicYear: "2024-2025",
+          annualFee: 50000,
+          arrearsAmount: 50000,
+        },
+        {
+          name: "Meera Gupta",
+          email: "meera.gupta@gitam.in",
+          phone: "9876543224",
+          scholarId: "GITAM-SCH-2021-098",
+          batch: "June 2023",
+          status: "Active",
+          department: "Mathematics",
+          researchArea: "Applied Statistics",
+          researchTitle: "Bayesian Networks in Health Data",
+          joiningDate: "2021-05-16",
+          phase: "Phase II",
+          programme: "Full Time",
+          location: "Visakhapatnam",
+          dateOfBirth: "1995-07-24",
+          nationality: "Indian",
+          fatherName: "Ramesh Gupta",
+          aadhaarNumber: "777712341234",
+          studentMobile: "9876543224",
+          parentMobile: "9876500005",
+          studentEmail: "meera.gupta@gitam.in",
+          gender: "Female",
+          isPwd: true,
+          completed: true,
+          academicYear: "2024-2025",
+          annualFee: 50000,
+        },
+      ];
 
-    for (const s of scholarsToSeed) {
-      try {
-        await createScholar(s);
-      } catch (err) {
-        // ignore individual seed errors
-      }
-    }
+      const seededScholars: Array<{ userId: number; scholarId: string }> = [];
 
-    console.log("Seeding complete.");
-  }
-}
+      for (const s of scholarsToSeed) {
+        try {
+          const created = await createScholar(s);
+          if (created) {
+            seededScholars.push({
+              userId: created.user.id,
+              scholarId: created.profile.scholarId,
+            });
+          }
+        } catch (err) {
+          // ignore individual seed errors
+        }
+      }
+
+      const scholarLookup = (scholarId: string) =>
+        seededScholars.find((scholar) => scholar.scholarId === scholarId);
+
       const supervisorUser = await storage.createUser({
         password: "password123",
         role: "supervisor",
         name: "Dr. Ramesh Kumar",
         email: "ramesh.kumar@gitam.edu",
-            userId: scholar6Profile.userId,
+        phone: "9876543230",
       });
 
       const supervisorEmployee = await storage.createEmployee({
@@ -175,7 +268,7 @@ export class SeedService {
         phone: "9876543240",
       });
 
-      const drcEmployee = await storage.createEmployee({
+      await storage.createEmployee({
         employeeId: "EMP-DRC-001",
         userId: drcUser.id,
         designation: "Professor",
@@ -191,7 +284,7 @@ export class SeedService {
         phone: "9876543250",
       });
 
-      const ircEmployee = await storage.createEmployee({
+      await storage.createEmployee({
         employeeId: "EMP-IRC-001",
         userId: ircUser.id,
         designation: "Associate Professor",
@@ -207,7 +300,7 @@ export class SeedService {
         phone: "9876543260",
       });
 
-      const doaaEmployee = await storage.createEmployee({
+      await storage.createEmployee({
         employeeId: "EMP-DOAA-001",
         userId: doaaUser.id,
         designation: "Professor",
@@ -216,36 +309,45 @@ export class SeedService {
 
       // === APPLICATIONS ===
       // Add sample application for scholar1
-      await storage.createApplication({
-        scholarId: scholar1Profile.id,
-        type: "Extension",
-        status: "Pending",
-        currentStage: "supervisor",
-        details: {
-          candidateName: "Thirupathi Kumar",
-          registrationDate: "15-08-2020",
-          durationEligible: "5 years",
-          extensionDuration: "6 months",
-          reason: "Additional time needed for experimental validation",
-          timeline:
-            "Complete experiments by June 2026, thesis submission by December 2026",
-        },
-      });
+      const scholar1 = scholarLookup("GITAM-SCH-2020-118");
+      const scholar2 = scholarLookup("GITAM-SCH-2021-204");
+
+      if (scholar1) {
+        await storage.createApplication({
+          userId: scholar1.userId,
+          type: "Extension",
+          status: "Pending",
+          currentStage: "supervisor",
+          details: {
+            candidateName: "Thirupathi Kumar",
+            registrationDate: "15-08-2020",
+            durationEligible: "5 years",
+            extensionDuration: "6 months",
+            reason: "Additional time needed for experimental validation",
+            timeline:
+              "Complete experiments by June 2026, thesis submission by December 2026",
+          },
+        });
+      }
 
       // === RESEARCH PROGRESS ===
-      await storage.createResearchProgress({
-        scholarId: scholar1Profile.id,
-        completedReviews: 4,
-        pendingReports: 1,
-        publications: 3,
-      });
+      if (scholar1) {
+        await storage.createResearchProgress({
+          userId: scholar1.userId,
+          completedReviews: 4,
+          pendingReports: 1,
+          publications: 3,
+        });
+      }
 
-      await storage.createResearchProgress({
-        scholarId: scholar2Profile.id,
-        completedReviews: 2,
-        pendingReports: 0,
-        publications: 1,
-      });
+      if (scholar2) {
+        await storage.createResearchProgress({
+          userId: scholar2.userId,
+          completedReviews: 2,
+          pendingReports: 0,
+          publications: 1,
+        });
+      }
 
       console.log("Seeding complete! Created accounts:");
       console.log("\n📚 SCHOLARS (for extension eligibility testing):");

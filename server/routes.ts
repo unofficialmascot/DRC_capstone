@@ -10,6 +10,7 @@ import { researchProgressService } from "./services/researchProgressService";
 import { seedService } from "./services/seedService";
 import { extensionEligibilityService } from "./services/extensionEligibilityService";
 import { applicationDocumentService } from "./services/applicationDocumentService";
+import { storage } from "./storage";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -192,7 +193,18 @@ export async function registerRoutes(
   // Check extension eligibility for a scholar
   app.get("/api/extensions/check-eligibility/:scholarId", async (req, res) => {
     try {
-      const scholarId = req.params.scholarId;
+      const scholarIdParam = req.params.scholarId;
+      let scholarId = scholarIdParam;
+
+      const parsedId = Number(scholarIdParam);
+      if (!Number.isNaN(parsedId)) {
+        const scholar = await storage.getScholarById(parsedId);
+        if (!scholar?.scholarId) {
+          return res.status(404).json({ message: "Scholar not found" });
+        }
+        scholarId = scholar.scholarId;
+      }
+
       const eligibility = await extensionEligibilityService.checkExtensionEligibility(
         scholarId,
       );

@@ -755,7 +755,8 @@ function ScholarApplications({ user }: { user: User }) {
 
   const handleExtensionClick = async () => {
     try {
-      const res = await fetch(`/api/extensions/check-eligibility/${user.scholarId}`);
+      const scholarIdentifier = user.scholarId ?? String(user.id);
+      const res = await fetch(`/api/extensions/check-eligibility/${scholarIdentifier}`);
       if (res.ok) {
         const data = await res.json();
         if (data.eligibility.isEligible) {
@@ -792,7 +793,7 @@ function ScholarApplications({ user }: { user: User }) {
   const submitMutation = useMutation({
     mutationFn: async (data: { type: string; details: Record<string, unknown> }) => {
       const res = await apiRequest("POST", "/api/applications", {
-        scholarId: user.scholarId,
+        userId: user.id,
         type: data.type,
         details: data.details
       });
@@ -800,9 +801,20 @@ function ScholarApplications({ user }: { user: User }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
-      alert("Application submitted successfully! It will be reviewed by the Supervisor.");
+      toast({
+        title: "Application submitted",
+        description: "Your application was submitted successfully and will be reviewed by the Supervisor."
+      });
       setView("options");
       setFormType(null);
+    },
+    onError: (error: any) => {
+      const message = typeof error?.message === "string" ? error.message : "Failed to submit application";
+      toast({
+        title: "Submission failed",
+        description: message,
+        variant: "destructive"
+      });
     }
   });
 
