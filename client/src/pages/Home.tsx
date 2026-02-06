@@ -755,7 +755,8 @@ function ScholarApplications({ user }: { user: User }) {
 
   const handleExtensionClick = async () => {
     try {
-      const res = await fetch(`/api/extensions/check-eligibility/${user.scholarId}`);
+      const scholarIdentifier = user.scholarId ?? String(user.id);
+      const res = await fetch(`/api/extensions/check-eligibility/${scholarIdentifier}`);
       if (res.ok) {
         const data = await res.json();
         if (data.eligibility.isEligible) {
