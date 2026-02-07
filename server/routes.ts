@@ -2,7 +2,7 @@ import type { Express, Response } from "express";
 import type { Server } from "http";
 import { api } from "../shared/routes.js";
 import { z } from "zod";
-import { toErrorResponse } from "./errors";
+import { AppError, toErrorResponse } from "./errors";
 import {
   applicationDocumentService,
   applicationService,
@@ -52,17 +52,17 @@ export async function registerRoutes(
   app.post("/api/auth/logout", (req, res) => {
     req.session.destroy((err) => {
       if (err) {
-        return res.status(500).json({ message: "Failed to logout" });
+        return respondWithError(res, new AppError("Failed to logout", 500), 500);
       }
       res.json({ message: "Logged out successfully" });
     });
   });
 
   app.get("/api/auth/me", async (req, res) => {
-    if (!req.session.userId) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
     try {
+      if (!req.session.userId) {
+        throw new AppError("Not authenticated", 401);
+      }
       const user = await authService.getCurrentUser(req.session.userId);
       res.json(user);
     } catch (error: unknown) {
@@ -121,16 +121,17 @@ export async function registerRoutes(
 
       if (stage === "supervisor") {
         if (!req.session.userId) {
-          return res.status(401).json({ message: "Not authenticated" });
+          throw new AppError("Not authenticated", 401);
         }
 
         const user = await userService.getUserById(req.session.userId);
         if (user.role === "supervisor") {
           const employee = await userService.getEmployeeByUserId(user.id);
           if (!employee?.employeeId) {
-            return res.status(404).json({
-              message: "No employee record mapped to this supervisor user.",
-            });
+            throw new AppError(
+              "No employee record mapped to this supervisor user.",
+              404,
+            );
           }
 
           const apps = await applicationService.getApplicationsForSupervisor(
