@@ -2,6 +2,7 @@ import type { IStorage } from "../storage";
 import type { UpdateApplicationInput } from "../domain/types";
 import type { ExtensionEligibilityService } from "./extensionEligibilityService";
 import type { ApplicationDocumentService } from "./applicationDocumentService";
+import { AppError } from "../errors";
 
 export class ApplicationService {
   constructor(
@@ -23,7 +24,7 @@ export class ApplicationService {
           // It's a scholar code string, look it up
           const scholar = await this.storage.getScholarByScholarId(scholarId);
           if (!scholar?.id) {
-            throw new Error(`Scholar not found for ID: ${scholarId}`);
+            throw new AppError(`Scholar not found for ID: ${scholarId}`, 404);
           }
           numericScholarId = scholar.id;
         }
@@ -38,7 +39,7 @@ export class ApplicationService {
   async getApplicationById(id: number) {
     const app = await this.storage.getApplicationById(id);
     if (!app) {
-      throw new Error("Application not found");
+      throw new AppError("Application not found", 404);
     }
     return app;
   }
@@ -77,7 +78,7 @@ export class ApplicationService {
     // Get scholar info first to get their scholarId string
     const scholar = await this.storage.getScholarById(scholarId);
     if (!scholar?.scholarId) {
-      throw new Error("Scholar not found");
+      throw new AppError("Scholar not found", 404);
     }
 
     // Check eligibility using scholar ID string
@@ -86,7 +87,10 @@ export class ApplicationService {
     );
 
     if (!eligibility.isEligible) {
-      throw new Error(`Extension not eligible: ${eligibility.issues.join("; ")}`);
+      throw new AppError(
+        `Extension not eligible: ${eligibility.issues.join("; ")}`,
+        400,
+      );
     }
 
     // Create application
@@ -120,7 +124,7 @@ export class ApplicationService {
     const app = await this.getApplicationById(applicationId);
 
     if (app.type !== "Extension") {
-      throw new Error("Application is not an extension application");
+      throw new AppError("Application is not an extension application", 400);
     }
     // For now we do not require document uploads during submission
     // (document storage/fetching will be implemented later).
@@ -128,11 +132,11 @@ export class ApplicationService {
     try {
       const resolvedScholarId = app.scholarId ?? Number(app.userId);
       if (Number.isNaN(resolvedScholarId)) {
-        throw new Error("Scholar not found");
+        throw new AppError("Scholar not found", 404);
       }
       const scholar = await this.storage.getScholarById(resolvedScholarId);
       if (!scholar?.scholarId) {
-        throw new Error("Scholar not found");
+        throw new AppError("Scholar not found", 404);
       }
       const eligibility = await this.extensionEligibilityService.checkExtensionEligibility(scholar.scholarId);
       if (!eligibility.isEligible) {
@@ -170,7 +174,10 @@ export class ApplicationService {
     const validation = await this.validateExtensionBeforeSubmission(applicationId);
 
     if (!validation.valid) {
-      throw new Error(`Extension cannot be submitted: ${validation.errors.join("; ")}`);
+      throw new AppError(
+        `Extension cannot be submitted: ${validation.errors.join("; ")}`,
+        400,
+      );
     }
 
     const app = await this.storage.updateApplication(applicationId, {

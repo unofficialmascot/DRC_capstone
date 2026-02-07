@@ -1,5 +1,6 @@
 import type { IStorage } from "../storage";
 import { verifyPassword } from "../storage";
+import { AppError } from "../errors";
 
 export class AuthService {
   constructor(private readonly storage: IStorage) {}
@@ -9,7 +10,7 @@ export class AuthService {
     const employeeId = input.employeeId?.trim().toUpperCase();
 
     if (!scholarId && !employeeId) {
-      throw new Error("Either scholarId or employeeId is required");
+      throw new AppError("Either scholarId or employeeId is required", 400);
     }
 
     let user;
@@ -20,7 +21,7 @@ export class AuthService {
     }
 
     if (!user) {
-      throw new Error("Invalid ID or password");
+      throw new AppError("Invalid ID or password", 401);
     }
 
     // Verify password
@@ -33,7 +34,7 @@ export class AuthService {
     }
 
     if (!passwordValid) {
-      throw new Error("Invalid ID or password");
+      throw new AppError("Invalid ID or password", 401);
     }
 
     // Return user without password
@@ -44,7 +45,7 @@ export class AuthService {
   async getCurrentUser(userId: number) {
     const user = await this.storage.getUserWithScholar(userId);
     if (!user) {
-      throw new Error("User not found");
+      throw new AppError("User not found", 404);
     }
     const { password: _, ...userWithoutPassword } = user;
     return userWithoutPassword;

@@ -2,6 +2,7 @@ import type { IStorage } from "../storage";
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
+import { AppError } from "../errors";
 
 // For ES modules, we need to define __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -53,7 +54,7 @@ export class ExtensionEligibilityService {
     // Get scholar information - need to look up by scholarId string first
     const scholar = await this.storage.getScholarByScholarId(scholarId);
     if (!scholar) {
-      throw new Error("Scholar not found");
+      throw new AppError("Scholar not found", 404);
     }
 
     // Determine gender category from DB fields (scholar_personal_details)

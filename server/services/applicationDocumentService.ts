@@ -1,4 +1,5 @@
 import type { IStorage } from "../storage";
+import { AppError } from "../errors";
 
 export interface DocumentUploadInput {
   applicationId: number;
@@ -63,7 +64,7 @@ export class ApplicationDocumentService {
     );
     
     if (result.length === 0) {
-      throw new Error("Document not found");
+      throw new AppError("Document not found", 404);
     }
     
     return result[0];
