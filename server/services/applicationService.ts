@@ -22,7 +22,10 @@ export class ApplicationService {
         } else {
           // It's a scholar code string, look it up
           const scholar = await this.storage.getScholarByScholarId(scholarId);
-          numericScholarId = scholar?.id;
+          if (!scholar?.id) {
+            throw new Error(`Scholar not found for ID: ${scholarId}`);
+          }
+          numericScholarId = scholar.id;
         }
       } else {
         numericScholarId = scholarId;
@@ -136,7 +139,12 @@ export class ApplicationService {
         return { valid: false, errors: [`Scholar no longer eligible: ${eligibility.issues.join('; ')}`], warnings: [] };
       }
     } catch (err) {
-      return { valid: false, errors: ["Failed to validate eligibility before submission"], warnings: [] };
+      const message = err instanceof Error ? err.message : "Unknown error";
+      return {
+        valid: false,
+        errors: [`Failed to validate eligibility before submission: ${message}`],
+        warnings: [],
+      };
     }
 
     // Check current status
