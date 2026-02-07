@@ -13,6 +13,15 @@ export interface Scholar {
   [key: string]: unknown;
 }
 
+export interface ScholarSupervisor {
+  id: number;
+  userId: number;
+  supervisorId: number;
+  isPrimary?: boolean | null;
+  assignedOn?: string | Date | null;
+  [key: string]: unknown;
+}
+
 export interface Employee {
   userId: number;
   employeeId: string;

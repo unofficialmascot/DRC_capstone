@@ -36,6 +36,7 @@ import type {
   RequiredDocument,
   ResearchProgress,
   Scholar,
+  ScholarSupervisor,
   ScholarPersonalDetails,
   UpdateApplicationInput,
   UpdateApplicationReviewerChecklistInput,
@@ -49,6 +50,7 @@ export interface IStorage {
   getUserWithScholar(id: number): Promise<(User & Partial<Scholar>) | undefined>;
   getUserByScholarId(scholarId: string): Promise<(User & Partial<Scholar>) | undefined>;
   getUserByEmployeeId(employeeId: string): Promise<(User & Partial<Employee>) | undefined>;
+  getUserByName(name: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   createUser(user: CreateUserInput): Promise<User>;
   updateUser(id: number, updates: UpdateUserInput): Promise<User>;
@@ -71,6 +73,11 @@ export interface IStorage {
   isSupervisorForScholar(employeeId: string, scholarId: string): Promise<boolean>;
   getScholarsBySupervisor(supervisorId: number | string): Promise<(Scholar & Partial<User>)[]>;
   createScholarProfile(profile: CreateScholarProfileInput): Promise<Scholar>;
+  updateScholarPhase(userId: number, phase: string): Promise<Scholar>;
+  updateScholarSupervisorAssignment(
+    userId: number,
+    supervisorId: number,
+  ): Promise<ScholarSupervisor>;
   
   // Stats
   getResearchProgress(scholarId: string): Promise<ResearchProgress | undefined>;
@@ -161,6 +168,11 @@ export class DatabaseStorage implements IStorage {
     }
 
     return { ...record.employees, ...record.users };
+  }
+
+  async getUserByName(name: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.name, name));
+    return user;
   }
 
   async getAllUsers(): Promise<User[]> {
@@ -315,6 +327,31 @@ export class DatabaseStorage implements IStorage {
   ): Promise<Scholar> {
     const [newProfile] = await db.insert(scholars).values(profile).returning();
     return newProfile;
+  }
+
+  async updateScholarPhase(userId: number, phase: string): Promise<Scholar> {
+    const [updated] = await db
+      .update(scholars)
+      .set({ phase, updatedAt: new Date() })
+      .where(eq(scholars.userId, userId))
+      .returning();
+    return updated;
+  }
+
+  async updateScholarSupervisorAssignment(
+    userId: number,
+    supervisorId: number,
+  ): Promise<ScholarSupervisor> {
+    await db
+      .update(scholarSupervisors)
+      .set({ isPrimary: false })
+      .where(eq(scholarSupervisors.userId, userId));
+
+    const [assignment] = await db
+      .insert(scholarSupervisors)
+      .values({ userId, supervisorId, isPrimary: true })
+      .returning();
+    return assignment;
   }
 
   async getResearchProgress(scholarId: string): Promise<ResearchProgress | undefined> {
