@@ -1,71 +1,111 @@
 import { db } from "./db";
-import { 
-  users, 
-  scholars,
-  employees,
-  scholarRacMembers,
-  applications, 
-    racReviews,
-  researchProgress, 
-  applicationReviews,
-  scholarEducationBackground,
-  scholarReviews,
-  scholarPersonalDetails,
-  scholarAddress,
-  scholarSupervisors,
+import {
+  applications,
   applicationAttachments,
   applicationRequiredDocuments,
   applicationReviewerChecklist,
+  applicationReviews,
   courseCompletion,
-  scholarFeeDemand,
+  employees,
   feePayments,
-  type Scholar,
-  type User, 
-  type InsertUser, 
-  type Application, 
-  type InsertApplication,
-  type ApplicationReview,
-  type InsertApplicationReview,
-  type InsertApplicationAttachment,
-  type ApplicationAttachment,
+  racReviews,
+  researchProgress,
+  scholarPersonalDetails,
+  scholarSupervisors,
+  scholars,
+  users,
 } from "@shared/schema";
 import { eq, and, desc, count } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import type {
+  Application,
+  ApplicationAttachment,
+  ApplicationReview,
+  CreateApplicationAttachmentInput,
+  CreateApplicationInput,
+  CreateCourseCompletionInput,
+  CreateEmployeeInput,
+  CreateFeePaymentInput,
+  CreateResearchProgressInput,
+  CreateReviewInput,
+  CreateScholarFeeDemandInput,
+  CreateScholarPersonalDetailsInput,
+  CreateScholarProfileInput,
+  CreateUserInput,
+  Employee,
+  RequiredDocument,
+  ResearchProgress,
+  Scholar,
+  ScholarPersonalDetails,
+  UpdateApplicationInput,
+  UpdateApplicationReviewerChecklistInput,
+  UpdateUserInput,
+  User,
+} from "./domain/types";
 
 export interface IStorage {
   // Users
   getUser(id: number): Promise<User | undefined>;
   getUserWithScholar(id: number): Promise<(User & Partial<Scholar>) | undefined>;
   getUserByScholarId(scholarId: string): Promise<(User & Partial<Scholar>) | undefined>;
-  getUserByEmployeeId(employeeId: string): Promise<(User & Partial<typeof employees.$inferSelect>) | undefined>;
+  getUserByEmployeeId(employeeId: string): Promise<(User & Partial<Employee>) | undefined>;
   getAllUsers(): Promise<User[]>;
-  createUser(user: InsertUser): Promise<User>;
-  updateUser(id: number, updates: Partial<InsertUser>): Promise<User>;
+  createUser(user: CreateUserInput): Promise<User>;
+  updateUser(id: number, updates: UpdateUserInput): Promise<User>;
   
   // Employees
-  getEmployee(employeeId: string): Promise<typeof employees.$inferSelect | undefined>;
-  createEmployee(emp: typeof employees.$inferInsert): Promise<typeof employees.$inferSelect>;
+  getEmployee(employeeId: string): Promise<Employee | undefined>;
+  createEmployee(emp: CreateEmployeeInput): Promise<Employee>;
   
   // Applications
   getApplications(scholarId?: number): Promise<Application[]>;
   getApplicationById(id: number): Promise<Application | undefined>;
   getApplicationsByStage(stage: string): Promise<Application[]>;
   getApplicationsForSupervisor(employeeId: string): Promise<Application[]>;
-  createApplication(app: InsertApplication): Promise<Application>;
-  updateApplication(id: number, updates: Partial<InsertApplication>): Promise<Application>;
+  createApplication(app: CreateApplicationInput): Promise<Application>;
+  updateApplication(id: number, updates: UpdateApplicationInput): Promise<Application>;
   
   // Application Reviews
   getReviewsForApplication(applicationId: number): Promise<ApplicationReview[]>;
-  createReview(review: InsertApplicationReview): Promise<ApplicationReview>;
+  createReview(review: CreateReviewInput): Promise<ApplicationReview>;
   isSupervisorForScholar(employeeId: string, scholarId: string): Promise<boolean>;
-  getScholarsBySupervisor(supervisorId: number | string): Promise<(typeof scholars.$inferSelect & Partial<User>)[]>;
-  createScholarProfile(
-    profile: typeof scholars.$inferInsert,
-  ): Promise<typeof scholars.$inferSelect>;
+  getScholarsBySupervisor(supervisorId: number | string): Promise<(Scholar & Partial<User>)[]>;
+  createScholarProfile(profile: CreateScholarProfileInput): Promise<Scholar>;
   
   // Stats
-  getResearchProgress(scholarId: string): Promise<typeof researchProgress.$inferSelect | undefined>;
-  createResearchProgress(stats: typeof researchProgress.$inferInsert): Promise<typeof researchProgress.$inferSelect>;
+  getResearchProgress(scholarId: string): Promise<ResearchProgress | undefined>;
+  createResearchProgress(stats: CreateResearchProgressInput): Promise<ResearchProgress>;
+  getScholarById(id: number): Promise<Scholar | undefined>;
+  getScholarByScholarId(scholarId: string): Promise<Scholar | undefined>;
+  getScholarPersonalDetails(scholarId: number): Promise<ScholarPersonalDetails | undefined>;
+  createScholarPersonalDetails(details: CreateScholarPersonalDetailsInput): Promise<ScholarPersonalDetails>;
+  createCourseCompletion(record: CreateCourseCompletionInput): Promise<Record<string, unknown>>;
+  createScholarFeeDemand(record: CreateScholarFeeDemandInput): Promise<Record<string, unknown>>;
+  createFeePayment(record: CreateFeePaymentInput): Promise<Record<string, unknown>>;
+  createApplicationAttachment(attachment: CreateApplicationAttachmentInput): Promise<ApplicationAttachment>;
+  getApplicationAttachments(applicationId: number): Promise<ApplicationAttachment[]>;
+  getApplicationAttachmentsByType(applicationId: number, documentType: string): Promise<ApplicationAttachment[]>;
+  updateApplicationAttachmentVerification(
+    attachmentId: number,
+    verifiedBy: number,
+    isVerified: boolean,
+    verificationNotes?: string,
+  ): Promise<ApplicationAttachment[]>;
+  deleteApplicationAttachment(attachmentId: number, uploadedBy: number): Promise<ApplicationAttachment[]>;
+  getApplicationRequiredDocuments(applicationType: string): Promise<RequiredDocument[]>;
+  createApplicationRequiredDocument(
+    applicationType: string,
+    documentType: string,
+    displayName: string,
+    isMandatory?: boolean,
+    description?: string,
+  ): Promise<RequiredDocument>;
+  updateApplicationReviewerChecklist(
+    applicationId: number,
+    reviewerId: number,
+    reviewStage: string,
+    updates: UpdateApplicationReviewerChecklistInput,
+  ): Promise<Record<string, unknown>[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -109,7 +149,7 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByEmployeeId(
     employeeId: string,
-  ): Promise<(User & Partial<typeof employees.$inferSelect>) | undefined> {
+  ): Promise<(User & Partial<Employee>) | undefined> {
     const [record] = await db
       .select()
       .from(users)
@@ -127,7 +167,7 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(users);
   }
 
-  async createUser(user: InsertUser): Promise<User> {
+  async createUser(user: CreateUserInput): Promise<User> {
     // Hash password before storing
     const hashedPassword = await bcrypt.hash(user.password || "password123", 10);
     const [newUser] = await db.insert(users).values({
@@ -137,7 +177,7 @@ export class DatabaseStorage implements IStorage {
     return newUser;
   }
 
-  async updateUser(id: number, updates: Partial<InsertUser>): Promise<User> {
+  async updateUser(id: number, updates: UpdateUserInput): Promise<User> {
     // Hash password if being updated
     const updateData = { ...updates };
     if (updates.password) {
@@ -147,12 +187,12 @@ export class DatabaseStorage implements IStorage {
     return updatedUser;
   }
 
-  async getEmployee(employeeId: string): Promise<typeof employees.$inferSelect | undefined> {
+  async getEmployee(employeeId: string): Promise<Employee | undefined> {
     const [emp] = await db.select().from(employees).where(eq(employees.employeeId, employeeId));
     return emp;
   }
 
-  async createEmployee(emp: typeof employees.$inferInsert): Promise<typeof employees.$inferSelect> {
+  async createEmployee(emp: CreateEmployeeInput): Promise<Employee> {
     const [newEmp] = await db.insert(employees).values(emp).returning();
     return newEmp;
   }
@@ -204,12 +244,19 @@ export class DatabaseStorage implements IStorage {
     return results.map((result) => result.applications);
   }
 
-  async createApplication(app: InsertApplication): Promise<Application> {
-    const [newApp] = await db.insert(applications).values(app).returning();
+  async createApplication(app: CreateApplicationInput): Promise<Application> {
+    const userId = app.userId ?? app.scholarId;
+    if (!userId) {
+      throw new Error("Application requires a userId");
+    }
+    const [newApp] = await db.insert(applications).values({
+      ...app,
+      userId,
+    }).returning();
     return newApp;
   }
 
-  async updateApplication(id: number, updates: Partial<InsertApplication>): Promise<Application> {
+  async updateApplication(id: number, updates: UpdateApplicationInput): Promise<Application> {
     const [updated] = await db.update(applications).set(updates).where(eq(applications.id, id)).returning();
     return updated;
   }
@@ -220,8 +267,14 @@ export class DatabaseStorage implements IStorage {
       .orderBy(applicationReviews.reviewDate);
   }
 
-  async createReview(review: InsertApplicationReview): Promise<ApplicationReview> {
-    const [newReview] = await db.insert(applicationReviews).values(review).returning();
+  async createReview(review: CreateReviewInput): Promise<ApplicationReview> {
+    const reviewerId = typeof review.reviewerId === "string"
+      ? parseInt(review.reviewerId, 10)
+      : review.reviewerId;
+    const [newReview] = await db.insert(applicationReviews).values({
+      ...review,
+      reviewerId,
+    }).returning();
     return newReview;
   }
 
@@ -238,7 +291,7 @@ export class DatabaseStorage implements IStorage {
     return !!supervisorRecord;
   }
 
-  async getScholarsBySupervisor(supervisorId: number | string): Promise<(typeof scholars.$inferSelect & Partial<User>)[]> {
+  async getScholarsBySupervisor(supervisorId: number | string): Promise<(Scholar & Partial<User>)[]> {
     const numericId = typeof supervisorId === 'string' ? parseInt(supervisorId) : supervisorId;
     
     const results = await db
@@ -258,62 +311,69 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createScholarProfile(
-    profile: typeof scholars.$inferInsert,
-  ): Promise<typeof scholars.$inferSelect> {
+    profile: CreateScholarProfileInput,
+  ): Promise<Scholar> {
     const [newProfile] = await db.insert(scholars).values(profile).returning();
     return newProfile;
   }
 
-  async getResearchProgress(scholarId: string): Promise<typeof researchProgress.$inferSelect | undefined> {
+  async getResearchProgress(scholarId: string): Promise<ResearchProgress | undefined> {
     // Convert scholarId string to number for lookup
     const numericId = parseInt(scholarId, 10);
     const [stats] = await db.select().from(researchProgress).where(eq(researchProgress.userId, numericId));
     return stats;
   }
 
-  async createResearchProgress(stats: typeof researchProgress.$inferInsert): Promise<typeof researchProgress.$inferSelect> {
-    const [newStats] = await db.insert(researchProgress).values(stats).returning();
+  async createResearchProgress(stats: CreateResearchProgressInput): Promise<ResearchProgress> {
+    const userId = stats.userId ?? stats.scholarId;
+    if (!userId) {
+      throw new Error("Research progress requires a userId");
+    }
+    const [newStats] = await db.insert(researchProgress).values({
+      ...stats,
+      userId,
+    }).returning();
     return newStats;
   }
 
   // === SCHOLAR HELPER METHODS ===
-  async getScholarById(id: number): Promise<typeof scholars.$inferSelect | undefined> {
+  async getScholarById(id: number): Promise<Scholar | undefined> {
     const [scholar] = await db.select().from(scholars).where(eq(scholars.userId, id));
     return scholar;
   }
 
-  async getScholarByScholarId(scholarId: string): Promise<typeof scholars.$inferSelect | undefined> {
+  async getScholarByScholarId(scholarId: string): Promise<Scholar | undefined> {
     const [scholar] = await db.select().from(scholars).where(eq(scholars.scholarId, scholarId));
     return scholar;
   }
 
-  async getScholarPersonalDetails(scholarId: number) {
+  async getScholarPersonalDetails(scholarId: number): Promise<ScholarPersonalDetails | undefined> {
     const [details] = await db.select().from(scholarPersonalDetails).where(eq(scholarPersonalDetails.userId, scholarId));
     return details;
   }
 
-  async createScholarPersonalDetails(details: typeof scholarPersonalDetails.$inferInsert) {
+  async createScholarPersonalDetails(details: CreateScholarPersonalDetailsInput): Promise<ScholarPersonalDetails> {
     const [newDetails] = await db.insert(scholarPersonalDetails).values(details).returning();
     return newDetails;
   }
 
-  async createCourseCompletion(record: any) {
+  async createCourseCompletion(record: CreateCourseCompletionInput) {
     const [newRec] = await db.insert(courseCompletion).values(record).returning();
     return newRec;
   }
 
-  async createScholarFeeDemand(record: any) {
+  async createScholarFeeDemand(record: CreateScholarFeeDemandInput) {
     const [newRec] = await db.insert(scholarFeeDemand).values(record).returning();
     return newRec;
   }
 
-  async createFeePayment(record: any) {
+  async createFeePayment(record: CreateFeePaymentInput) {
     const [newRec] = await db.insert(feePayments).values(record).returning();
     return newRec;
   }
 
   // === APPLICATION ATTACHMENT METHODS ===
-  async createApplicationAttachment(attachment: InsertApplicationAttachment): Promise<ApplicationAttachment> {
+  async createApplicationAttachment(attachment: CreateApplicationAttachmentInput): Promise<ApplicationAttachment> {
     const [newAttachment] = await db.insert(applicationAttachments).values(attachment).returning();
     return newAttachment;
   }
@@ -336,17 +396,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   // === REQUIRED DOCUMENTS METHODS ===
-  async getApplicationRequiredDocuments(applicationType: string) {
+  async getApplicationRequiredDocuments(applicationType: string): Promise<RequiredDocument[]> {
     return db.select().from(applicationRequiredDocuments).where(eq(applicationRequiredDocuments.applicationType, applicationType)).orderBy(applicationRequiredDocuments.sortOrder);
   }
 
-  async createApplicationRequiredDocument(applicationType: string, documentType: string, displayName: string, isMandatory: boolean = true, description?: string) {
+  async createApplicationRequiredDocument(applicationType: string, documentType: string, displayName: string, isMandatory: boolean = true, description?: string): Promise<RequiredDocument> {
     const [doc] = await db.insert(applicationRequiredDocuments).values({ applicationType, documentType, displayName, description, isMandatory }).returning();
     return doc;
   }
 
   // === REVIEWER CHECKLIST METHODS ===
-  async updateApplicationReviewerChecklist(applicationId: number, reviewerId: number, reviewStage: string, updates: Record<string, any>) {
+  async updateApplicationReviewerChecklist(applicationId: number, reviewerId: number, reviewStage: string, updates: UpdateApplicationReviewerChecklistInput) {
     const existing = await db.select().from(applicationReviewerChecklist).where(and(eq(applicationReviewerChecklist.applicationId, applicationId), eq(applicationReviewerChecklist.reviewerId, reviewerId), eq(applicationReviewerChecklist.reviewStage, reviewStage)));
 
     if (existing.length > 0) {

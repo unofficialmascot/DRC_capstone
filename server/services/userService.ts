@@ -1,9 +1,11 @@
-import { storage } from "../storage";
-import type { InsertUser } from "@shared/schema";
+import type { IStorage } from "../storage";
+import type { UpdateUserInput } from "../domain/types";
 
 export class UserService {
+  constructor(private readonly storage: IStorage) {}
+
   async getUserById(id: number) {
-    const user = await storage.getUserWithScholar(id);
+    const user = await this.storage.getUserWithScholar(id);
     if (!user) {
       throw new Error("User not found");
     }
@@ -12,18 +14,16 @@ export class UserService {
   }
 
   async getAllUsers() {
-    const users = await storage.getAllUsers();
+    const users = await this.storage.getAllUsers();
     return users.map((u) => {
       const { password: _, ...rest } = u;
       return rest;
     });
   }
 
-  async updateUser(id: number, updates: Partial<InsertUser>) {
-    const updatedUser = await storage.updateUser(id, updates);
+  async updateUser(id: number, updates: UpdateUserInput) {
+    const updatedUser = await this.storage.updateUser(id, updates);
     const { password: _, ...userWithoutPassword } = updatedUser;
     return userWithoutPassword;
   }
 }
-
-export const userService = new UserService();

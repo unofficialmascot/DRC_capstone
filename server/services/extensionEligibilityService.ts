@@ -1,4 +1,4 @@
-import { storage } from "../storage";
+import type { IStorage } from "../storage";
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
@@ -38,6 +38,8 @@ export interface ExtensionRule {
 }
 
 export class ExtensionEligibilityService {
+  constructor(private readonly storage: IStorage) {}
+
   private getEligibilityRules(gender: string): ExtensionRule {
     const rules = (extensionRulesConfig.extensionEligibilityRules as Record<string, ExtensionRule>);
     // Default to male rules if gender not found in config
@@ -49,13 +51,13 @@ export class ExtensionEligibilityService {
     const warnings: string[] = [];
 
     // Get scholar information - need to look up by scholarId string first
-    const scholar = await storage.getScholarByScholarId(scholarId);
+    const scholar = await this.storage.getScholarByScholarId(scholarId);
     if (!scholar) {
       throw new Error("Scholar not found");
     }
 
     // Determine gender category from DB fields (scholar_personal_details)
-    const personalDetails = await storage.getScholarPersonalDetails(scholar.userId);
+    const personalDetails = await this.storage.getScholarPersonalDetails(scholar.userId);
     let genderCategory = "M";
     if (personalDetails?.isPwd === true) {
       genderCategory = "PWD";
@@ -85,11 +87,11 @@ export class ExtensionEligibilityService {
 
     // Run remaining checks in PARALLEL instead of sequential
     const [racMeetingsCount, hasPreTalk, coursesCompleted, feeArrears, currentExtensions] = await Promise.all([
-      storage.countRacMeetings(scholar.userId),
-      rules.requiresNoPreTalk ? storage.checkIfPreTalkDone(scholar.userId) : Promise.resolve(false),
-      rules.requiresCoursesCompletion ? storage.checkCourseCompletion(scholar.userId) : Promise.resolve(true),
-      rules.requiresNoFeeArrears ? storage.calculateFeeArrears(scholar.userId) : Promise.resolve(0),
-      storage.countApprovedExtensions(scholar.userId),
+      this.storage.countRacMeetings(scholar.userId),
+      rules.requiresNoPreTalk ? this.storage.checkIfPreTalkDone(scholar.userId) : Promise.resolve(false),
+      rules.requiresCoursesCompletion ? this.storage.checkCourseCompletion(scholar.userId) : Promise.resolve(true),
+      rules.requiresNoFeeArrears ? this.storage.calculateFeeArrears(scholar.userId) : Promise.resolve(0),
+      this.storage.countApprovedExtensions(scholar.userId),
     ]);
 
     // 2. Check RAC meetings
@@ -155,5 +157,3 @@ export interface RequiredDocument {
   description: string;
   isMandatory: boolean;
 }
-
-export const extensionEligibilityService = new ExtensionEligibilityService();

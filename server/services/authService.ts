@@ -1,8 +1,9 @@
-import { z } from "zod";
-import { storage } from "../storage";
+import type { IStorage } from "../storage";
 import { verifyPassword } from "../storage";
 
 export class AuthService {
+  constructor(private readonly storage: IStorage) {}
+
   async login(input: { scholarId?: string; employeeId?: string; password: string }) {
     const scholarId = input.scholarId?.trim().toUpperCase();
     const employeeId = input.employeeId?.trim().toUpperCase();
@@ -13,9 +14,9 @@ export class AuthService {
 
     let user;
     if (scholarId) {
-      user = await storage.getUserByScholarId(scholarId);
+      user = await this.storage.getUserByScholarId(scholarId);
     } else if (employeeId) {
-      user = await storage.getUserByEmployeeId(employeeId);
+      user = await this.storage.getUserByEmployeeId(employeeId);
     }
 
     if (!user) {
@@ -27,7 +28,7 @@ export class AuthService {
     
     // Fallback for legacy plaintext passwords
     if (!passwordValid && user.password === input.password) {
-      await storage.updateUser(user.id, { password: input.password });
+      await this.storage.updateUser(user.id, { password: input.password });
       passwordValid = true;
     }
 
@@ -41,7 +42,7 @@ export class AuthService {
   }
 
   async getCurrentUser(userId: number) {
-    const user = await storage.getUserWithScholar(userId);
+    const user = await this.storage.getUserWithScholar(userId);
     if (!user) {
       throw new Error("User not found");
     }
@@ -49,5 +50,3 @@ export class AuthService {
     return userWithoutPassword;
   }
 }
-
-export const authService = new AuthService();

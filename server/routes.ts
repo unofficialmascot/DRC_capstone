@@ -2,15 +2,17 @@ import type { Express } from "express";
 import type { Server } from "http";
 import { api } from "../shared/routes.js";
 import { z } from "zod";
-import { authService } from "./services/authService";
-import { userService } from "./services/userService";
-import { applicationService } from "./services/applicationService";
-import { reviewService } from "./services/reviewService";
-import { researchProgressService } from "./services/researchProgressService";
-import { seedService } from "./services/seedService";
-import { extensionEligibilityService } from "./services/extensionEligibilityService";
-import { applicationDocumentService } from "./services/applicationDocumentService";
-import { storage } from "./storage";
+import {
+  applicationDocumentService,
+  applicationService,
+  authService,
+  extensionEligibilityService,
+  researchProgressService,
+  reviewService,
+  scholarService,
+  seedService,
+  userService,
+} from "./services";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -198,7 +200,7 @@ export async function registerRoutes(
 
       const parsedId = Number(scholarIdParam);
       if (!Number.isNaN(parsedId)) {
-        const scholar = await storage.getScholarById(parsedId);
+        const scholar = await scholarService.getScholarById(parsedId);
         if (!scholar?.scholarId) {
           return res.status(404).json({ message: "Scholar not found" });
         }
@@ -326,7 +328,7 @@ export async function registerRoutes(
         return res.status(401).json({ message: "Not authenticated" });
       }
 
-      const scholars = await storage.getScholarsBySupervisor(user.id);
+      const scholars = await scholarService.getScholarsBySupervisor(user.id);
       res.json(scholars);
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to fetch scholars" });
@@ -349,7 +351,7 @@ export async function registerRoutes(
         res.json(apps);
       } else {
         // Get all applications for scholars under this supervisor
-        const apps = await storage.getApplicationsForSupervisor(String(user.id));
+        const apps = await applicationService.getApplicationsForSupervisor(String(user.id));
         res.json(apps);
       }
     } catch (error: any) {
