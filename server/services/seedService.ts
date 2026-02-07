@@ -1,10 +1,12 @@
-import { storage } from "../storage";
+import type { IStorage } from "../storage";
 
 export class SeedService {
+  constructor(private readonly storage: IStorage) {}
+
   async seedDatabase() {
     try {
       // Check if data already exists
-      const existingScholar = await storage.getUserByScholarId("GITAM-SCH-2020-118").catch(() => null);
+      const existingScholar = await this.storage.getUserByScholarId("GITAM-SCH-2020-118").catch(() => null);
       if (existingScholar) {
         console.log("Database already seeded, skipping seed data...");
         return;
@@ -16,7 +18,7 @@ export class SeedService {
     console.log("Seeding database with dummy accounts...");
 
     const createScholar = async (payload: any) => {
-      const user = await storage.createUser({
+      const user = await this.storage.createUser({
         password: "password123",
         role: "scholar",
         name: payload.name,
@@ -24,7 +26,7 @@ export class SeedService {
         phone: payload.phone,
       });
 
-      const profile = await storage.createScholarProfile({
+      const profile = await this.storage.createScholarProfile({
         userId: user.id,
         scholarId: payload.scholarId,
         batch: payload.batch,
@@ -38,7 +40,7 @@ export class SeedService {
         location: payload.location,
       });
 
-      await storage.createScholarPersonalDetails({
+      await this.storage.createScholarPersonalDetails({
         userId: profile.userId,
         dateOfBirth: payload.dateOfBirth,
         nationality: payload.nationality,
@@ -51,8 +53,8 @@ export class SeedService {
         isPwd: payload.isPwd || false,
       }).catch(() => null);
 
-      await storage.createCourseCompletion({ userId: profile.userId, completed: payload.completed || false }).catch(() => null);
-      await storage.createScholarFeeDemand({ userId: profile.userId, academicYear: payload.academicYear || '2024-2025', arrearsAmount: payload.arrearsAmount || 0, annualFee: payload.annualFee || 0 }).catch(() => null);
+      await this.storage.createCourseCompletion({ userId: profile.userId, completed: payload.completed || false }).catch(() => null);
+      await this.storage.createScholarFeeDemand({ userId: profile.userId, academicYear: payload.academicYear || '2024-2025', arrearsAmount: payload.arrearsAmount || 0, annualFee: payload.annualFee || 0 }).catch(() => null);
 
       return { user, profile };
     };
@@ -244,7 +246,7 @@ export class SeedService {
       const scholarLookup = (scholarId: string) =>
         seededScholars.find((scholar) => scholar.scholarId === scholarId);
 
-      const supervisorUser = await storage.createUser({
+      const supervisorUser = await this.storage.createUser({
         password: "password123",
         role: "supervisor",
         name: "Dr. Ramesh Kumar",
@@ -252,7 +254,7 @@ export class SeedService {
         phone: "9876543230",
       });
 
-      const supervisorEmployee = await storage.createEmployee({
+      const supervisorEmployee = await this.storage.createEmployee({
         employeeId: "EMP-SUPERVISOR-001",
         userId: supervisorUser.id,
         designation: "Associate Professor",
@@ -260,7 +262,7 @@ export class SeedService {
       });
 
       // === DRC MEMBER ===
-      const drcUser = await storage.createUser({
+      const drcUser = await this.storage.createUser({
         password: "password123",
         role: "drc",
         name: "Dr. Lakshmi Narayana",
@@ -268,7 +270,7 @@ export class SeedService {
         phone: "9876543240",
       });
 
-      await storage.createEmployee({
+      await this.storage.createEmployee({
         employeeId: "EMP-DRC-001",
         userId: drcUser.id,
         designation: "Professor",
@@ -276,7 +278,7 @@ export class SeedService {
       });
 
       // === IRC MEMBER ===
-      const ircUser = await storage.createUser({
+      const ircUser = await this.storage.createUser({
         password: "password123",
         role: "irc",
         name: "Dr. Venkatesh Rao",
@@ -284,7 +286,7 @@ export class SeedService {
         phone: "9876543250",
       });
 
-      await storage.createEmployee({
+      await this.storage.createEmployee({
         employeeId: "EMP-IRC-001",
         userId: ircUser.id,
         designation: "Associate Professor",
@@ -292,7 +294,7 @@ export class SeedService {
       });
 
       // === DOAA OFFICER ===
-      const doaaUser = await storage.createUser({
+      const doaaUser = await this.storage.createUser({
         password: "password123",
         role: "doaa",
         name: "Prof. Srinivas Reddy",
@@ -300,7 +302,7 @@ export class SeedService {
         phone: "9876543260",
       });
 
-      await storage.createEmployee({
+      await this.storage.createEmployee({
         employeeId: "EMP-DOAA-001",
         userId: doaaUser.id,
         designation: "Professor",
@@ -313,7 +315,7 @@ export class SeedService {
       const scholar2 = scholarLookup("GITAM-SCH-2021-204");
 
       if (scholar1) {
-        await storage.createApplication({
+        await this.storage.createApplication({
           userId: scholar1.userId,
           type: "Extension",
           status: "Pending",
@@ -332,7 +334,7 @@ export class SeedService {
 
       // === RESEARCH PROGRESS ===
       if (scholar1) {
-        await storage.createResearchProgress({
+        await this.storage.createResearchProgress({
           userId: scholar1.userId,
           completedReviews: 4,
           pendingReports: 1,
@@ -341,7 +343,7 @@ export class SeedService {
       }
 
       if (scholar2) {
-        await storage.createResearchProgress({
+        await this.storage.createResearchProgress({
           userId: scholar2.userId,
           completedReviews: 2,
           pendingReports: 0,
@@ -371,5 +373,3 @@ export class SeedService {
     }
   }
 }
-
-export const seedService = new SeedService();

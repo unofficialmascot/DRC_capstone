@@ -1,9 +1,15 @@
-import { storage } from "../storage";
-import type { InsertApplication } from "@shared/schema";
-import { extensionEligibilityService } from "./extensionEligibilityService";
-import { applicationDocumentService } from "./applicationDocumentService";
+import type { IStorage } from "../storage";
+import type { UpdateApplicationInput } from "../domain/types";
+import type { ExtensionEligibilityService } from "./extensionEligibilityService";
+import type { ApplicationDocumentService } from "./applicationDocumentService";
 
 export class ApplicationService {
+  constructor(
+    private readonly storage: IStorage,
+    private readonly extensionEligibilityService: ExtensionEligibilityService,
+    private readonly applicationDocumentService: ApplicationDocumentService,
+  ) {}
+
   async getApplications(scholarId?: string | number) {
     let numericScholarId: number | undefined;
     
@@ -15,7 +21,7 @@ export class ApplicationService {
           numericScholarId = parsed;
         } else {
           // It's a scholar code string, look it up
-          const scholar = await storage.getScholarByScholarId(scholarId);
+          const scholar = await this.storage.getScholarByScholarId(scholarId);
           numericScholarId = scholar?.id;
         }
       } else {
@@ -23,11 +29,11 @@ export class ApplicationService {
       }
     }
     
-    return storage.getApplications(numericScholarId);
+    return this.storage.getApplications(numericScholarId);
   }
 
   async getApplicationById(id: number) {
-    const app = await storage.getApplicationById(id);
+    const app = await this.storage.getApplicationById(id);
     if (!app) {
       throw new Error("Application not found");
     }
@@ -35,11 +41,11 @@ export class ApplicationService {
   }
 
   async getApplicationsByStage(stage: string) {
-    return storage.getApplicationsByStage(stage);
+    return this.storage.getApplicationsByStage(stage);
   }
 
   async getApplicationsForSupervisor(employeeId: string) {
-    return storage.getApplicationsForSupervisor(employeeId);
+    return this.storage.getApplicationsForSupervisor(employeeId);
   }
 
   async createApplication(
@@ -47,7 +53,7 @@ export class ApplicationService {
     type: string,
     details: unknown,
   ) {
-    const application = await storage.createApplication({
+    const application = await this.storage.createApplication({
       scholarId,
       type,
       status: "Pending",
@@ -66,13 +72,13 @@ export class ApplicationService {
     details?: Record<string, unknown>,
   ) {
     // Get scholar info first to get their scholarId string
-    const scholar = await storage.getScholarById(scholarId);
+    const scholar = await this.storage.getScholarById(scholarId);
     if (!scholar?.scholarId) {
       throw new Error("Scholar not found");
     }
 
     // Check eligibility using scholar ID string
-    const eligibility = await extensionEligibilityService.checkExtensionEligibility(
+    const eligibility = await this.extensionEligibilityService.checkExtensionEligibility(
       scholar.scholarId,
     );
 
@@ -81,7 +87,7 @@ export class ApplicationService {
     }
 
     // Create application
-    const application = await storage.createApplication({
+    const application = await this.storage.createApplication({
       scholarId: scholarId,
       type: "Extension",
       status: "Pending",
@@ -98,7 +104,7 @@ export class ApplicationService {
     return {
       application,
       eligibility,
-      requiredDocuments: await extensionEligibilityService.getRequiredDocumentsForExtension(
+      requiredDocuments: await this.extensionEligibilityService.getRequiredDocumentsForExtension(
         scholar.scholarId,
       ),
     };
@@ -117,11 +123,15 @@ export class ApplicationService {
     // (document storage/fetching will be implemented later).
     // Re-check eligibility to ensure scholar still meets criteria.
     try {
-      const scholar = await storage.getScholarById(app.scholarId);
+      const resolvedScholarId = app.scholarId ?? Number(app.userId);
+      if (Number.isNaN(resolvedScholarId)) {
+        throw new Error("Scholar not found");
+      }
+      const scholar = await this.storage.getScholarById(resolvedScholarId);
       if (!scholar?.scholarId) {
         throw new Error("Scholar not found");
       }
-      const eligibility = await extensionEligibilityService.checkExtensionEligibility(scholar.scholarId);
+      const eligibility = await this.extensionEligibilityService.checkExtensionEligibility(scholar.scholarId);
       if (!eligibility.isEligible) {
         return { valid: false, errors: [`Scholar no longer eligible: ${eligibility.issues.join('; ')}`], warnings: [] };
       }
@@ -155,13 +165,13 @@ export class ApplicationService {
       throw new Error(`Extension cannot be submitted: ${validation.errors.join("; ")}`);
     }
 
-    const app = await storage.updateApplication(applicationId, {
+    const app = await this.storage.updateApplication(applicationId, {
       status: "Pending",
       currentStage: "supervisor",
     });
 
     // Create reviewer checklist entry
-    const docChecklist = await applicationDocumentService.getDocumentChecklistStatus(
+    const docChecklist = await this.applicationDocumentService.getDocumentChecklistStatus(
       applicationId,
       "Extension",
     );
@@ -174,9 +184,9 @@ export class ApplicationService {
 
   async updateApplication(
     id: number,
-    updates: Partial<InsertApplication>,
+    updates: UpdateApplicationInput,
   ) {
-    const updated = await storage.updateApplication(id, updates);
+    const updated = await this.storage.updateApplication(id, updates);
     return updated;
   }
 }
@@ -186,5 +196,3 @@ export interface ValidationResult {
   errors: string[];
   warnings: string[];
 }
-
-export const applicationService = new ApplicationService();

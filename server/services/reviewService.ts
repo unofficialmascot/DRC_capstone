@@ -1,4 +1,4 @@
-import { storage } from "../storage";
+import type { IStorage } from "../storage";
 import {
   evaluateWorkflowDecision,
   getWorkflowDefinition,
@@ -12,13 +12,15 @@ export interface ReviewInput {
 }
 
 export class ReviewService {
+  constructor(private readonly storage: IStorage) {}
+
   async getReviewsForApplication(applicationId: number) {
-    return storage.getReviewsForApplication(applicationId);
+    return this.storage.getReviewsForApplication(applicationId);
   }
 
   async submitReview(applicationId: number, input: ReviewInput) {
     // Validate application exists
-    const application = await storage.getApplicationById(applicationId);
+    const application = await this.storage.getApplicationById(applicationId);
     if (!application) {
       throw new Error("Application not found");
     }
@@ -28,7 +30,7 @@ export class ReviewService {
     }
 
     // Validate reviewer exists
-    const reviewer = await storage.getEmployee(input.reviewerId);
+    const reviewer = await this.storage.getEmployee(input.reviewerId);
     if (!reviewer) {
       throw new Error("Reviewer not found");
     }
@@ -46,9 +48,9 @@ export class ReviewService {
     );
 
     // Create review record
-    const review = await storage.createReview({
+    const review = await this.storage.createReview({
       applicationId,
-      reviewerId: input.reviewerId,
+      reviewerId: reviewer.userId,
       stage: application.currentStage,
       decision: input.decision,
       remarks: input.remarks,
@@ -72,7 +74,7 @@ export class ReviewService {
     }
 
     // Update application with new state
-    const updatedApp = await storage.updateApplication(applicationId, {
+    const updatedApp = await this.storage.updateApplication(applicationId, {
       currentStage: workflowResult.nextStage,
       status: workflowResult.status,
       finalOutcome: workflowResult.finalOutcome,
@@ -84,13 +86,13 @@ export class ReviewService {
   private async validateReviewerAuthorization(
     reviewerId: string,
     stage: WorkflowStage,
-    userId: string,
+    userId: string | number,
   ) {
     // Special validation for supervisor stage
     if (stage === "supervisor") {
-      const isAssigned = await storage.isSupervisorForScholar(
+      const isAssigned = await this.storage.isSupervisorForScholar(
         reviewerId,
-        userId,
+        String(userId),
       );
       if (!isAssigned) {
         throw new Error("Supervisor not assigned to this scholar");
@@ -126,5 +128,3 @@ export class ReviewService {
     }
   }
 }
-
-export const reviewService = new ReviewService();

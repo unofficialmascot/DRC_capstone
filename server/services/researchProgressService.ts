@@ -1,8 +1,10 @@
-import { storage } from "../storage";
+import type { IStorage } from "../storage";
 
 export class ResearchProgressService {
+  constructor(private readonly storage: IStorage) {}
+
   async getResearchProgress(scholarId: string) {
-    const stats = await storage.getResearchProgress(scholarId);
+    const stats = await this.storage.getResearchProgress(scholarId);
     
     if (!stats) {
       return {
@@ -24,8 +26,8 @@ export class ResearchProgressService {
     },
   ) {
     const numericScholarId = parseInt(scholarId, 10);
-    return storage.createResearchProgress({
-      scholarId: numericScholarId,
+    return this.storage.createResearchProgress({
+      userId: numericScholarId,
       completedReviews: data.completedReviews ?? 0,
       pendingReports: data.pendingReports ?? 0,
       publications: data.publications ?? 0,
@@ -41,7 +43,7 @@ export class ResearchProgressService {
     },
   ) {
     const numericScholarId = parseInt(scholarId, 10);
-    const existing = await storage.getResearchProgress(scholarId);
+    const existing = await this.storage.getResearchProgress(scholarId);
     
     if (!existing) {
       return this.createResearchProgress(scholarId, data);
@@ -52,5 +54,3 @@ export class ResearchProgressService {
     return existing;
   }
 }
-
-export const researchProgressService = new ResearchProgressService();
