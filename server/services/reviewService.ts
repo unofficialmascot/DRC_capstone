@@ -109,22 +109,89 @@ export class ReviewService {
     details: unknown;
   }) {
     const details = application.details as Record<string, unknown>;
+    const scholarUserId =
+      typeof application.userId === "string"
+        ? Number.parseInt(application.userId, 10)
+        : application.userId;
+
+    if (Number.isNaN(scholarUserId)) {
+      throw new Error("Invalid scholar ID for approved application changes");
+    }
+
+    if (application.type === "Supervisor Change") {
+      const supervisorUserId = await this.resolveSupervisorUserId(details);
+      await this.storage.updateScholarSupervisorAssignment(
+        scholarUserId,
+        supervisorUserId,
+      );
+    }
 
     if (
-      application.type === "Supervisor Change" &&
-      details?.proposedSupervisor
+      application.type === "Extension" &&
+      (details?.extensionDuration ||
+        details?.extensionPeriod ||
+        details?.phase)
     ) {
-      console.log(
-        `Supervisor change approved: ${details.proposedSupervisor}`,
-      );
-      // Update supervisor assignments in database
+      const extensionDuration =
+        (details.extensionDuration as string | undefined) ??
+        (details.extensionPeriod as string | undefined);
+      const explicitPhase = details.phase as string | undefined;
+      const scholar = await this.storage.getScholarById(scholarUserId);
+      const basePhase = scholar?.phase?.toString();
+      const updatedPhase =
+        explicitPhase ??
+        (extensionDuration
+          ? basePhase
+            ? `${basePhase} (Extension ${extensionDuration})`
+            : `Extension ${extensionDuration}`
+          : basePhase);
+
+      if (updatedPhase && updatedPhase !== basePhase) {
+        await this.storage.updateScholarPhase(scholarUserId, updatedPhase);
+      }
+    }
+  }
+
+  private async resolveSupervisorUserId(
+    details: Record<string, unknown>,
+  ): Promise<number> {
+    const explicitSupervisorId =
+      (details.proposedSupervisorId as number | string | undefined) ??
+      (details.proposedSupervisorUserId as number | string | undefined);
+
+    if (explicitSupervisorId !== undefined) {
+      const numericId =
+        typeof explicitSupervisorId === "string"
+          ? Number.parseInt(explicitSupervisorId, 10)
+          : explicitSupervisorId;
+      if (!Number.isNaN(numericId)) {
+        return numericId;
+      }
     }
 
-    if (application.type === "Extension" && details?.extensionDuration) {
-      console.log(
-        `Extension approved for scholar ${application.userId}: ${details.extensionDuration}`,
+    const proposedSupervisorEmployeeId = details
+      .proposedSupervisorEmployeeId as string | undefined;
+    if (proposedSupervisorEmployeeId) {
+      const employee = await this.storage.getEmployee(
+        proposedSupervisorEmployeeId,
       );
-      // Update phase or other timeline fields
+      if (employee) {
+        return employee.userId;
+      }
     }
+
+    const proposedSupervisorName = details.proposedSupervisor as
+      | string
+      | undefined;
+    if (proposedSupervisorName) {
+      const user = await this.storage.getUserByName(proposedSupervisorName);
+      if (user) {
+        return user.id;
+      }
+    }
+
+    throw new Error(
+      "Unable to resolve proposed supervisor for approved change",
+    );
   }
 }
