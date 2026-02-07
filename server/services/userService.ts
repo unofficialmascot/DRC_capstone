@@ -26,4 +26,8 @@ export class UserService {
     const { password: _, ...userWithoutPassword } = updatedUser;
     return userWithoutPassword;
   }
+
+  async getEmployeeByUserId(userId: number) {
+    return this.storage.getEmployeeByUserId(userId);
+  }
 }

@@ -117,9 +117,17 @@ export async function registerRoutes(
 
         const user = await userService.getUserById(req.session.userId);
         if (user.role === "supervisor") {
-          // TODO: Get employee ID for this supervisor user
-          // For now, we'll return empty array until employee mapping is set up
-          return res.json([]);
+          const employee = await userService.getEmployeeByUserId(user.id);
+          if (!employee?.employeeId) {
+            return res.status(404).json({
+              message: "No employee record mapped to this supervisor user.",
+            });
+          }
+
+          const apps = await applicationService.getApplicationsForSupervisor(
+            employee.employeeId,
+          );
+          return res.json(apps);
         }
       }
 
