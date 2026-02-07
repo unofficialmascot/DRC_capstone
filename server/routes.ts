@@ -1,7 +1,8 @@
-import type { Express } from "express";
+import type { Express, Response } from "express";
 import type { Server } from "http";
 import { api } from "../shared/routes.js";
 import { z } from "zod";
+import { toErrorResponse } from "./errors";
 import {
   applicationDocumentService,
   applicationService,
@@ -18,6 +19,14 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express,
 ): Promise<Server> {
+  const respondWithError = (
+    res: Response,
+    error: unknown,
+    fallbackStatus = 500,
+  ) => {
+    const { status, body } = toErrorResponse(error, fallbackStatus);
+    return res.status(status).json(body);
+  };
   // === AUTH ===
   app.post("/api/auth/login", async (req, res) => {
     try {
@@ -35,8 +44,8 @@ export async function registerRoutes(
       const user = await authService.login(input);
       req.session.userId = user.id;
       res.json(user);
-    } catch (error: any) {
-      res.status(401).json({ message: error.message || "Invalid input" });
+    } catch (error: unknown) {
+      respondWithError(res, error, 401);
     }
   });
 
@@ -56,8 +65,8 @@ export async function registerRoutes(
     try {
       const user = await authService.getCurrentUser(req.session.userId);
       res.json(user);
-    } catch (error: any) {
-      res.status(401).json({ message: error.message || "User not found" });
+    } catch (error: unknown) {
+      respondWithError(res, error, 401);
     }
   });
 
@@ -66,8 +75,8 @@ export async function registerRoutes(
     try {
       const user = await userService.getUserById(Number(req.params.id));
       res.json(user);
-    } catch (error: any) {
-      res.status(404).json({ message: error.message || "User not found" });
+    } catch (error: unknown) {
+      respondWithError(res, error, 404);
     }
   });
 
@@ -75,8 +84,8 @@ export async function registerRoutes(
     try {
       const users = await userService.getAllUsers();
       res.json(users);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message || "Failed to fetch users" });
+    } catch (error: unknown) {
+      respondWithError(res, error, 500);
     }
   });
 
@@ -88,8 +97,8 @@ export async function registerRoutes(
         updates,
       );
       res.json(updatedUser);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message || "Invalid input" });
+    } catch (error: unknown) {
+      respondWithError(res, error, 400);
     }
   });
 
@@ -101,8 +110,8 @@ export async function registerRoutes(
         : undefined;
       const apps = await applicationService.getApplications(scholarId);
       res.json(apps);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message || "Failed to fetch applications" });
+    } catch (error: unknown) {
+      respondWithError(res, error, 500);
     }
   });
 
@@ -133,8 +142,8 @@ export async function registerRoutes(
 
       const apps = await applicationService.getApplicationsByStage(stage);
       res.json(apps);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message || "Failed to fetch applications" });
+    } catch (error: unknown) {
+      respondWithError(res, error, 500);
     }
   });
 
@@ -144,8 +153,8 @@ export async function registerRoutes(
         Number(req.params.id),
       );
       res.json(app);
-    } catch (error: any) {
-      res.status(404).json({ message: error.message || "Application not found" });
+    } catch (error: unknown) {
+      respondWithError(res, error, 404);
     }
   });
 
@@ -158,8 +167,8 @@ export async function registerRoutes(
         input.details,
       );
       res.status(201).json(newApp);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message || "Invalid input" });
+    } catch (error: unknown) {
+      respondWithError(res, error, 400);
     }
   });
 
@@ -170,8 +179,8 @@ export async function registerRoutes(
         Number(req.params.id),
       );
       res.json(reviews);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message || "Failed to fetch reviews" });
+    } catch (error: unknown) {
+      respondWithError(res, error, 500);
     }
   });
 
@@ -191,10 +200,8 @@ export async function registerRoutes(
       );
 
       res.json(result);
-    } catch (error: any) {
-      res.status(error.message.includes("not found") ? 404 : error.message.includes("not authorized") || error.message.includes("not assigned") ? 403 : 400).json({
-        message: error.message || "Invalid input",
-      });
+    } catch (error: unknown) {
+      respondWithError(res, error, 400);
     }
   });
 
@@ -226,10 +233,8 @@ export async function registerRoutes(
         eligibility,
         requiredDocuments: requiredDocs,
       });
-    } catch (error: any) {
-      res
-        .status(error.message.includes("not found") ? 404 : 400)
-        .json({ message: error.message || "Failed to check eligibility" });
+    } catch (error: unknown) {
+      respondWithError(res, error, 400);
     }
   });
 
@@ -251,8 +256,8 @@ export async function registerRoutes(
       );
 
       res.status(201).json(result);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message || "Failed to create extension application" });
+    } catch (error: unknown) {
+      respondWithError(res, error, 400);
     }
   });
 
@@ -276,8 +281,8 @@ export async function registerRoutes(
       });
 
       res.status(201).json(document);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message || "Failed to upload document" });
+    } catch (error: unknown) {
+      respondWithError(res, error, 400);
     }
   });
 
@@ -308,10 +313,8 @@ export async function registerRoutes(
       const applicationId = parseInt(req.params.id, 10);
       const app = await applicationService.submitExtensionApplication(applicationId);
       res.json(app);
-    } catch (error: any) {
-      res
-        .status(error.message.includes("cannot be submitted") ? 400 : 500)
-        .json({ message: error.message || "Failed to submit application" });
+    } catch (error: unknown) {
+      respondWithError(res, error, 400);
     }
   });
 
@@ -322,8 +325,8 @@ export async function registerRoutes(
         String(req.params.scholarId),
       );
       res.json(stats);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message || "Failed to fetch stats" });
+    } catch (error: unknown) {
+      respondWithError(res, error, 500);
     }
   });
 
@@ -338,8 +341,8 @@ export async function registerRoutes(
 
       const scholars = await scholarService.getScholarsBySupervisor(user.id);
       res.json(scholars);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message || "Failed to fetch scholars" });
+    } catch (error: unknown) {
+      respondWithError(res, error, 500);
     }
   });
 
@@ -362,8 +365,8 @@ export async function registerRoutes(
         const apps = await applicationService.getApplicationsForSupervisor(String(user.id));
         res.json(apps);
       }
-    } catch (error: any) {
-      res.status(500).json({ message: error.message || "Failed to fetch applications" });
+    } catch (error: unknown) {
+      respondWithError(res, error, 500);
     }
   });
 

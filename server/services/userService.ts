@@ -1,5 +1,6 @@
 import type { IStorage } from "../storage";
 import type { UpdateUserInput } from "../domain/types";
+import { AppError } from "../errors";
 
 export class UserService {
   constructor(private readonly storage: IStorage) {}
@@ -7,7 +8,7 @@ export class UserService {
   async getUserById(id: number) {
     const user = await this.storage.getUserWithScholar(id);
     if (!user) {
-      throw new Error("User not found");
+      throw new AppError("User not found", 404);
     }
     const { password: _, ...userWithoutPassword } = user;
     return userWithoutPassword;

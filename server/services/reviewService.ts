@@ -4,6 +4,7 @@ import {
   getWorkflowDefinition,
   type WorkflowStage,
 } from "../workflow";
+import { AppError } from "../errors";
 
 export interface ReviewInput {
   reviewerId: string;
@@ -22,22 +23,22 @@ export class ReviewService {
     // Validate application exists
     const application = await this.storage.getApplicationById(applicationId);
     if (!application) {
-      throw new Error("Application not found");
+      throw new AppError("Application not found", 404);
     }
 
     if (application.status !== "Pending") {
-      throw new Error("Application is no longer pending");
+      throw new AppError("Application is no longer pending", 409);
     }
 
     // Validate reviewer exists
     const reviewer = await this.storage.getEmployee(input.reviewerId);
     if (!reviewer) {
-      throw new Error("Reviewer not found");
+      throw new AppError("Reviewer not found", 404);
     }
 
     // Validate remarks
     if (!input.remarks || input.remarks.trim().length === 0) {
-      throw new Error("Remarks are required");
+      throw new AppError("Remarks are required", 400);
     }
 
     // Check authorization for current stage
@@ -95,7 +96,7 @@ export class ReviewService {
         String(userId),
       );
       if (!isAssigned) {
-        throw new Error("Supervisor not assigned to this scholar");
+        throw new AppError("Supervisor not assigned to this scholar", 403);
       }
     }
 
@@ -115,7 +116,10 @@ export class ReviewService {
         : application.userId;
 
     if (Number.isNaN(scholarUserId)) {
-      throw new Error("Invalid scholar ID for approved application changes");
+      throw new AppError(
+        "Invalid scholar ID for approved application changes",
+        400,
+      );
     }
 
     if (application.type === "Supervisor Change") {
@@ -190,8 +194,9 @@ export class ReviewService {
       }
     }
 
-    throw new Error(
+    throw new AppError(
       "Unable to resolve proposed supervisor for approved change",
+      400,
     );
   }
 }
