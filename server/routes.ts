@@ -1,4 +1,4 @@
-import type { Express, Response } from "express";
+import type { Express, Request, Response } from "express";
 import type { Server } from "http";
 import { api } from "../shared/routes.js";
 import { z } from "zod";
@@ -20,11 +20,16 @@ export async function registerRoutes(
   app: Express,
 ): Promise<Server> {
   const respondWithError = (
+    req: Request,
     res: Response,
     error: unknown,
     fallbackStatus = 500,
   ) => {
     const { status, body } = toErrorResponse(error, fallbackStatus);
+    const detailsSuffix = body.details ? ` ${JSON.stringify(body.details)}` : "";
+    const message = body.message ?? "Unknown error";
+    const logLine = `${req.method} ${req.path} ${status} ${message}${detailsSuffix}`;
+    console.warn(logLine);
     return res.status(status).json(body);
   };
   // === AUTH ===
@@ -45,14 +50,14 @@ export async function registerRoutes(
       req.session.userId = user.id;
       res.json(user);
     } catch (error: unknown) {
-      respondWithError(res, error, 401);
+      respondWithError(req, res, error, 401);
     }
   });
 
   app.post("/api/auth/logout", (req, res) => {
     req.session.destroy((err) => {
       if (err) {
-        return respondWithError(res, new AppError("Failed to logout", 500), 500);
+        return respondWithError(req, res, new AppError("Failed to logout", 500), 500);
       }
       res.json({ message: "Logged out successfully" });
     });
@@ -66,7 +71,7 @@ export async function registerRoutes(
       const user = await authService.getCurrentUser(req.session.userId);
       res.json(user);
     } catch (error: unknown) {
-      respondWithError(res, error, 401);
+      respondWithError(req, res, error, 401);
     }
   });
 
@@ -76,7 +81,7 @@ export async function registerRoutes(
       const user = await userService.getUserById(Number(req.params.id));
       res.json(user);
     } catch (error: unknown) {
-      respondWithError(res, error, 404);
+      respondWithError(req, res, error, 404);
     }
   });
 
@@ -85,7 +90,7 @@ export async function registerRoutes(
       const users = await userService.getAllUsers();
       res.json(users);
     } catch (error: unknown) {
-      respondWithError(res, error, 500);
+      respondWithError(req, res, error, 500);
     }
   });
 
@@ -98,7 +103,7 @@ export async function registerRoutes(
       );
       res.json(updatedUser);
     } catch (error: unknown) {
-      respondWithError(res, error, 400);
+      respondWithError(req, res, error, 400);
     }
   });
 
@@ -111,7 +116,7 @@ export async function registerRoutes(
       const apps = await applicationService.getApplications(scholarId);
       res.json(apps);
     } catch (error: unknown) {
-      respondWithError(res, error, 500);
+      respondWithError(req, res, error, 500);
     }
   });
 
@@ -144,7 +149,7 @@ export async function registerRoutes(
       const apps = await applicationService.getApplicationsByStage(stage);
       res.json(apps);
     } catch (error: unknown) {
-      respondWithError(res, error, 500);
+      respondWithError(req, res, error, 500);
     }
   });
 
@@ -155,7 +160,7 @@ export async function registerRoutes(
       );
       res.json(app);
     } catch (error: unknown) {
-      respondWithError(res, error, 404);
+      respondWithError(req, res, error, 404);
     }
   });
 
@@ -169,7 +174,7 @@ export async function registerRoutes(
       );
       res.status(201).json(newApp);
     } catch (error: unknown) {
-      respondWithError(res, error, 400);
+      respondWithError(req, res, error, 400);
     }
   });
 
@@ -181,7 +186,7 @@ export async function registerRoutes(
       );
       res.json(reviews);
     } catch (error: unknown) {
-      respondWithError(res, error, 500);
+      respondWithError(req, res, error, 500);
     }
   });
 
@@ -202,7 +207,7 @@ export async function registerRoutes(
 
       res.json(result);
     } catch (error: unknown) {
-      respondWithError(res, error, 400);
+      respondWithError(req, res, error, 400);
     }
   });
 
@@ -235,7 +240,7 @@ export async function registerRoutes(
         requiredDocuments: requiredDocs,
       });
     } catch (error: unknown) {
-      respondWithError(res, error, 400);
+      respondWithError(req, res, error, 400);
     }
   });
 
@@ -258,7 +263,7 @@ export async function registerRoutes(
 
       res.status(201).json(result);
     } catch (error: unknown) {
-      respondWithError(res, error, 400);
+      respondWithError(req, res, error, 400);
     }
   });
 
@@ -283,7 +288,7 @@ export async function registerRoutes(
 
       res.status(201).json(document);
     } catch (error: unknown) {
-      respondWithError(res, error, 400);
+      respondWithError(req, res, error, 400);
     }
   });
 
@@ -315,7 +320,7 @@ export async function registerRoutes(
       const app = await applicationService.submitExtensionApplication(applicationId);
       res.json(app);
     } catch (error: unknown) {
-      respondWithError(res, error, 400);
+      respondWithError(req, res, error, 400);
     }
   });
 
@@ -327,7 +332,7 @@ export async function registerRoutes(
       );
       res.json(stats);
     } catch (error: unknown) {
-      respondWithError(res, error, 500);
+      respondWithError(req, res, error, 500);
     }
   });
 
@@ -343,7 +348,7 @@ export async function registerRoutes(
       const scholars = await scholarService.getScholarsBySupervisor(user.id);
       res.json(scholars);
     } catch (error: unknown) {
-      respondWithError(res, error, 500);
+      respondWithError(req, res, error, 500);
     }
   });
 
@@ -367,7 +372,7 @@ export async function registerRoutes(
         res.json(apps);
       }
     } catch (error: unknown) {
-      respondWithError(res, error, 500);
+      respondWithError(req, res, error, 500);
     }
   });
 
