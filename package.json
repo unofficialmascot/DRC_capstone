@@ -8,7 +8,8 @@
     "build": "tsx script/build.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
-    "db:push": "NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit push"
+    "db:push": "NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit push",
+    "demo:setup": "node reset-db.cjs && node run-seed.mjs && npm run dev"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
