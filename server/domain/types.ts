@@ -6,7 +6,6 @@ export interface User {
 }
 
 export interface Scholar {
-  id?: number;
   userId: number;
   scholarId?: string;
   joiningDate?: string | Date | null;
@@ -30,8 +29,7 @@ export interface Employee {
 
 export interface Application {
   id: number;
-  userId: number | string;
-  scholarId?: number;
+  userId: number;
   type: string;
   status: string;
   currentStage: string;
@@ -110,8 +108,7 @@ export interface CreateEmployeeInput {
 }
 
 export interface CreateApplicationInput {
-  userId?: number;
-  scholarId?: number;
+  userId: number;
   type: string;
   status: string;
   currentStage: string;
@@ -124,7 +121,7 @@ export type UpdateApplicationInput = Partial<CreateApplicationInput>;
 
 export interface CreateReviewInput {
   applicationId: number;
-  reviewerId: number | string;
+  reviewerId: number;
   stage: string;
   decision: string;
   remarks: string;
@@ -143,8 +140,7 @@ export interface CreateApplicationAttachmentInput {
 }
 
 export interface CreateResearchProgressInput {
-  userId?: number;
-  scholarId?: number;
+  userId: number;
   completedReviews: number;
   pendingReports: number;
   publications: number;

@@ -50,7 +50,7 @@ export const api = {
       method: 'POST' as const,
       path: '/api/applications/:id/review',
       input: z.object({
-        reviewerId: z.string(),
+        reviewerId: z.number(),
         decision: z.enum(['approved', 'rejected']),
         remarks: z.string().min(1),
       }),
