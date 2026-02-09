@@ -4,7 +4,18 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import "../styles/gscholar.css";
 
-type ScholarPage = "profile" | "applications" | "research" | "fees" | "dochub" | "noticeboard";
+type ScholarPage =
+  | "profile"
+  | "application-supervisor"
+  | "application-pretalk"
+  | "application-extension"
+  | "application-reregistration"
+  | "application-track"
+  | "application-thesis"
+  | "research"
+  | "fees"
+  | "dochub"
+  | "noticeboard";
 type ReviewerPage = "dashboard" | "reviews";
 
 interface User {
@@ -207,7 +218,12 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
   const renderScholarSidebar = () => (
     <ul>
       <li className={scholarPage === "profile" ? "active" : ""} onClick={() => setScholarPage("profile")} data-testid="nav-profile">Profile</li>
-      <li className={`red-button ${scholarPage === "applications" ? "active" : ""}`} onClick={() => setScholarPage("applications")} data-testid="nav-applications">Applications</li>
+      <li className={scholarPage === "application-supervisor" ? "active" : ""} onClick={() => setScholarPage("application-supervisor")} data-testid="nav-application-supervisor">Change of Supervisor</li>
+      <li className={scholarPage === "application-pretalk" ? "active" : ""} onClick={() => setScholarPage("application-pretalk")} data-testid="nav-application-pretalk">Pre-talk Application</li>
+      <li className={scholarPage === "application-extension" ? "active" : ""} onClick={() => setScholarPage("application-extension")} data-testid="nav-application-extension">Extension Application</li>
+      <li className={scholarPage === "application-reregistration" ? "active" : ""} onClick={() => setScholarPage("application-reregistration")} data-testid="nav-application-reregistration">Re-Registration Application</li>
+      <li className={scholarPage === "application-thesis" ? "active" : ""} onClick={() => setScholarPage("application-thesis")} data-testid="nav-application-thesis">Thesis Submission</li>
+      <li className={`red-button ${scholarPage === "application-track" ? "active" : ""}`} onClick={() => setScholarPage("application-track")} data-testid="nav-application-track">Track My Application</li>
       <li className={scholarPage === "research" ? "active" : ""} onClick={() => setScholarPage("research")} data-testid="nav-research">Research Progress</li>
       <li className={scholarPage === "fees" ? "active" : ""} onClick={() => setScholarPage("fees")} data-testid="nav-fees">Fee Details</li>
       <li className={`red-button ${scholarPage === "dochub" ? "active" : ""}`} onClick={() => setScholarPage("dochub")} data-testid="nav-dochub">Doc-Hub</li>
@@ -226,7 +242,18 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
     if (user.role === "scholar") {
       switch (scholarPage) {
         case "profile": return <ScholarProfile user={user} />;
-        case "applications": return <ScholarApplications user={user} />;
+        case "application-supervisor":
+          return <ScholarApplicationFormPage user={user} formType="supervisor" onBack={() => setScholarPage("application-track")} />;
+        case "application-pretalk":
+          return <ScholarApplicationFormPage user={user} formType="pretalk" onBack={() => setScholarPage("application-track")} />;
+        case "application-extension":
+          return <ScholarApplicationFormPage user={user} formType="extension" onBack={() => setScholarPage("application-track")} />;
+        case "application-reregistration":
+          return <ScholarApplicationFormPage user={user} formType="reregistration" onBack={() => setScholarPage("application-track")} />;
+        case "application-thesis":
+          return <ScholarThesisSubmission />;
+        case "application-track":
+          return <ScholarApplicationsTracker user={user} />;
         case "research": return <ScholarResearchProgress userId={user.id} />;
         case "fees": return <ScholarFeeDetails />;
         case "dochub": return <ScholarDocHub />;
@@ -761,17 +788,34 @@ interface EligibilityStatus {
   };
 }
 
-interface ExtensionRequirements {
-  minYearsRequired: number;
-  minRacMeetings: number;
-  courseCompletionRequired: boolean;
-  noFeeArrearsRequired: boolean;
-}
+type ApplicationFormType = "extension" | "supervisor" | "pretalk" | "reregistration";
 
-function ScholarApplications({ user }: { user: User }) {
-  const [view, setView] = useState<"options" | "apply" | "track">("options");
-  const [formType, setFormType] = useState<string | null>(null);
-  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+const applicationFormTitles: Record<ApplicationFormType, string> = {
+  supervisor: "Change of Supervisor",
+  pretalk: "Pre-talk Application",
+  extension: "Extension Application",
+  reregistration: "Re-Registration Application",
+};
+
+const applicationSubmitTypes: Record<ApplicationFormType, string> = {
+  supervisor: "Supervisor Change",
+  pretalk: "Pre-Talk",
+  extension: "Extension",
+  reregistration: "Re-Registration",
+};
+
+function ScholarApplicationFormPage({
+  user,
+  formType,
+  onBack,
+}: {
+  user: User;
+  formType: ApplicationFormType;
+  onBack: () => void;
+}) {
+  const [eligibility, setEligibility] = useState<EligibilityStatus | null>(null);
+  const [eligibilityLoading, setEligibilityLoading] = useState(formType === "extension");
+  const [eligibilityError, setEligibilityError] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -780,42 +824,26 @@ function ScholarApplications({ user }: { user: User }) {
     queryFn: () => fetch(`/api/applications?userId=${user.id}`).then(res => res.json())
   });
 
-  const handleExtensionClick = async () => {
-    try {
-      const scholarIdentifier = user.scholarId ?? String(user.id);
-      const res = await fetch(`/api/extensions/check-eligibility/${scholarIdentifier}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.eligibility.isEligible) {
-          // Eligible - proceed with form
-          setView("apply");
-          setFormType("extension");
-        } else {
-          // Not eligible - show red toast and don't proceed
-          const issues = data.eligibility.issues || [];
-          const message = issues.length > 0 ? issues[0] : "You are not eligible for PhD extension";
-          toast({
-            title: "Cannot Apply for Extension",
-            description: message,
-            variant: "destructive"
-          });
+    const checkEligibility = async () => {
+      try {
+        setEligibilityLoading(true);
+        setEligibilityError(null);
+        const scholarIdentifier = user.scholarId ?? String(user.id);
+        const res = await fetch(`/api/extensions/check-eligibility/${scholarIdentifier}`);
+        if (!res.ok) {
+          throw new Error("Unable to check eligibility");
         }
-      } else {
-        toast({
-          title: "Error",
-          description: "Unable to check eligibility",
-          variant: "destructive"
-        });
+        const data = await res.json();
+        setEligibility(data.eligibility);
+      } catch (error: any) {
+        setEligibilityError(error?.message || "Failed to check eligibility");
+      } finally {
+        setEligibilityLoading(false);
       }
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to check eligibility",
-        variant: "destructive"
-      });
-      console.error("Error checking eligibility:", error);
-    }
-  };
+    };
+
+    checkEligibility();
+  }, [formType, user.id, user.scholarId]);
 
   const submitMutation = useMutation({
     mutationFn: async (data: { type: string; details: Record<string, unknown> }) => {
@@ -832,8 +860,6 @@ function ScholarApplications({ user }: { user: User }) {
         title: "Application submitted",
         description: "Your application was submitted successfully and will be reviewed by the Supervisor."
       });
-      setView("options");
-      setFormType(null);
     },
     onError: (error: any) => {
       const message = typeof error?.message === "string" ? error.message : "Failed to submit application";
@@ -843,6 +869,88 @@ function ScholarApplications({ user }: { user: User }) {
         variant: "destructive"
       });
     }
+  });
+
+  const renderForm = () => {
+    const submitType = applicationSubmitTypes[formType];
+    switch (formType) {
+      case "extension":
+        return (
+          <ExtensionForm
+            user={user}
+            onSubmit={(details) => submitMutation.mutate({ type: submitType, details })}
+            onBack={onBack}
+            isSubmitting={submitMutation.isPending}
+          />
+        );
+      case "supervisor":
+        return (
+          <SupervisorChangeForm
+            user={user}
+            onSubmit={(details) => submitMutation.mutate({ type: submitType, details })}
+            onBack={onBack}
+            isSubmitting={submitMutation.isPending}
+          />
+        );
+      case "pretalk":
+        return (
+          <PreTalkForm
+            user={user}
+            onSubmit={(details) => submitMutation.mutate({ type: submitType, details })}
+            onBack={onBack}
+            isSubmitting={submitMutation.isPending}
+          />
+        );
+      case "reregistration":
+        return (
+          <ReRegistrationForm
+            user={user}
+            onSubmit={(details) => submitMutation.mutate({ type: submitType, details })}
+            onBack={onBack}
+            isSubmitting={submitMutation.isPending}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="applications-container">
+      <div className="applications-title">{applicationFormTitles[formType]}</div>
+
+      {formType === "extension" && eligibilityLoading && (
+        <div style={{ textAlign: "center", padding: "40px" }}>Checking extension eligibility...</div>
+      )}
+
+      {formType === "extension" && !eligibilityLoading && eligibilityError && (
+        <div className="form-container" style={{ textAlign: "center" }}>
+          <p style={{ color: "#e74c3c", marginBottom: "20px" }}>{eligibilityError}</p>
+          <button className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back</button>
+        </div>
+      )}
+
+      {formType === "extension" && !eligibilityLoading && eligibility && !eligibility.isEligible && (
+        <div className="form-container" style={{ textAlign: "center" }}>
+          <h3 style={{ color: "#e74c3c", marginBottom: "10px" }}>Extension Not Eligible</h3>
+          <p style={{ color: "#666", marginBottom: "20px" }}>
+            {eligibility.issues?.[0] || "You are not eligible for a Ph.D extension at this time."}
+          </p>
+          <button className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back</button>
+        </div>
+      )}
+
+      {formType !== "extension" || (!eligibilityLoading && !eligibilityError && (!eligibility || eligibility.isEligible)) ? renderForm() : null}
+    </div>
+  );
+}
+
+function ScholarApplicationsTracker({ user }: { user: User }) {
+  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+
+  const { data: applications = [], isLoading } = useQuery<Application[]>({
+    queryKey: ["/api/applications", { scholarId: user.scholarId }],
+    queryFn: () => fetch(`/api/applications?scholarId=${user.scholarId}`).then(res => res.json())
   });
 
   const getStageProgress = (stage: string, status: string) => {
@@ -860,84 +968,54 @@ function ScholarApplications({ user }: { user: User }) {
 
   return (
     <div className="applications-container">
-      <div className="applications-title">Applications</div>
+      <div className="applications-title">Track My Application</div>
 
-      {view === "options" && (
-        <div className="applications-options">
-          <button className="application-option" onClick={() => { setView("apply"); setFormType(null); }} data-testid="button-apply">Apply</button>
-          <button className="application-option" onClick={() => setView("track")} data-testid="button-track">Track Your Application</button>
-        </div>
-      )}
-
-      {view === "apply" && !formType && (
-        <div className="dropdown-container" style={{ display: "block" }}>
-          <div className="dropdown-box" data-testid="dropdown-application-type">Select Application Type ▼</div>
-          <div className="dropdown-content" style={{ display: "block", position: "relative" }}>
-            <button onClick={() => setFormType("supervisor")} data-testid="button-supervisor-change">Change of Supervisor</button>
-            <button onClick={() => setFormType("pretalk")} data-testid="button-pretalk">Apply for Pre-talk</button>
-            <button onClick={handleExtensionClick} data-testid="button-extension">Extension of Ph.D Duration</button>
-            <button onClick={() => setFormType("reregistration")} data-testid="button-reregistration">Ph.D Re-Registration</button>
-          </div>
-          <button className="submit-btn" onClick={() => setView("options")} style={{ marginTop: "20px", background: "#6c757d" }} data-testid="button-back-options">Back to Options</button>
-        </div>
-      )}
-
-      {view === "apply" && formType === "extension" && (
-        <ExtensionForm user={user} onSubmit={(details) => submitMutation.mutate({ type: "Extension", details })} onBack={() => { setView("options"); setFormType(null); }} isSubmitting={submitMutation.isPending} />
-      )}
-
-      {view === "apply" && formType === "supervisor" && (
-        <SupervisorChangeForm user={user} onSubmit={(details) => submitMutation.mutate({ type: "Supervisor Change", details })} onBack={() => { setView("options"); setFormType(null); }} isSubmitting={submitMutation.isPending} />
-      )}
-
-      {view === "apply" && formType === "pretalk" && (
-        <PreTalkForm user={user} onSubmit={(details) => submitMutation.mutate({ type: "Pre-Talk", details })} onBack={() => { setView("options"); setFormType(null); }} isSubmitting={submitMutation.isPending} />
-      )}
-
-      {view === "apply" && formType === "reregistration" && (
-        <ReRegistrationForm user={user} onSubmit={(details) => submitMutation.mutate({ type: "Re-Registration", details })} onBack={() => { setView("options"); setFormType(null); }} isSubmitting={submitMutation.isPending} />
-      )}
-
-      {view === "track" && (
-        <>
-          <button className="submit-btn" onClick={() => setView("options")} style={{ marginBottom: "20px", background: "#6c757d" }} data-testid="button-back-options-track">Back to Options</button>
-          {isLoading ? (
-            <div style={{ textAlign: "center", padding: "40px" }}>Loading applications...</div>
-          ) : applications.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>No applications found. Submit an application to get started.</div>
-          ) : (
-            <div className="tracking-container">
-              {applications.map((app) => {
-                const progress = getStageProgress(app.currentStage, app.status);
-                return (
-                  <div className="application-card" key={app.id}>
-                    <div className="application-header">
-                      <div className="application-type">{app.type}</div>
-                      <div className="application-submitted">Submitted: {new Date(app.submissionDate).toLocaleDateString()}</div>
-                    </div>
-                    <div className="application-body">
-                      <div className="current-stage">
-                        <div className={`stage-indicator ${app.status === "Pending" ? "in-progress" : app.status === "Approved" ? "completed" : "rejected"}`}></div>
-                        <div className="stage-text">{progress.label}</div>
-                      </div>
-                      <div className="progress-container">
-                        <div className="progress-bar"><div className="progress-fill" style={{ width: `${progress.percent}%`, background: progress.color }}></div></div>
-                        <div className="progress-text"><span>Submitted</span><span>{progress.percent}% Complete</span></div>
-                      </div>
-                    </div>
-                    <div className="application-footer">
-                      <div className={`status-badge ${app.status === "Pending" ? "in-progress" : app.status === "Approved" ? "completed" : "rejected"}`}>{app.status}</div>
-                      <button className="details-btn" onClick={() => setSelectedApp(app)} data-testid={`button-details-${app.id}`}>More Details →</button>
-                    </div>
+      {isLoading ? (
+        <div style={{ textAlign: "center", padding: "40px" }}>Loading applications...</div>
+      ) : applications.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>No applications found. Submit an application to get started.</div>
+      ) : (
+        <div className="tracking-container">
+          {applications.map((app) => {
+            const progress = getStageProgress(app.currentStage, app.status);
+            return (
+              <div className="application-card" key={app.id}>
+                <div className="application-header">
+                  <div className="application-type">{app.type}</div>
+                  <div className="application-submitted">Submitted: {new Date(app.submissionDate).toLocaleDateString()}</div>
+                </div>
+                <div className="application-body">
+                  <div className="current-stage">
+                    <div className={`stage-indicator ${app.status === "Pending" ? "in-progress" : app.status === "Approved" ? "completed" : "rejected"}`}></div>
+                    <div className="stage-text">{progress.label}</div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </>
+                  <div className="progress-container">
+                    <div className="progress-bar"><div className="progress-fill" style={{ width: `${progress.percent}%`, background: progress.color }}></div></div>
+                    <div className="progress-text"><span>Submitted</span><span>{progress.percent}% Complete</span></div>
+                  </div>
+                </div>
+                <div className="application-footer">
+                  <div className={`status-badge ${app.status === "Pending" ? "in-progress" : app.status === "Approved" ? "completed" : "rejected"}`}>{app.status}</div>
+                  <button className="details-btn" onClick={() => setSelectedApp(app)} data-testid={`button-details-${app.id}`}>More Details →</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {selectedApp && <ApplicationDetailModal app={selectedApp} onClose={() => setSelectedApp(null)} />}
+    </div>
+  );
+}
+
+function ScholarThesisSubmission() {
+  return (
+    <div className="applications-container">
+      <div className="applications-title">Thesis Submission</div>
+      <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>
+        Thesis submission routing is ready. Content will be added soon.
+      </div>
     </div>
   );
 }
@@ -1192,7 +1270,7 @@ function SupervisorChangeForm({ user, onSubmit, onBack, isSubmitting }: { user: 
       <div className="form-group"><label>Reason/Justification</label><textarea value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })} placeholder="Please provide detailed reason" style={{ height: "120px" }} /></div>
       <div style={{ display: "flex", gap: "10px" }}>
         <button className="submit-btn" onClick={() => onSubmit(formData)} disabled={isSubmitting} data-testid="button-submit-form">{isSubmitting ? "Submitting..." : "Submit Application"}</button>
-        <button className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back to Options</button>
+        <button className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back to Tracking</button>
       </div>
     </div>
   );
@@ -1220,7 +1298,7 @@ function PreTalkForm({ user, onSubmit, onBack, isSubmitting }: { user: User; onS
       <div className="form-group"><label>Venue</label><input type="text" value={formData.venue} onChange={(e) => setFormData({ ...formData, venue: e.target.value })} /></div>
       <div style={{ display: "flex", gap: "10px" }}>
         <button className="submit-btn" onClick={() => onSubmit(formData)} disabled={isSubmitting}>{isSubmitting ? "Submitting..." : "Submit Application"}</button>
-        <button className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back</button>
+        <button className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back to Tracking</button>
       </div>
     </div>
   );
@@ -1248,7 +1326,7 @@ function ExtensionForm({ user, onSubmit, onBack, isSubmitting }: { user: User; o
       <div className="form-group"><label>Expected Timeline</label><textarea value={formData.timeline} onChange={(e) => setFormData({ ...formData, timeline: e.target.value })} placeholder="When do you expect to complete?" style={{ height: "80px" }} /></div>
       <div style={{ display: "flex", gap: "10px" }}>
         <button className="submit-btn" onClick={() => onSubmit(formData)} disabled={isSubmitting}>{isSubmitting ? "Submitting..." : "Submit Application"}</button>
-        <button className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back</button>
+        <button className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back to Tracking</button>
       </div>
     </div>
   );
@@ -1277,7 +1355,7 @@ function ReRegistrationForm({ user, onSubmit, onBack, isSubmitting }: { user: Us
       <div className="form-group"><label>E-mail</label><input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} /></div>
       <div style={{ display: "flex", gap: "10px" }}>
         <button className="submit-btn" onClick={() => onSubmit(formData)} disabled={isSubmitting}>{isSubmitting ? "Submitting..." : "Submit Application"}</button>
-        <button className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back</button>
+        <button className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back to Tracking</button>
       </div>
     </div>
   );
