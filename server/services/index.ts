@@ -2,6 +2,7 @@ import { storage } from "../storage";
 import { ApplicationDocumentService } from "./applicationDocumentService";
 import { ApplicationService } from "./applicationService";
 import { AuthService } from "./authService";
+import { DocumentStorageProvider } from "./documentStorageProvider";
 import { ExtensionEligibilityService } from "./extensionEligibilityService";
 import { FeeStructureService } from "./feeStructureService";
 import { ResearchProgressService } from "./researchProgressService";
@@ -11,7 +12,11 @@ import { SeedService } from "./seedService";
 import { UserService } from "./userService";
 
 const extensionEligibilityService = new ExtensionEligibilityService(storage);
-const applicationDocumentService = new ApplicationDocumentService(storage);
+const documentStorageProvider = new DocumentStorageProvider();
+const applicationDocumentService = new ApplicationDocumentService(
+  storage,
+  documentStorageProvider,
+);
 const applicationService = new ApplicationService(
   storage,
   extensionEligibilityService,
@@ -29,6 +34,7 @@ export {
   applicationDocumentService,
   applicationService,
   authService,
+  documentStorageProvider,
   feeStructureService,
   extensionEligibilityService,
   researchProgressService,

@@ -63,6 +63,8 @@ export interface ApplicationAttachment {
   documentType: string;
   fileName: string;
   fileUrl: string;
+  fileSize?: number | null;
+  mimeType?: string | null;
   uploadedBy: number;
   uploadedOn?: string | Date | null;
   isVerified?: boolean;

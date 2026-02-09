@@ -1,14 +1,16 @@
 import type { IStorage } from "../storage";
 import { AppError } from "../errors";
+import type { DocumentStorageProvider } from "./documentStorageProvider";
 
 export interface DocumentUploadInput {
   applicationId: number;
   documentType: string;
   fileName: string;
-  fileUrl: string;
+  fileUrl?: string;
   fileSize?: number;
   mimeType?: string;
   uploadedBy: number;
+  objectKey?: string;
 }
 
 export interface DocumentVerificationInput {
@@ -19,17 +21,28 @@ export interface DocumentVerificationInput {
 }
 
 export class ApplicationDocumentService {
-  constructor(private readonly storage: IStorage) {}
+  constructor(
+    private readonly storage: IStorage,
+    private readonly documentStorageProvider?: DocumentStorageProvider,
+  ) {}
 
   /**
    * Upload a document for an application
    */
   async uploadDocument(input: DocumentUploadInput) {
+    const resolvedUrl =
+      input.fileUrl ??
+      (input.objectKey
+        ? this.documentStorageProvider?.resolveDownloadUrl(input.objectKey)
+        : undefined);
+    if (!resolvedUrl) {
+      throw new AppError("File URL is required", 400);
+    }
     const attachment = await this.storage.createApplicationAttachment({
       applicationId: input.applicationId,
       documentType: input.documentType,
       fileName: input.fileName,
-      fileUrl: input.fileUrl,
+      fileUrl: resolvedUrl,
       fileSize: input.fileSize,
       mimeType: input.mimeType,
       uploadedBy: input.uploadedBy,
@@ -165,5 +178,65 @@ export class ApplicationDocumentService {
    */
   async deleteDocument(attachmentId: number, uploadedBy: number) {
     return this.storage.deleteApplicationAttachment(attachmentId, uploadedBy);
+  }
+
+  async assertDocumentAccess(
+    applicationId: number,
+    userId: number,
+    options?: {
+      requireUploader?: boolean;
+      requireReviewer?: boolean;
+      requireStageMatch?: boolean;
+    },
+  ) {
+    const application = await this.storage.getApplicationById(applicationId);
+    if (!application) {
+      throw new AppError("Application not found", 404);
+    }
+
+    const user = await this.storage.getUser(userId);
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+
+    const isUploader = application.userId === userId;
+    const isReviewer = await this.isReviewerForApplication(
+      userId,
+      user.role ?? "",
+      application.userId,
+    );
+
+    if (options?.requireUploader && !isUploader) {
+      throw new AppError("Not authorized to upload documents for this application", 403);
+    }
+
+    if (options?.requireReviewer && !isReviewer) {
+      throw new AppError("Not authorized to review documents for this application", 403);
+    }
+
+    if (!options?.requireUploader && !options?.requireReviewer && !isUploader && !isReviewer) {
+      throw new AppError("Not authorized to access documents for this application", 403);
+    }
+
+    if (options?.requireStageMatch && isReviewer) {
+      const role = user.role ?? "";
+      if (application.currentStage !== role) {
+        throw new AppError("Not authorized for this review stage", 403);
+      }
+    }
+
+    return { application, user, isReviewer, isUploader };
+  }
+
+  private async isReviewerForApplication(
+    reviewerId: number,
+    role: string,
+    scholarUserId: number,
+  ) {
+    if (role === "supervisor") {
+      return this.storage.isSupervisorForScholar(reviewerId, String(scholarUserId));
+    }
+
+    return ["drc", "irc", "doaa"].includes(role);
   }
 }
