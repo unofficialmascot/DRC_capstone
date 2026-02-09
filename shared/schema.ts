@@ -79,6 +79,7 @@ export const scholarEducationBackground = pgTable("scholar_education_background"
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   educationLevel: text("education_level").notNull(), // '10th', '12th', 'UG', 'PG'
+  instituteName: text("institute_name"),
   boardOrUniversity: text("board_or_university").notNull(),
   percentageOrCgpa: numeric("percentage_or_cgpa", { precision: 5, scale: 2 }),
   yearOfCompletion: integer("year_of_completion"),
