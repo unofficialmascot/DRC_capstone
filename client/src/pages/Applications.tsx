@@ -55,7 +55,7 @@ export default function Applications() {
     queryFn: () => apiRequest("GET", "/api/auth/me").then(res => res.json()),
   });
 
-  // Get applications for current user's scholar ID
+  // Get applications for current user ID
   const { data: applications, isLoading } = useApplications(user?.id?.toString());
   const createApplication = useCreateApplication();
 
@@ -63,7 +63,7 @@ export default function Applications() {
     if (!selectedType || !user?.id) return;
     
     createApplication.mutate({
-      scholarId: user.id,
+      userId: user.id,
       type: selectedType,
       details: { reason },
     }, {
