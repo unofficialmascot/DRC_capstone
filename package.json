@@ -9,7 +9,9 @@
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
     "db:push": "NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit push",
-    "demo:setup": "node reset-db.cjs && node run-seed.mjs && npm run dev"
+    "demo:setup": "node reset-db.cjs && node run-seed.mjs && npm run dev",
+    "dev:db": "node reset-schema.cjs && npm run db:push && node run-seed.mjs",
+    "dev:demo": "DEMO_FILE_STORAGE=true DEMO_DATA_FILE=server/data/demo-data.json npm run dev"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

@@ -1,5 +1,31 @@
 # DRC Capstone
 
+## Local dev database
+Use the local dev flow when you want a clean schema plus demo data. It will **drop and recreate the public schema**, recreate tables from the Drizzle schema, and then seed demo users/data.
+
+```bash
+npm run dev:db
+```
+
+## Local demo data (no database)
+If you want to run the app without connecting to Postgres, use the file-backed demo store. Data lives in `server/data/demo-data.json`, so you can edit the JSON directly and restart the server.
+
+```bash
+npm run dev:demo
+```
+
+You can also point to a different data file by setting `DEMO_DATA_FILE=/path/to/your.json`.
+
+### Reset/seed helpers (repo root)
+- `reset-schema.cjs`: drops/recreates the public schema (use with `dev:db`).
+- `reset-db.cjs`: clears demo data without dropping the schema.
+- `reset-seed.cjs`: clears demo data (variant used for reseeding workflows).
+- `run-seed.mjs`: inserts demo accounts and sample records.
+
+### Migrations vs. demo data
+- **Production/staging**: apply schema changes via migrations only (see `apply-migrations.cjs`), and avoid demo reseeds.
+- **Local dev/demo**: use `npm run dev:db` to rebuild schema and load demo data quickly.
+
 ## Demo data (seeded)
 Use the following demo IDs (all with password `password123`) to log in and show specific flows.
 
