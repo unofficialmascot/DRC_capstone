@@ -8,6 +8,7 @@ import { registerExtensionRoutes } from "./routes/extensions.routes";
 import { registerFeeStructureRoutes } from "./routes/fees.routes";
 import { registerStatsRoutes } from "./routes/stats.routes";
 import { registerSupervisorRoutes } from "./routes/supervisors.routes";
+import { registerThesisSubmissionRoutes } from "./routes/thesis-submissions.routes";
 import { registerUserRoutes } from "./routes/users.routes";
 
 export async function registerRoutes(
@@ -35,6 +36,7 @@ export async function registerRoutes(
   registerFeeStructureRoutes(app, respondWithError);
   registerStatsRoutes(app, respondWithError);
   registerSupervisorRoutes(app, respondWithError);
+  registerThesisSubmissionRoutes(app, respondWithError);
 
   await seedService.seedDatabase();
 

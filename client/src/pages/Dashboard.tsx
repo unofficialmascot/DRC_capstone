@@ -63,7 +63,7 @@ export default function Dashboard() {
                 <p className="text-muted-foreground mt-1">Here is what's happening with your research today.</p>
               </div>
               <Button asChild className="hidden sm:flex bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">
-                <Link href="/applications">
+                <Link href="/applications/track">
                   New Application <ArrowRight className="ml-2 w-4 h-4" />
                 </Link>
               </Button>
@@ -121,7 +121,7 @@ export default function Dashboard() {
                     ))}
                   </div>
                   <Button variant="ghost" className="w-full mt-4 text-primary" asChild>
-                    <Link href="/applications">View All Applications</Link>
+                    <Link href="/applications/track">View All Applications</Link>
                   </Button>
                 </CardContent>
               </Card>

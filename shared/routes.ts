@@ -62,6 +62,23 @@ export const api = {
       },
     },
   },
+  thesisSubmissions: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/thesis-submissions',
+      responses: {
+        200: z.array(z.unknown()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/thesis-submissions',
+      input: z.object({}).passthrough(),
+      responses: {
+        201: z.object({ message: z.string() }),
+      },
+    },
+  },
   stats: {
     get: {
       method: 'GET' as const,
