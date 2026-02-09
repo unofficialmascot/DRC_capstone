@@ -3,8 +3,8 @@ import type { IStorage } from "../storage";
 export class ResearchProgressService {
   constructor(private readonly storage: IStorage) {}
 
-  async getResearchProgress(scholarId: string) {
-    const stats = await this.storage.getResearchProgress(scholarId);
+  async getResearchProgress(userId: number) {
+    const stats = await this.storage.getResearchProgress(userId);
     
     if (!stats) {
       return {
@@ -18,16 +18,15 @@ export class ResearchProgressService {
   }
 
   async createResearchProgress(
-    scholarId: string,
+    userId: number,
     data: {
       completedReviews?: number;
       pendingReports?: number;
       publications?: number;
     },
   ) {
-    const numericScholarId = parseInt(scholarId, 10);
     return this.storage.createResearchProgress({
-      userId: numericScholarId,
+      userId,
       completedReviews: data.completedReviews ?? 0,
       pendingReports: data.pendingReports ?? 0,
       publications: data.publications ?? 0,
@@ -35,18 +34,17 @@ export class ResearchProgressService {
   }
 
   async updateResearchProgress(
-    scholarId: string,
+    userId: number,
     data: {
       completedReviews?: number;
       pendingReports?: number;
       publications?: number;
     },
   ) {
-    const numericScholarId = parseInt(scholarId, 10);
-    const existing = await this.storage.getResearchProgress(scholarId);
+    const existing = await this.storage.getResearchProgress(userId);
     
     if (!existing) {
-      return this.createResearchProgress(scholarId, data);
+      return this.createResearchProgress(userId, data);
     }
 
     // Update logic would go here

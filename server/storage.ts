@@ -75,7 +75,7 @@ export interface IStorage {
   // Application Reviews
   getReviewsForApplication(applicationId: number): Promise<ApplicationReview[]>;
   createReview(review: CreateReviewInput): Promise<ApplicationReview>;
-  isSupervisorForScholar(employeeId: string, scholarId: string): Promise<boolean>;
+  isSupervisorForScholar(supervisorUserId: number, scholarId: string): Promise<boolean>;
   getScholarsBySupervisor(supervisorId: number | string): Promise<(Scholar & Partial<User>)[]>;
   createScholarProfile(profile: CreateScholarProfileInput): Promise<Scholar>;
   updateScholarPhase(userId: number, phase: string): Promise<Scholar>;
@@ -85,7 +85,7 @@ export interface IStorage {
   ): Promise<ScholarSupervisor>;
   
   // Stats
-  getResearchProgress(scholarId: string): Promise<ResearchProgress | undefined>;
+  getResearchProgress(userId: number): Promise<ResearchProgress | undefined>;
   createResearchProgress(stats: CreateResearchProgressInput): Promise<ResearchProgress>;
   getScholarById(id: number): Promise<Scholar | undefined>;
   getScholarByScholarId(scholarId: string): Promise<Scholar | undefined>;
@@ -1018,13 +1018,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createApplication(app: CreateApplicationInput): Promise<Application> {
-    const userId = app.userId ?? app.scholarId;
-    if (!userId) {
-      throw new Error("Application requires a userId");
-    }
     const [newApp] = await db.insert(applications).values({
       ...app,
-      userId,
     }).returning();
     return newApp;
   }
@@ -1041,24 +1036,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createReview(review: CreateReviewInput): Promise<ApplicationReview> {
-    const reviewerId = typeof review.reviewerId === "string"
-      ? parseInt(review.reviewerId, 10)
-      : review.reviewerId;
     const [newReview] = await db.insert(applicationReviews).values({
       ...review,
-      reviewerId,
     }).returning();
     return newReview;
   }
 
-  async isSupervisorForScholar(employeeId: string, scholarId: string): Promise<boolean> {
+  async isSupervisorForScholar(supervisorUserId: number, scholarId: string): Promise<boolean> {
     const [supervisorRecord] = await db
       .select()
       .from(scholarSupervisors)
-      .innerJoin(scholars, eq(scholars.id, scholarSupervisors.scholarId))
+      .innerJoin(scholars, eq(scholars.userId, scholarSupervisors.userId))
       .where(and(
         eq(scholars.scholarId, scholarId),
-        eq(scholarSupervisors.supervisorId, parseInt(employeeId))
+        eq(scholarSupervisors.supervisorId, supervisorUserId)
       ));
 
     return !!supervisorRecord;
@@ -1115,21 +1106,14 @@ export class DatabaseStorage implements IStorage {
     return assignment;
   }
 
-  async getResearchProgress(scholarId: string): Promise<ResearchProgress | undefined> {
-    // Convert scholarId string to number for lookup
-    const numericId = parseInt(scholarId, 10);
-    const [stats] = await db.select().from(researchProgress).where(eq(researchProgress.userId, numericId));
+  async getResearchProgress(userId: number): Promise<ResearchProgress | undefined> {
+    const [stats] = await db.select().from(researchProgress).where(eq(researchProgress.userId, userId));
     return stats;
   }
 
   async createResearchProgress(stats: CreateResearchProgressInput): Promise<ResearchProgress> {
-    const userId = stats.userId ?? stats.scholarId;
-    if (!userId) {
-      throw new Error("Research progress requires a userId");
-    }
     const [newStats] = await db.insert(researchProgress).values({
       ...stats,
-      userId,
     }).returning();
     return newStats;
   }

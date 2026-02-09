@@ -334,7 +334,7 @@ export class SeedService {
           submissionDate: new Date("2025-01-15T10:30:00Z"),
           details: {
             candidateName: "Thirupathi Kumar",
-            registrationDate: "15-08-2020",
+            joiningDate: "2020-08-15",
             durationEligible: "5 years",
             extensionDuration: "6 months",
             reason: "Additional time needed for experimental validation",

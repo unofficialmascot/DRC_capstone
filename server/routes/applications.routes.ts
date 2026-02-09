@@ -15,10 +15,10 @@ export function registerApplicationRoutes(
 ) {
   app.get(api.applications.list.path, async (req, res) => {
     try {
-      const scholarId = req.query.scholarId
-        ? String(req.query.scholarId)
+      const userId = req.query.userId
+        ? String(req.query.userId)
         : undefined;
-      const apps = await applicationService.getApplications(scholarId);
+      const apps = await applicationService.getApplications(userId);
       res.json(apps);
     } catch (error: unknown) {
       respondWithError(req, res, error, 500);
@@ -73,7 +73,7 @@ export function registerApplicationRoutes(
     try {
       const input = api.applications.create.input.parse(req.body);
       const newApp = await applicationService.createApplication(
-        input.scholarId,
+        input.userId,
         input.type,
         input.details,
       );
@@ -98,7 +98,7 @@ export function registerApplicationRoutes(
     try {
       const reviewInput = z
         .object({
-          reviewerId: z.string(),
+          reviewerId: z.number(),
           decision: z.enum(["approved", "rejected"]),
           remarks: z.string().min(1, "Remarks are required"),
         })
