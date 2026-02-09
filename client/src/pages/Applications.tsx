@@ -1,26 +1,11 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useApplications, useCreateApplication } from "@/hooks/use-applications";
+import { useApplications } from "@/hooks/use-applications";
 import { apiRequest } from "@/lib/queryClient";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { FilePlus, FileClock, AlertCircle, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
 
 interface User {
   id: number;
@@ -37,18 +22,7 @@ interface User {
   researchTitle?: string;
 }
 
-const APPLICATION_TYPES = [
-  { id: "Leave", label: "Leave Application", icon: FileClock, color: "bg-blue-500" },
-  { id: "Extension", label: "Extension Request", icon: Calendar, color: "bg-purple-500" },
-  { id: "Deregistration", label: "Deregistration", icon: AlertCircle, color: "bg-red-500" },
-  { id: "General", label: "General Request", icon: FilePlus, color: "bg-emerald-500" },
-];
-
 export default function Applications() {
-  const [selectedType, setSelectedType] = useState<string | null>(null);
-  const [reason, setReason] = useState("");
-  const { toast } = useToast();
-
   // Get current user
   const { data: user } = useQuery({
     queryKey: ["/api/auth/me"],
@@ -93,31 +67,8 @@ export default function Applications() {
         <main className="flex-1 overflow-y-auto p-4 md:p-8">
           <div className="max-w-5xl mx-auto">
             <div className="mb-10">
-              <h1 className="text-3xl font-display font-bold text-slate-900 mb-2">Applications</h1>
-              <p className="text-muted-foreground">Submit and track your academic requests.</p>
-            </div>
-
-            {/* Application Type Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-              {APPLICATION_TYPES.map((type, i) => (
-                <motion.div 
-                  key={type.id}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.1 }}
-                >
-                  <Button
-                    variant="outline"
-                    className="w-full h-32 flex flex-col gap-4 border-2 hover:border-primary/50 hover:bg-slate-50 hover:shadow-lg transition-all rounded-2xl group"
-                    onClick={() => setSelectedType(type.id)}
-                  >
-                    <div className={cn("p-3 rounded-full text-white transition-transform group-hover:scale-110", type.color)}>
-                      <type.icon className="w-6 h-6" />
-                    </div>
-                    <span className="font-semibold text-slate-700">{type.label}</span>
-                  </Button>
-                </motion.div>
-              ))}
+              <h1 className="text-3xl font-display font-bold text-slate-900 mb-2">Track My Application</h1>
+              <p className="text-muted-foreground">Monitor the status of your submitted requests.</p>
             </div>
 
             {/* History Table */}
@@ -168,44 +119,6 @@ export default function Applications() {
           </div>
         </main>
       </div>
-
-      {/* Application Modal */}
-      <Dialog open={!!selectedType} onOpenChange={(open) => !open && setSelectedType(null)}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>New {selectedType} Application</DialogTitle>
-            <DialogDescription>
-              Please provide the necessary details for your request.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="scholarCode">Scholar Code</Label>
-              <Input id="scholarCode" value={user?.scholarId || ""} disabled className="bg-slate-50" />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="reason">Reason / Description</Label>
-              <Textarea 
-                id="reason" 
-                value={reason} 
-                onChange={(e) => setReason(e.target.value)}
-                placeholder="Please describe why you are applying..." 
-                className="h-32" 
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedType(null)}>Cancel</Button>
-            <Button 
-              onClick={handleApply} 
-              disabled={!reason || createApplication.isPending || !user?.id}
-              className="bg-primary hover:bg-primary/90"
-            >
-              {createApplication.isPending ? "Submitting..." : "Submit Application"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
