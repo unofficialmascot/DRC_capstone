@@ -29,8 +29,35 @@ export default function Applications() {
     queryFn: () => apiRequest("GET", "/api/auth/me").then(res => res.json()),
   });
 
-  // Get applications for current user's scholar ID
+  // Get applications for current user ID
   const { data: applications, isLoading } = useApplications(user?.id?.toString());
+  const createApplication = useCreateApplication();
+
+  const handleApply = () => {
+    if (!selectedType || !user?.id) return;
+    
+    createApplication.mutate({
+      userId: user.id,
+      type: selectedType,
+      details: { reason },
+    }, {
+      onSuccess: () => {
+        toast({
+          title: "Application Submitted",
+          description: `Your ${selectedType} application has been submitted successfully.`,
+        });
+        setSelectedType(null);
+        setReason("");
+      },
+      onError: (error) => {
+        toast({
+          variant: "destructive",
+          title: "Submission Failed",
+          description: `${(error as Error).message || "Could not submit application. Please try again."}`,
+        });
+      }
+    });
+  };
 
   return (
     <div className="flex h-screen bg-slate-50/50 overflow-hidden">

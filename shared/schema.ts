@@ -37,7 +37,7 @@ export const scholars = pgTable("scholars", {
   department: text("department"),
   researchArea: text("research_area"),
   researchTitle: text("research_title"),
-  joiningDate: text("joining_date"),
+  joiningDate: date("joining_date"),
   phase: text("phase"), // Phase-I, Phase-II, Phase-III
   programme: text("programme"), // Full Time, Part Time
   location: text("location"),
