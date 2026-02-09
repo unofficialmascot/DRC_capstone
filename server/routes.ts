@@ -38,7 +38,11 @@ export async function registerRoutes(
   registerSupervisorRoutes(app, respondWithError);
   registerThesisSubmissionRoutes(app, respondWithError);
 
-  await seedService.seedDatabase();
+  try {
+    await seedService.seedDatabase();
+  } catch (error: unknown) {
+    console.warn("Seed skipped due to startup error:", error);
+  }
 
   return httpServer;
 }
