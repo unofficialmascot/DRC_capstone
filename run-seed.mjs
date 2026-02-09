@@ -12,7 +12,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 const { Pool } = pg;
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
 
-async function upsertUser(client, username, password, role, name, email, phone) {
+async function upsertUser(client, userId, username, password, role, name, email, phone) {
   const hashed = await bcrypt.hash(password, 10);
   // Safe upsert: check existing user by username first
   const existing = await client.query('SELECT id FROM users WHERE username = $1', [username]);
@@ -21,7 +21,7 @@ async function upsertUser(client, username, password, role, name, email, phone) 
     await client.query('UPDATE users SET password=$1, role=$2, name=$3, email=$4, phone=$5, updated_at=NOW() WHERE id=$6', [hashed, role, name, email, phone, id]);
     return id;
   }
-  const res = await client.query('INSERT INTO users (username, password, role, name, email, phone) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id', [username, hashed, role, name, email, phone]);
+  const res = await client.query('INSERT INTO users (id, username, password, role, name, email, phone) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id', [userId, username, hashed, role, name, email, phone]);
   return res.rows[0].id;
 }
 
@@ -51,21 +51,21 @@ async function assignRacMember(client, scholarId, userId, role) {
   }
 }
 
-async function createApplication(client, scholarId, type, details) {
+async function createApplication(client, scholarId, type, details, submissionDate) {
   const res = await client.query(
-    `INSERT INTO applications (scholar_id, type, details)
-     VALUES ($1,$2,$3) RETURNING id`,
-    [scholarId, type, JSON.stringify(details)]
+    `INSERT INTO applications (scholar_id, type, details, submission_date)
+     VALUES ($1,$2,$3,$4) RETURNING id`,
+    [scholarId, type, JSON.stringify(details), submissionDate]
   );
   return res.rows[0].id;
 }
 
-async function createResearchProgress(client, scholarId, completed, pending, pubs) {
+async function createResearchProgress(client, scholarId, completed, pending, pubs, lastReviewDate) {
   const existing = await client.query('SELECT id FROM research_progress WHERE scholar_id=$1', [scholarId]);
   if (existing.rows.length > 0) {
-    await client.query('UPDATE research_progress SET completed_reviews=$1, pending_reports=$2, publications=$3, last_review_date=NOW() WHERE scholar_id=$4', [completed, pending, pubs, scholarId]);
+    await client.query('UPDATE research_progress SET completed_reviews=$1, pending_reports=$2, publications=$3, last_review_date=$4 WHERE scholar_id=$5', [completed, pending, pubs, lastReviewDate, scholarId]);
   } else {
-    await client.query('INSERT INTO research_progress (scholar_id, completed_reviews, pending_reports, publications) VALUES ($1,$2,$3,$4)', [scholarId, completed, pending, pubs]);
+    await client.query('INSERT INTO research_progress (scholar_id, completed_reviews, pending_reports, publications, last_review_date) VALUES ($1,$2,$3,$4,$5)', [scholarId, completed, pending, pubs, lastReviewDate]);
   }
 }
 
@@ -75,12 +75,12 @@ async function run() {
     await client.query('BEGIN');
 
     console.log('Seeding users...');
-    const scholar1Uid = await upsertUser(client, 'scholar1', 'password123', 'scholar', 'Thirupathi Kumar', 'thirupathi@gitam.in', '9876543210');
-    const scholar2Uid = await upsertUser(client, 'scholar2', 'password123', 'scholar', 'Priya Reddy', 'priya.reddy@gitam.in', '9876543220');
-    const supervisorUid = await upsertUser(client, 'supervisor1', 'password123', 'supervisor', 'Dr. Ramesh Kumar', 'ramesh.kumar@gitam.edu', '9876543230');
-    const drcUid = await upsertUser(client, 'drc1', 'password123', 'drc', 'Dr. Lakshmi Narayana', 'lakshmi.drc@gitam.edu', '9876543240');
-    const ircUid = await upsertUser(client, 'irc1', 'password123', 'irc', 'Dr. Venkatesh Rao', 'venkatesh.irc@gitam.edu', '9876543250');
-    const doaaUid = await upsertUser(client, 'doaa1', 'password123', 'doaa', 'Prof. Srinivas Reddy', 'srinivas.doaa@gitam.edu', '9876543260');
+    const scholar1Uid = await upsertUser(client, 1001, 'scholar1', 'password123', 'scholar', 'Thirupathi Kumar', 'thirupathi@gitam.in', '9876543210');
+    const scholar2Uid = await upsertUser(client, 1002, 'scholar2', 'password123', 'scholar', 'Priya Reddy', 'priya.reddy@gitam.in', '9876543220');
+    const supervisorUid = await upsertUser(client, 2001, 'supervisor1', 'password123', 'supervisor', 'Dr. Ramesh Kumar', 'ramesh.kumar@gitam.edu', '9876543230');
+    const drcUid = await upsertUser(client, 2002, 'drc1', 'password123', 'drc', 'Dr. Lakshmi Narayana', 'lakshmi.drc@gitam.edu', '9876543240');
+    const ircUid = await upsertUser(client, 2003, 'irc1', 'password123', 'irc', 'Dr. Venkatesh Rao', 'venkatesh.irc@gitam.edu', '9876543250');
+    const doaaUid = await upsertUser(client, 2004, 'doaa1', 'password123', 'doaa', 'Prof. Srinivas Reddy', 'srinivas.doaa@gitam.edu', '9876543260');
 
     console.log('Ensuring scholar profiles...');
     const scholar1Id = await upsertScholar(client, scholar1Uid, 'PHD2020001', '2020-2021', 'Computer Science and Engineering');
@@ -95,10 +95,10 @@ async function run() {
     console.log('Creating sample application and research progress...');
     await createApplication(client, scholar1Id, 'Extension', {
       candidateName: 'Thirupathi Kumar', registrationDate: '15-08-2020', durationEligible: '5 years', extensionDuration: '6 months', reason: 'Additional time needed', timeline: 'Complete experiments by June 2026'
-    });
+    }, '2025-01-15T10:30:00Z');
 
-    await createResearchProgress(client, scholar1Id, 4, 1, 3);
-    await createResearchProgress(client, scholar2Id, 2, 0, 1);
+    await createResearchProgress(client, scholar1Id, 4, 1, 3, '2024-11-20T09:00:00Z');
+    await createResearchProgress(client, scholar2Id, 2, 0, 1, '2024-10-05T09:00:00Z');
 
     await client.query('COMMIT');
     console.log('Seeding complete.');

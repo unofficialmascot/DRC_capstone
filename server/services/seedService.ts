@@ -19,6 +19,7 @@ export class SeedService {
 
     const createScholar = async (payload: any) => {
       const user = await this.storage.createUser({
+        id: payload.userId,
         password: "password123",
         role: "scholar",
         name: payload.name,
@@ -63,6 +64,7 @@ export class SeedService {
       // Seed a few sample scholars
       const scholarsToSeed = [
         {
+          userId: 1001,
           name: "Thirupathi Kumar",
           email: "thirupathi@gitam.in",
           phone: "9876543210",
@@ -90,6 +92,7 @@ export class SeedService {
           annualFee: 50000,
         },
         {
+          userId: 1002,
           name: "Priya Reddy",
           email: "priya.reddy@gitam.in",
           phone: "9876543220",
@@ -117,6 +120,7 @@ export class SeedService {
           annualFee: 50000,
         },
         {
+          userId: 1003,
           name: "Arvind Kumar Singh",
           email: "arvind.singh@gitam.in",
           phone: "9876543221",
@@ -144,6 +148,7 @@ export class SeedService {
           annualFee: 50000,
         },
         {
+          userId: 1004,
           name: "Neha Sharma",
           email: "neha.sharma@gitam.in",
           phone: "9876543222",
@@ -171,6 +176,7 @@ export class SeedService {
           annualFee: 50000,
         },
         {
+          userId: 1005,
           name: "Ravi Malhotra",
           email: "ravi.malhotra@gitam.in",
           phone: "9876543223",
@@ -199,6 +205,7 @@ export class SeedService {
           arrearsAmount: 50000,
         },
         {
+          userId: 1006,
           name: "Meera Gupta",
           email: "meera.gupta@gitam.in",
           phone: "9876543224",
@@ -247,6 +254,7 @@ export class SeedService {
         seededScholars.find((scholar) => scholar.scholarId === scholarId);
 
       const supervisorUser = await this.storage.createUser({
+        id: 2001,
         password: "password123",
         role: "supervisor",
         name: "Dr. Ramesh Kumar",
@@ -263,6 +271,7 @@ export class SeedService {
 
       // === DRC MEMBER ===
       const drcUser = await this.storage.createUser({
+        id: 2002,
         password: "password123",
         role: "drc",
         name: "Dr. Lakshmi Narayana",
@@ -279,6 +288,7 @@ export class SeedService {
 
       // === IRC MEMBER ===
       const ircUser = await this.storage.createUser({
+        id: 2003,
         password: "password123",
         role: "irc",
         name: "Dr. Venkatesh Rao",
@@ -295,6 +305,7 @@ export class SeedService {
 
       // === DOAA OFFICER ===
       const doaaUser = await this.storage.createUser({
+        id: 2004,
         password: "password123",
         role: "doaa",
         name: "Prof. Srinivas Reddy",
@@ -320,6 +331,7 @@ export class SeedService {
           type: "Extension",
           status: "Pending",
           currentStage: "supervisor",
+          submissionDate: new Date("2025-01-15T10:30:00Z"),
           details: {
             candidateName: "Thirupathi Kumar",
             registrationDate: "15-08-2020",
@@ -339,6 +351,7 @@ export class SeedService {
           completedReviews: 4,
           pendingReports: 1,
           publications: 3,
+          lastReviewDate: new Date("2024-11-20T09:00:00Z"),
         });
       }
 
@@ -348,6 +361,7 @@ export class SeedService {
           completedReviews: 2,
           pendingReports: 0,
           publications: 1,
+          lastReviewDate: new Date("2024-10-05T09:00:00Z"),
         });
       }
 
