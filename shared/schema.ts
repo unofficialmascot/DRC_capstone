@@ -79,6 +79,7 @@ export const scholarEducationBackground = pgTable("scholar_education_background"
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   educationLevel: text("education_level").notNull(), // '10th', '12th', 'UG', 'PG'
+  instituteName: text("institute_name"),
   boardOrUniversity: text("board_or_university").notNull(),
   percentageOrCgpa: numeric("percentage_or_cgpa", { precision: 5, scale: 2 }),
   yearOfCompletion: integer("year_of_completion"),
@@ -124,31 +125,6 @@ export const racReviews = pgTable("rac_reviews", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// === ACADEMIC RECORDS ===
-// Degree/qualification history
-export const academicRecords = pgTable("academic_records", {
-  recordId: serial("record_id").primaryKey(),
-  userId: integer("user_id").notNull(),
-  level: text("level").notNull(),
-  instituteName: text("institute_name").notNull(),
-  boardOrUniversity: text("board_or_university").notNull(),
-  yearOfPassing: integer("year_of_passing").notNull(),
-  percentageOrCgpa: numeric("percentage_or_cgpa", { precision: 5, scale: 2 }),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// === ACADEMIC CERTIFICATES ===
-// Verification and uploads for academic records
-export const academicCertificates = pgTable("academic_certificates", {
-  certificateId: serial("certificate_id").primaryKey(),
-  academicRecordId: integer("academic_record_id").notNull(),
-  documentUrl: text("document_url").notNull(),
-  uploadedOn: timestamp("uploaded_on").defaultNow(),
-  verified: boolean("verified").default(false),
-  verifiedBy: integer("verified_by"),
-  verifiedOn: timestamp("verified_on"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
 
 // === DOCUMENTS ===
 // General document storage
