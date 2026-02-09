@@ -3,6 +3,7 @@ import { ApplicationDocumentService } from "./applicationDocumentService";
 import { ApplicationService } from "./applicationService";
 import { AuthService } from "./authService";
 import { ExtensionEligibilityService } from "./extensionEligibilityService";
+import { FeeStructureService } from "./feeStructureService";
 import { ResearchProgressService } from "./researchProgressService";
 import { ReviewService } from "./reviewService";
 import { ScholarService } from "./scholarService";
@@ -17,6 +18,7 @@ const applicationService = new ApplicationService(
   applicationDocumentService,
 );
 const authService = new AuthService(storage);
+const feeStructureService = new FeeStructureService(storage);
 const reviewService = new ReviewService(storage);
 const researchProgressService = new ResearchProgressService(storage);
 const scholarService = new ScholarService(storage);
@@ -27,6 +29,7 @@ export {
   applicationDocumentService,
   applicationService,
   authService,
+  feeStructureService,
   extensionEligibilityService,
   researchProgressService,
   reviewService,

@@ -53,6 +53,17 @@ interface ApplicationReview {
   reviewDate: string;
 }
 
+interface FeeStructureRow {
+  feeId: number;
+  academicYear: string;
+  phase: string;
+  batch: string;
+  year1Fee?: number | string | null;
+  year2Fee?: number | string | null;
+  year3Fee?: number | string | null;
+  year4Fee?: number | string | null;
+}
+
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -271,12 +282,22 @@ function ScholarProfile({ user }: { user: User }) {
     queryFn: () => fetch(`/api/users/${user.id}`).then(res => res.json()),
     initialData: user
   });
+  const { data: feeStructure = [] } = useQuery<FeeStructureRow[]>({
+    queryKey: ["/api/fees/structure"],
+    queryFn: () => fetch("/api/fees/structure").then(res => res.json()),
+  });
 
   const displayUser = freshUser || user;
-  const feeStructure = [
-    { year: "2023-24", phase: "Phase I", batch: "June 2022", firstYear: "₹90,000", secondYear: "₹85,000", thirdYear: "₹80,000", fourthYear: "₹75,000" },
-    { year: "2024-25", phase: "Phase II", batch: "June 2023", firstYear: "₹95,000", secondYear: "₹88,000", thirdYear: "₹82,000", fourthYear: "₹78,000" }
-  ];
+  const formatFee = (value: number | string | null | undefined) => {
+    if (value === null || value === undefined || value === "") {
+      return "—";
+    }
+    const numeric = Number(value);
+    if (Number.isNaN(numeric)) {
+      return String(value);
+    }
+    return `₹${numeric.toLocaleString("en-IN")}`;
+  };
   const feeDemand = {
     arrears: "₹12,500",
     hostelArrears: "₹5,000",
@@ -455,17 +476,23 @@ function ScholarProfile({ user }: { user: User }) {
               </tr>
             </thead>
             <tbody>
-              {feeStructure.map((row) => (
-                <tr key={`${row.year}-${row.phase}`}>
-                  <td>{row.year}</td>
-                  <td>{row.phase}</td>
-                  <td>{row.batch}</td>
-                  <td>{row.firstYear}</td>
-                  <td>{row.secondYear}</td>
-                  <td>{row.thirdYear}</td>
-                  <td>{row.fourthYear}</td>
+              {feeStructure.length ? (
+                feeStructure.map((row) => (
+                  <tr key={row.feeId}>
+                    <td>{row.academicYear}</td>
+                    <td>{row.phase}</td>
+                    <td>{row.batch}</td>
+                    <td>{formatFee(row.year1Fee)}</td>
+                    <td>{formatFee(row.year2Fee)}</td>
+                    <td>{formatFee(row.year3Fee)}</td>
+                    <td>{formatFee(row.year4Fee)}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7}>No fee structure available.</td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
           <div className="module-split">

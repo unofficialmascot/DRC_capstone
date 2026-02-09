@@ -5,6 +5,7 @@ import { seedService } from "./services";
 import { registerApplicationRoutes } from "./routes/applications.routes";
 import { registerAuthRoutes } from "./routes/auth.routes";
 import { registerExtensionRoutes } from "./routes/extensions.routes";
+import { registerFeeStructureRoutes } from "./routes/fees.routes";
 import { registerStatsRoutes } from "./routes/stats.routes";
 import { registerSupervisorRoutes } from "./routes/supervisors.routes";
 import { registerUserRoutes } from "./routes/users.routes";
@@ -31,6 +32,7 @@ export async function registerRoutes(
   registerUserRoutes(app, respondWithError);
   registerApplicationRoutes(app, respondWithError);
   registerExtensionRoutes(app, respondWithError);
+  registerFeeStructureRoutes(app, respondWithError);
   registerStatsRoutes(app, respondWithError);
   registerSupervisorRoutes(app, respondWithError);
 
