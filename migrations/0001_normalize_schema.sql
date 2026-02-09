@@ -111,20 +111,6 @@ CREATE TABLE "academic_records" (
 CREATE INDEX "idx_academic_records_scholar_id" ON "academic_records" ("scholar_id");
 CREATE INDEX "idx_academic_records_level" ON "academic_records" ("level");
 
--- Create academic certificates
-CREATE TABLE "academic_certificates" (
-  "certificate_id" SERIAL PRIMARY KEY,
-  "academic_record_id" integer NOT NULL REFERENCES "academic_records"("record_id") ON DELETE CASCADE,
-  "document_url" text NOT NULL,
-  "uploaded_on" timestamp DEFAULT NOW(),
-  "verified" boolean DEFAULT false,
-  "verified_by" integer REFERENCES "users"("user_id") ON DELETE SET NULL,
-  "verified_on" timestamp,
-  "created_at" timestamp DEFAULT NOW()
-);
-
-CREATE INDEX "idx_academic_certificates_record_id" ON "academic_certificates" ("academic_record_id");
-
 -- Create fee structure
 CREATE TABLE "fee_structure" (
   "fee_id" SERIAL PRIMARY KEY,
@@ -256,22 +242,6 @@ CREATE TABLE "review_outcome" (
   "created_at" timestamp DEFAULT NOW(),
   "updated_at" timestamp DEFAULT NOW()
 );
-
--- Create documents
-CREATE TABLE "documents" (
-  "document_id" SERIAL PRIMARY KEY,
-  "scholar_id" integer NOT NULL REFERENCES "scholars"("scholar_id") ON DELETE CASCADE,
-  "document_type" text NOT NULL,
-  "file_url" text NOT NULL,
-  "uploaded_by" integer NOT NULL REFERENCES "users"("user_id") ON DELETE RESTRICT,
-  "uploaded_on" timestamp DEFAULT NOW(),
-  "version" integer DEFAULT 1,
-  "is_locked" boolean DEFAULT false,
-  "created_at" timestamp DEFAULT NOW()
-);
-
-CREATE INDEX "idx_documents_scholar_id" ON "documents" ("scholar_id");
-CREATE INDEX "idx_documents_document_type" ON "documents" ("document_type");
 
 -- Create audit logs
 CREATE TABLE "audit_logs" (

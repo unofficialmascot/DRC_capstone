@@ -137,33 +137,6 @@ export const academicRecords = pgTable("academic_records", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// === ACADEMIC CERTIFICATES ===
-// Verification and uploads for academic records
-export const academicCertificates = pgTable("academic_certificates", {
-  certificateId: serial("certificate_id").primaryKey(),
-  academicRecordId: integer("academic_record_id").notNull(),
-  documentUrl: text("document_url").notNull(),
-  uploadedOn: timestamp("uploaded_on").defaultNow(),
-  verified: boolean("verified").default(false),
-  verifiedBy: integer("verified_by"),
-  verifiedOn: timestamp("verified_on"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// === DOCUMENTS ===
-// General document storage
-export const documents = pgTable("documents", {
-  documentId: serial("document_id").primaryKey(),
-  userId: integer("user_id").notNull(),
-  documentType: text("document_type").notNull(),
-  fileUrl: text("file_url").notNull(),
-  uploadedBy: integer("uploaded_by").notNull(),
-  uploadedOn: timestamp("uploaded_on").defaultNow(),
-  version: integer("version").default(1),
-  isLocked: boolean("is_locked").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
 // === RESEARCH PROGRESS ===
 // Scholar research metrics
 export const researchProgress = pgTable("research_progress", {
