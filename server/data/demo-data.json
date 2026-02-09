@@ -1,0 +1,413 @@
+{
+  "users": [
+    {
+      "id": 1001,
+      "password": "password123",
+      "role": "scholar",
+      "name": "Thirupathi Kumar",
+      "email": "thirupathi@gitam.in",
+      "phone": "9876543210",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 1002,
+      "password": "password123",
+      "role": "scholar",
+      "name": "Priya Reddy",
+      "email": "priya.reddy@gitam.in",
+      "phone": "9876543220",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 1003,
+      "password": "password123",
+      "role": "scholar",
+      "name": "Arvind Kumar Singh",
+      "email": "arvind.singh@gitam.in",
+      "phone": "9876543221",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 1004,
+      "password": "password123",
+      "role": "scholar",
+      "name": "Neha Sharma",
+      "email": "neha.sharma@gitam.in",
+      "phone": "9876543222",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 1005,
+      "password": "password123",
+      "role": "scholar",
+      "name": "Ravi Malhotra",
+      "email": "ravi.malhotra@gitam.in",
+      "phone": "9876543223",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 1006,
+      "password": "password123",
+      "role": "scholar",
+      "name": "Meera Gupta",
+      "email": "meera.gupta@gitam.in",
+      "phone": "9876543224",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 2001,
+      "password": "password123",
+      "role": "supervisor",
+      "name": "Dr. Ramesh Kumar",
+      "email": "ramesh.kumar@gitam.edu",
+      "phone": "9876543230",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 2002,
+      "password": "password123",
+      "role": "drc",
+      "name": "Dr. Lakshmi Narayana",
+      "email": "lakshmi.drc@gitam.edu",
+      "phone": "9876543240",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 2003,
+      "password": "password123",
+      "role": "irc",
+      "name": "Dr. Venkatesh Rao",
+      "email": "venkatesh.irc@gitam.edu",
+      "phone": "9876543250",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 2004,
+      "password": "password123",
+      "role": "doaa",
+      "name": "Prof. Srinivas Reddy",
+      "email": "srinivas.doaa@gitam.edu",
+      "phone": "9876543260",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    }
+  ],
+  "employees": [
+    {
+      "userId": 2001,
+      "employeeId": "EMP-SUPERVISOR-001",
+      "designation": "Associate Professor",
+      "department": "Computer Science"
+    },
+    {
+      "userId": 2002,
+      "employeeId": "EMP-DRC-001",
+      "designation": "Professor",
+      "department": "Computer Science"
+    },
+    {
+      "userId": 2003,
+      "employeeId": "EMP-IRC-001",
+      "designation": "Associate Professor",
+      "department": "Biotechnology"
+    },
+    {
+      "userId": 2004,
+      "employeeId": "EMP-DOAA-001",
+      "designation": "Professor",
+      "department": "Administration"
+    }
+  ],
+  "scholars": [
+    {
+      "userId": 1001,
+      "scholarId": "GITAM-SCH-2020-118",
+      "batch": "June 2022",
+      "status": "Active",
+      "department": "Computer Science",
+      "researchArea": "Applied Machine Learning",
+      "researchTitle": "Context-Aware Diagnosis for Healthcare Records",
+      "joiningDate": "2020-08-15",
+      "phase": "Phase I",
+      "programme": "Full Time",
+      "location": "Visakhapatnam",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "userId": 1002,
+      "scholarId": "GITAM-SCH-2021-204",
+      "batch": "June 2023",
+      "status": "Active",
+      "department": "Biotechnology",
+      "researchArea": "Molecular Biology",
+      "researchTitle": "RNA Signatures in Pediatric Care",
+      "joiningDate": "2021-07-21",
+      "phase": "Phase II",
+      "programme": "Full Time",
+      "location": "Hyderabad",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "userId": 1003,
+      "scholarId": "GITAM-SCH-2019-087",
+      "batch": "June 2021",
+      "status": "Active",
+      "department": "Physics",
+      "researchArea": "Quantum Computing",
+      "researchTitle": "Quantum Error Correction in Topological Systems",
+      "joiningDate": "2019-06-10",
+      "phase": "Phase III",
+      "programme": "Full Time",
+      "location": "Hyderabad",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "userId": 1004,
+      "scholarId": "GITAM-SCH-2023-156",
+      "batch": "June 2024",
+      "status": "Active",
+      "department": "Chemistry",
+      "researchArea": "Organic Synthesis",
+      "researchTitle": "Sustainable Catalyst Design",
+      "joiningDate": "2023-08-12",
+      "phase": "Phase I",
+      "programme": "Full Time",
+      "location": "Visakhapatnam",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "userId": 1005,
+      "scholarId": "GITAM-SCH-2020-142",
+      "batch": "June 2022",
+      "status": "Active",
+      "department": "Mechanical Engineering",
+      "researchArea": "Energy Systems",
+      "researchTitle": "Hybrid Thermal Storage",
+      "joiningDate": "2020-06-28",
+      "phase": "Phase II",
+      "programme": "Full Time",
+      "location": "Hyderabad",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "userId": 1006,
+      "scholarId": "GITAM-SCH-2021-098",
+      "batch": "June 2023",
+      "status": "Active",
+      "department": "Mathematics",
+      "researchArea": "Applied Statistics",
+      "researchTitle": "Bayesian Networks in Health Data",
+      "joiningDate": "2021-05-16",
+      "phase": "Phase II",
+      "programme": "Full Time",
+      "location": "Visakhapatnam",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    }
+  ],
+  "scholarSupervisors": [],
+  "applications": [
+    {
+      "id": 1,
+      "userId": 1001,
+      "type": "Extension",
+      "status": "Pending",
+      "currentStage": "supervisor",
+      "submissionDate": "2025-01-15T10:30:00.000Z",
+      "details": {
+        "candidateName": "Thirupathi Kumar",
+        "registrationDate": "15-08-2020",
+        "durationEligible": "5 years",
+        "extensionDuration": "6 months",
+        "reason": "Additional time needed for experimental validation",
+        "timeline": "Complete experiments by June 2026, thesis submission by December 2026"
+      }
+    }
+  ],
+  "applicationReviews": [],
+  "researchProgress": [
+    {
+      "userId": 1001,
+      "completedReviews": 4,
+      "pendingReports": 1,
+      "publications": 3,
+      "lastReviewDate": "2024-11-20T09:00:00.000Z"
+    },
+    {
+      "userId": 1002,
+      "completedReviews": 2,
+      "pendingReports": 0,
+      "publications": 1,
+      "lastReviewDate": "2024-10-05T09:00:00.000Z"
+    }
+  ],
+  "scholarPersonalDetails": [
+    {
+      "userId": 1001,
+      "dateOfBirth": "1993-04-12",
+      "nationality": "Indian",
+      "fatherName": "Rama Rao",
+      "aadhaarNumber": "123412341234",
+      "studentMobile": "9876543210",
+      "parentMobile": "9876500000",
+      "studentEmail": "thirupathi@gitam.in",
+      "gender": "Male",
+      "isPwd": false,
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "userId": 1002,
+      "dateOfBirth": "1995-11-02",
+      "nationality": "Indian",
+      "fatherName": "Suresh Reddy",
+      "aadhaarNumber": "432143214321",
+      "studentMobile": "9876543220",
+      "parentMobile": "9876500001",
+      "studentEmail": "priya.reddy@gitam.in",
+      "gender": "Female",
+      "isPwd": false,
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "userId": 1003,
+      "dateOfBirth": "1992-03-25",
+      "nationality": "Indian",
+      "fatherName": "Hari Singh",
+      "aadhaarNumber": "567856785678",
+      "studentMobile": "9876543221",
+      "parentMobile": "9876500002",
+      "studentEmail": "arvind.singh@gitam.in",
+      "gender": "Male",
+      "isPwd": true,
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "userId": 1004,
+      "dateOfBirth": "1997-01-19",
+      "nationality": "Indian",
+      "fatherName": "Rajesh Sharma",
+      "aadhaarNumber": "888812341234",
+      "studentMobile": "9876543222",
+      "parentMobile": "9876500003",
+      "studentEmail": "neha.sharma@gitam.in",
+      "gender": "Female",
+      "isPwd": false,
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "userId": 1005,
+      "dateOfBirth": "1994-09-07",
+      "nationality": "Indian",
+      "fatherName": "Mahesh Malhotra",
+      "aadhaarNumber": "999912341234",
+      "studentMobile": "9876543223",
+      "parentMobile": "9876500004",
+      "studentEmail": "ravi.malhotra@gitam.in",
+      "gender": "Male",
+      "isPwd": false,
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "userId": 1006,
+      "dateOfBirth": "1995-07-24",
+      "nationality": "Indian",
+      "fatherName": "Ramesh Gupta",
+      "aadhaarNumber": "777712341234",
+      "studentMobile": "9876543224",
+      "parentMobile": "9876500005",
+      "studentEmail": "meera.gupta@gitam.in",
+      "gender": "Female",
+      "isPwd": true,
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    }
+  ],
+  "courseCompletion": [
+    {
+      "userId": 1001,
+      "completed": false
+    },
+    {
+      "userId": 1002,
+      "completed": true
+    },
+    {
+      "userId": 1003,
+      "completed": true
+    },
+    {
+      "userId": 1004,
+      "completed": false
+    },
+    {
+      "userId": 1005,
+      "completed": true
+    },
+    {
+      "userId": 1006,
+      "completed": true
+    }
+  ],
+  "scholarFeeDemand": [
+    {
+      "userId": 1001,
+      "academicYear": "2024-2025",
+      "arrearsAmount": 0,
+      "annualFee": 50000
+    },
+    {
+      "userId": 1002,
+      "academicYear": "2024-2025",
+      "arrearsAmount": 0,
+      "annualFee": 50000
+    },
+    {
+      "userId": 1003,
+      "academicYear": "2024-2025",
+      "arrearsAmount": 0,
+      "annualFee": 50000
+    },
+    {
+      "userId": 1004,
+      "academicYear": "2024-2025",
+      "arrearsAmount": 0,
+      "annualFee": 50000
+    },
+    {
+      "userId": 1005,
+      "academicYear": "2024-2025",
+      "arrearsAmount": 50000,
+      "annualFee": 50000
+    },
+    {
+      "userId": 1006,
+      "academicYear": "2024-2025",
+      "arrearsAmount": 0,
+      "annualFee": 50000
+    }
+  ],
+  "feePayments": [],
+  "applicationAttachments": [],
+  "applicationRequiredDocuments": [],
+  "applicationReviewerChecklist": [],
+  "racReviews": []
+}
