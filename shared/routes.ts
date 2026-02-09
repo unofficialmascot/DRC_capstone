@@ -74,6 +74,24 @@ export const api = {
         }),
       },
     },
+  },
+  fees: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/fees/structure',
+      responses: {
+        200: z.array(z.object({
+          feeId: z.number(),
+          academicYear: z.string(),
+          phase: z.string(),
+          batch: z.string(),
+          year1Fee: z.union([z.string(), z.number()]).nullable().optional(),
+          year2Fee: z.union([z.string(), z.number()]).nullable().optional(),
+          year3Fee: z.union([z.string(), z.number()]).nullable().optional(),
+          year4Fee: z.union([z.string(), z.number()]).nullable().optional(),
+        })),
+      },
+    },
   }
 };
 

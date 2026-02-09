@@ -406,6 +406,28 @@
     }
   ],
   "feePayments": [],
+  "feeStructure": [
+    {
+      "feeId": 1,
+      "academicYear": "2023-2024",
+      "phase": "Phase I",
+      "batch": "June 2022",
+      "year1Fee": 90000,
+      "year2Fee": 85000,
+      "year3Fee": 80000,
+      "year4Fee": 75000
+    },
+    {
+      "feeId": 2,
+      "academicYear": "2024-2025",
+      "phase": "Phase II",
+      "batch": "June 2023",
+      "year1Fee": 95000,
+      "year2Fee": 88000,
+      "year3Fee": 82000,
+      "year4Fee": 78000
+    }
+  ],
   "applicationAttachments": [],
   "applicationRequiredDocuments": [],
   "applicationReviewerChecklist": [],

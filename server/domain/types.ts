@@ -186,6 +186,19 @@ export interface CreateFeePaymentInput {
   [key: string]: unknown;
 }
 
+export interface FeeStructure {
+  feeId: number;
+  academicYear: string;
+  phase: string;
+  batch: string;
+  year1Fee?: number | string | null;
+  year2Fee?: number | string | null;
+  year3Fee?: number | string | null;
+  year4Fee?: number | string | null;
+  createdAt?: Date | string | null;
+  updatedAt?: Date | string | null;
+}
+
 export interface CreateApplicationRequiredDocumentInput {
   applicationType: string;
   documentType: string;

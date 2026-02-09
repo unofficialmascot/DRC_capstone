@@ -8,6 +8,7 @@ import {
   courseCompletion,
   employees,
   feePayments,
+  feeStructure,
   racReviews,
   researchProgress,
   scholarPersonalDetails,
@@ -35,6 +36,7 @@ import type {
   CreateScholarProfileInput,
   CreateUserInput,
   Employee,
+  FeeStructure,
   RequiredDocument,
   ResearchProgress,
   Scholar,
@@ -110,6 +112,7 @@ export interface IStorage {
     isMandatory?: boolean,
     description?: string,
   ): Promise<RequiredDocument>;
+  getFeeStructure(): Promise<FeeStructure[]>;
   updateApplicationReviewerChecklist(
     applicationId: number,
     reviewerId: number,
@@ -130,6 +133,7 @@ type DemoDataFile = {
   courseCompletion: Record<string, unknown>[];
   scholarFeeDemand: Record<string, unknown>[];
   feePayments: Record<string, unknown>[];
+  feeStructure: FeeStructure[];
   applicationAttachments: ApplicationAttachment[];
   applicationRequiredDocuments: RequiredDocument[];
   applicationReviewerChecklist: Record<string, unknown>[];
@@ -148,6 +152,7 @@ const emptyDemoData = (): DemoDataFile => ({
   courseCompletion: [],
   scholarFeeDemand: [],
   feePayments: [],
+  feeStructure: [],
   applicationAttachments: [],
   applicationRequiredDocuments: [],
   applicationReviewerChecklist: [],
@@ -662,6 +667,11 @@ export class FileStorage implements IStorage {
     return record;
   }
 
+  async getFeeStructure(): Promise<FeeStructure[]> {
+    await this.ensureReady();
+    return this.data.feeStructure;
+  }
+
   async createApplicationAttachment(
     attachment: CreateApplicationAttachmentInput,
   ): Promise<ApplicationAttachment> {
@@ -1158,6 +1168,10 @@ export class DatabaseStorage implements IStorage {
   async createFeePayment(record: CreateFeePaymentInput) {
     const [newRec] = await db.insert(feePayments).values(record).returning();
     return newRec;
+  }
+
+  async getFeeStructure(): Promise<FeeStructure[]> {
+    return db.select().from(feeStructure).orderBy(desc(feeStructure.academicYear));
   }
 
   // === APPLICATION ATTACHMENT METHODS ===
