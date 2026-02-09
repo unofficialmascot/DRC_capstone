@@ -34,7 +34,7 @@ interface User {
 
 interface Application {
   id: number;
-  scholarId: string;
+  userId: number;
   type: string;
   status: string;
   currentStage: string;
@@ -46,7 +46,7 @@ interface Application {
 interface ApplicationReview {
   id: number;
   applicationId: number;
-  reviewerId: string;
+  reviewerId: number;
   stage: string;
   decision: string;
   remarks: string;
@@ -776,8 +776,8 @@ function ScholarApplications({ user }: { user: User }) {
   const queryClient = useQueryClient();
 
   const { data: applications = [], isLoading } = useQuery<Application[]>({
-    queryKey: ["/api/applications", { scholarId: user.scholarId }],
-    queryFn: () => fetch(`/api/applications?scholarId=${user.scholarId}`).then(res => res.json())
+    queryKey: ["/api/applications", { userId: user.id }],
+    queryFn: () => fetch(`/api/applications?userId=${user.id}`).then(res => res.json())
   });
 
   const handleExtensionClick = async () => {
@@ -1058,9 +1058,14 @@ function ReviewerApplications({ user }: { user: User }) {
     queryFn: () => fetch("/api/users").then(res => res.json())
   });
 
-  const getScholarName = (scholarId: string) => {
-    const scholar = allUsers.find(u => u.scholarId === scholarId);
-    return scholar?.name || scholarId || "Unknown Scholar";
+  const getScholarName = (userId: number) => {
+    const scholar = allUsers.find(u => u.id === userId);
+    return scholar?.name || `User ${userId}`;
+  };
+
+  const getScholarIdentifier = (userId: number) => {
+    const scholar = allUsers.find(u => u.id === userId);
+    return scholar?.scholarId || `User ${userId}`;
   };
 
   const reviewMutation = useMutation({
@@ -1101,7 +1106,7 @@ function ReviewerApplications({ user }: { user: User }) {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
                 <div>
                   <div style={{ fontWeight: "600", fontSize: "16px" }}>{app.type}</div>
-                  <div style={{ fontSize: "13px", color: "#666" }}>Scholar: {getScholarName(app.scholarId)} | Submitted: {new Date(app.submissionDate).toLocaleDateString()}</div>
+                  <div style={{ fontSize: "13px", color: "#666" }}>Scholar: {getScholarName(app.userId)} | Submitted: {new Date(app.submissionDate).toLocaleDateString()}</div>
                 </div>
                 <div className="status-badge in-progress">Awaiting Review</div>
               </div>
@@ -1126,7 +1131,7 @@ function ReviewerApplications({ user }: { user: User }) {
             </div>
             <div className="modal-body">
               <div style={{ marginBottom: "20px" }}>
-                <strong>Scholar:</strong> {getScholarName(selectedApp.scholarId)}<br />
+                <strong>Scholar:</strong> {getScholarName(selectedApp.userId)} ({getScholarIdentifier(selectedApp.userId)})<br />
                 <strong>Type:</strong> {selectedApp.type}<br />
                 <strong>Submitted:</strong> {new Date(selectedApp.submissionDate).toLocaleDateString()}
               </div>
@@ -1224,7 +1229,7 @@ function PreTalkForm({ user, onSubmit, onBack, isSubmitting }: { user: User; onS
 function ExtensionForm({ user, onSubmit, onBack, isSubmitting }: { user: User; onSubmit: (details: Record<string, unknown>) => void; onBack: () => void; isSubmitting: boolean }) {
   const [formData, setFormData] = useState({
     candidateName: user.name,
-    registrationDate: user.joiningDate || "",
+    joiningDate: user.joiningDate || "",
     extensionDuration: "",
     reason: "",
     timeline: ""
@@ -1237,7 +1242,7 @@ function ExtensionForm({ user, onSubmit, onBack, isSubmitting }: { user: User; o
 
       <div className="form-title">Application for Extension of Ph.D. Program Duration</div>
       <div className="form-group"><label>Name of the Candidate</label><input type="text" value={formData.candidateName} onChange={(e) => setFormData({ ...formData, candidateName: e.target.value })} /></div>
-      <div className="form-group"><label>Date of Registration</label><input type="text" value={formData.registrationDate} onChange={(e) => setFormData({ ...formData, registrationDate: e.target.value })} /></div>
+      <div className="form-group"><label>Date of Joining</label><input type="text" value={formData.joiningDate} onChange={(e) => setFormData({ ...formData, joiningDate: e.target.value })} /></div>
       <div className="form-group"><label>Required Extension Duration</label><input type="text" value={formData.extensionDuration} onChange={(e) => setFormData({ ...formData, extensionDuration: e.target.value })} placeholder="e.g., 6 months" /></div>
       <div className="form-group"><label>Reason for Extension</label><textarea value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })} placeholder="Explain why you need the extension" style={{ height: "80px" }} /></div>
       <div className="form-group"><label>Expected Timeline</label><textarea value={formData.timeline} onChange={(e) => setFormData({ ...formData, timeline: e.target.value })} placeholder="When do you expect to complete?" style={{ height: "80px" }} /></div>
@@ -1470,7 +1475,7 @@ function SupervisorDashboard({ user }: { user: User }) {
                     <div>
                       <h3 style={{ margin: "0 0 5px 0", color: "#0b6a55" }}>{app.type}</h3>
                       <p style={{ margin: "5px 0", color: "#666", fontSize: "14px" }}>
-                        Scholar ID: {app.scholarId}
+                        Scholar User ID: {app.userId}
                       </p>
                     </div>
                     <span style={{

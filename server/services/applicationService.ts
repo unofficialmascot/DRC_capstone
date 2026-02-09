@@ -23,10 +23,10 @@ export class ApplicationService {
         } else {
           // It's a scholar code string, look it up
           const scholar = await this.storage.getScholarByScholarId(scholarId);
-          if (!scholar?.id) {
+          if (!scholar?.userId) {
             throw new AppError(`Scholar not found for ID: ${scholarId}`, 404);
           }
-          numericScholarId = scholar.id;
+          numericScholarId = scholar.userId;
         }
       } else {
         numericScholarId = scholarId;
@@ -53,12 +53,12 @@ export class ApplicationService {
   }
 
   async createApplication(
-    scholarId: number,
+    userId: number,
     type: string,
     details: unknown,
   ) {
     const application = await this.storage.createApplication({
-      scholarId,
+      userId,
       type,
       status: "Pending",
       currentStage: "supervisor",
@@ -71,12 +71,12 @@ export class ApplicationService {
    * Create an extension application with eligibility checks
    */
   async createExtensionApplication(
-    scholarId: number,
+    userId: number,
     extensionPeriod: "6_months" | "1_year",
     details?: Record<string, unknown>,
   ) {
     // Get scholar info first to get their scholarId string
-    const scholar = await this.storage.getScholarById(scholarId);
+    const scholar = await this.storage.getScholarById(userId);
     if (!scholar?.scholarId) {
       throw new AppError("Scholar not found", 404);
     }
@@ -95,7 +95,7 @@ export class ApplicationService {
 
     // Create application
     const application = await this.storage.createApplication({
-      scholarId: scholarId,
+      userId,
       type: "Extension",
       status: "Pending",
       currentStage: "supervisor",
@@ -130,11 +130,7 @@ export class ApplicationService {
     // (document storage/fetching will be implemented later).
     // Re-check eligibility to ensure scholar still meets criteria.
     try {
-      const resolvedScholarId = app.scholarId ?? Number(app.userId);
-      if (Number.isNaN(resolvedScholarId)) {
-        throw new AppError("Scholar not found", 404);
-      }
-      const scholar = await this.storage.getScholarById(resolvedScholarId);
+      const scholar = await this.storage.getScholarById(app.userId);
       if (!scholar?.scholarId) {
         throw new AppError("Scholar not found", 404);
       }
