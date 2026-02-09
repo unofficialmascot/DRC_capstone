@@ -7,7 +7,7 @@ import {
 import { AppError } from "../errors";
 
 export interface ReviewInput {
-  reviewerId: string;
+  reviewerId: number;
   decision: "approved" | "rejected";
   remarks: string;
 }
@@ -31,7 +31,7 @@ export class ReviewService {
     }
 
     // Validate reviewer exists
-    const reviewer = await this.storage.getEmployee(input.reviewerId);
+    const reviewer = await this.storage.getEmployeeByUserId(input.reviewerId);
     if (!reviewer) {
       throw new AppError("Reviewer not found", 404);
     }
@@ -85,7 +85,7 @@ export class ReviewService {
   }
 
   private async validateReviewerAuthorization(
-    reviewerId: string,
+    reviewerId: number,
     stage: WorkflowStage,
     userId: string | number,
   ) {
@@ -105,22 +105,12 @@ export class ReviewService {
   }
 
   private async applyApprovedChanges(application: {
-    userId: string;
+    userId: number;
     type: string;
     details: unknown;
   }) {
     const details = application.details as Record<string, unknown>;
-    const scholarUserId =
-      typeof application.userId === "string"
-        ? Number.parseInt(application.userId, 10)
-        : application.userId;
-
-    if (Number.isNaN(scholarUserId)) {
-      throw new AppError(
-        "Invalid scholar ID for approved application changes",
-        400,
-      );
-    }
+    const scholarUserId = application.userId;
 
     if (application.type === "Supervisor Change") {
       const supervisorUserId = await this.resolveSupervisorUserId(details);

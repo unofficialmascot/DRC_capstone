@@ -14,7 +14,7 @@ export function registerStatsRoutes(
   app.get(api.stats.get.path, async (req, res) => {
     try {
       const stats = await researchProgressService.getResearchProgress(
-        String(req.params.scholarId),
+        Number(req.params.userId),
       );
       res.json(stats);
     } catch (error: unknown) {
