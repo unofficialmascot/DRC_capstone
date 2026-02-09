@@ -125,18 +125,16 @@ export const racReviews = pgTable("rac_reviews", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-
-// === DOCUMENTS ===
-// General document storage
-export const documents = pgTable("documents", {
-  documentId: serial("document_id").primaryKey(),
+// === ACADEMIC RECORDS ===
+// Degree/qualification history
+export const academicRecords = pgTable("academic_records", {
+  recordId: serial("record_id").primaryKey(),
   userId: integer("user_id").notNull(),
-  documentType: text("document_type").notNull(),
-  fileUrl: text("file_url").notNull(),
-  uploadedBy: integer("uploaded_by").notNull(),
-  uploadedOn: timestamp("uploaded_on").defaultNow(),
-  version: integer("version").default(1),
-  isLocked: boolean("is_locked").default(false),
+  level: text("level").notNull(),
+  instituteName: text("institute_name").notNull(),
+  boardOrUniversity: text("board_or_university").notNull(),
+  yearOfPassing: integer("year_of_passing").notNull(),
+  percentageOrCgpa: numeric("percentage_or_cgpa", { precision: 5, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
