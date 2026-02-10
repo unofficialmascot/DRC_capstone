@@ -16,14 +16,14 @@ npm run dev:demo
 
 You can also point to a different data file by setting `DEMO_DATA_FILE=/path/to/your.json`.
 
-### Reset/seed helpers (repo root)
-- `reset-schema.cjs`: drops/recreates the public schema (use with `dev:db`).
-- `reset-db.cjs`: clears demo data without dropping the schema.
-- `reset-seed.cjs`: clears demo data (variant used for reseeding workflows).
-- `run-seed.mjs`: inserts demo accounts and sample records.
+### Reset/seed helpers (`scripts/db`)
+- `scripts/db/reset-schema.cjs`: drops/recreates the public schema (use with `dev:db`).
+- `scripts/db/reset-db.cjs`: clears demo data without dropping the schema.
+- `scripts/db/reset-seed.cjs`: clears demo data (variant used for reseeding workflows).
+- `scripts/db/run-seed.mjs`: inserts demo accounts and sample records.
 
 ### Migrations vs. demo data
-- **Production/staging**: apply schema changes via migrations only (see `apply-migrations.cjs`), and avoid demo reseeds.
+- **Production/staging**: apply schema changes via migrations only (see `scripts/migrations/apply-migrations.cjs`), and avoid demo reseeds.
 - **Local dev/demo**: use `npm run dev:db` to rebuild schema and load demo data quickly.
 
 ## Demo data (seeded)
