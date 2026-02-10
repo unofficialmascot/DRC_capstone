@@ -11,7 +11,8 @@
     "db:push": "NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit push",
     "demo:setup": "node reset-db.cjs && node run-seed.mjs && npm run dev",
     "dev:db": "node reset-schema.cjs && npm run db:push && node run-seed.mjs",
-    "dev:demo": "DEMO_FILE_STORAGE=true DEMO_DATA_FILE=server/data/demo-data.json npm run dev"
+    "dev:demo": "DEMO_FILE_STORAGE=true DEMO_DATA_FILE=server/data/demo-data.json npm run dev",
+    "lint:no-direct-fetch": "node scripts/check-no-direct-fetch-pages.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

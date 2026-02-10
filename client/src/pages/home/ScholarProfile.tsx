@@ -1,4 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+import { apiJson } from "@/lib/api";
+import { api, buildUrl } from "@shared/routes";
 import type { FeeStructureRow, User } from "@/types/gscholar";
 import {
   useAuditTimeline,
@@ -13,13 +15,16 @@ interface ScholarProfileProps {
 
 export default function ScholarProfile({ user }: ScholarProfileProps) {
   const { data: freshUser } = useQuery<User>({
-    queryKey: ["/api/users", user.id],
-    queryFn: () => fetch(`/api/users/${user.id}`).then((res) => res.json()),
+    queryKey: [api.users.get.path, user.id],
+    queryFn: () =>
+      apiJson<User>(buildUrl(api.users.get.path, { id: user.id }), {
+        method: api.users.get.method,
+      }),
     initialData: user,
   });
   const { data: feeStructure = [] } = useQuery<FeeStructureRow[]>({
-    queryKey: ["/api/fees/structure"],
-    queryFn: () => fetch("/api/fees/structure").then((res) => res.json()),
+    queryKey: [api.fees.list.path],
+    queryFn: () => apiJson<FeeStructureRow[]>(api.fees.list.path, { method: api.fees.list.method }),
   });
   const {
     data: progressionSummary = [],

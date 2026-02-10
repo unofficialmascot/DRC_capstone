@@ -1,4 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+import { apiJson } from "@/lib/api";
+import { api, buildUrl } from "@shared/routes";
 
 interface ScholarResearchProgressProps {
   userId: number;
@@ -8,8 +10,8 @@ export default function ScholarResearchProgress({
   userId,
 }: ScholarResearchProgressProps) {
   const { data: stats } = useQuery({
-    queryKey: ["/api/stats", userId],
-    queryFn: () => fetch(`/api/stats/${userId}`).then((res) => res.json()),
+    queryKey: [api.stats.get.path, userId],
+    queryFn: () => apiJson<{ completedReviews: number; pendingReports: number; publications: number }>(buildUrl(api.stats.get.path, { userId }), { method: api.stats.get.method }),
   });
 
   return (

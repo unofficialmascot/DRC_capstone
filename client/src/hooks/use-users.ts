@@ -1,44 +1,46 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import type { InsertUser } from "@shared/schema";
+import { ApiError, apiJson } from "@/lib/api";
 
 // GET /api/users/:id
 export function useUser(id?: number | string) {
   return useQuery({
     queryKey: [api.users.get.path, id],
     queryFn: async () => {
-      // If no ID provided, we might want to fetch "me" or handle it in a real auth system
-      // For now, we'll assume ID 1 is the demo user if undefined, or fail gracefully
-      const targetId = id || 1; 
-      const url = buildUrl(api.users.get.path, { id: targetId });
-      const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) {
-        if (res.status === 404) return null;
-        throw new Error("Failed to fetch user");
+      if (id === undefined || id === null) {
+        throw new Error("Cannot fetch user profile without an authenticated user id.");
       }
-      return api.users.get.responses[200].parse(await res.json());
+
+      const url = buildUrl(api.users.get.path, { id });
+      try {
+        const data = await apiJson(url, { method: api.users.get.method });
+        return api.users.get.responses[200].parse(data);
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 404) {
+          return null;
+        }
+        throw error;
+      }
     },
-    enabled: !!id || id === undefined, // Allow fetching default if no ID
+    enabled: id !== undefined && id !== null,
   });
 }
 
 // PUT /api/users/:id
 export function useUpdateUser() {
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: number } & Partial<InsertUser>) => {
       const url = buildUrl(api.users.update.path, { id });
       const validated = api.users.update.input.parse(updates);
-      
-      const res = await fetch(url, {
+      const data = await apiJson(url, {
         method: api.users.update.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(validated),
-        credentials: "include",
+        body: validated,
       });
 
-      if (!res.ok) throw new Error("Failed to update user");
-      return api.users.update.responses[200].parse(await res.json());
+      return api.users.update.responses[200].parse(data);
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [api.users.get.path] });

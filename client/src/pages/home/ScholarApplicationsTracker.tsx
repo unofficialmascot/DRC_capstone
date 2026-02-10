@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { apiJson } from "@/lib/api";
+import { api, appendQuery } from "@shared/routes";
 import type { Application, User } from "@/types/gscholar";
 import ApplicationDetailModal from "@/pages/home/ApplicationDetailModal";
 
@@ -13,11 +15,13 @@ export default function ScholarApplicationsTracker({
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
 
   const { data: applications = [], isLoading } = useQuery<Application[]>({
-    queryKey: ["/api/applications", { scholarId: user.scholarId }],
-    queryFn: () =>
-      fetch(`/api/applications?scholarId=${user.scholarId}`).then((res) =>
-        res.json(),
-      ),
+    queryKey: [api.applications.list.path, { scholarId: user.scholarId }],
+    queryFn: () => {
+      const query = api.applications.list.input?.parse({ scholarId: user.scholarId });
+      return apiJson<Application[]>(appendQuery(api.applications.list.path, query), {
+        method: api.applications.list.method,
+      });
+    },
   });
 
   const getStageProgress = (stage: string, status: string) => {

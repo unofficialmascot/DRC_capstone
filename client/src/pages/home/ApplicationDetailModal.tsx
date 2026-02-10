@@ -1,4 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+import { apiJson } from "@/lib/api";
+import { api, buildUrl } from "@shared/routes";
 import type { Application, ApplicationReview } from "@/types/gscholar";
 
 interface ApplicationDetailModalProps {
@@ -11,9 +13,11 @@ export default function ApplicationDetailModal({
   onClose,
 }: ApplicationDetailModalProps) {
   const { data: reviews = [] } = useQuery<ApplicationReview[]>({
-    queryKey: ["/api/applications", app.id, "reviews"],
+    queryKey: [api.applications.getReviews.path, app.id],
     queryFn: () =>
-      fetch(`/api/applications/${app.id}/reviews`).then((res) => res.json()),
+      apiJson<ApplicationReview[]>(buildUrl(api.applications.getReviews.path, { id: app.id }), {
+        method: api.applications.getReviews.method,
+      }),
   });
 
   const stages = ["supervisor", "drc", "irc", "doaa", "completed"];

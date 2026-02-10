@@ -1,4 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+import { apiJson } from "@/lib/api";
+import { api, buildUrl } from "@shared/routes";
 import type { Application } from "@/types/gscholar";
 
 interface ReviewerDashboardProps {
@@ -7,8 +9,11 @@ interface ReviewerDashboardProps {
 
 export default function ReviewerDashboard({ role }: ReviewerDashboardProps) {
   const { data: pendingApps = [] } = useQuery<Application[]>({
-    queryKey: ["/api/applications/stage", role],
-    queryFn: () => fetch(`/api/applications/stage/${role}`).then((res) => res.json()),
+    queryKey: [api.applications.getByStage.path, role],
+    queryFn: () =>
+      apiJson<Application[]>(buildUrl(api.applications.getByStage.path, { stage: role }), {
+        method: api.applications.getByStage.method,
+      }),
   });
 
   return (
