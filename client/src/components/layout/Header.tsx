@@ -20,7 +20,7 @@ export function Header() {
   const { toast } = useToast();
 
   const handleRoleChange = (role: string) => {
-    if (!user) return;
+    if (!user || typeof user.id !== "number") return;
     updateUser.mutate(
       { id: user.id, role },
       {

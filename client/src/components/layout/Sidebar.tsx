@@ -19,12 +19,19 @@ interface SidebarProps {
   className?: string;
 }
 
+type MenuItem = {
+  label: string;
+  icon: typeof LayoutDashboard;
+  href: string;
+  highlight?: boolean;
+};
+
 export function Sidebar({ className }: SidebarProps) {
   const [location] = useLocation();
   const { data: user } = useUser(1); // Hardcoded ID 1 for demo
   const role = user?.role || "scholar";
 
-  const menuItems = {
+  const menuItems: Record<"scholar" | "supervisor" | "rac", MenuItem[]> = {
     scholar: [
       { label: "My Profile", icon: UserCircle, href: "/profile" },
       { label: "Research Progress", icon: LayoutDashboard, href: "/research" },

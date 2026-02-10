@@ -11,7 +11,7 @@ import {
   type ApplicationReview,
   type InsertApplicationReview
 } from "@shared/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray, or } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -23,6 +23,7 @@ export interface IStorage {
   
   // Applications
   getApplications(scholarId?: number): Promise<Application[]>;
+  getApplicationsForSupervisor(supervisorUserId: number): Promise<Application[]>;
   getApplicationById(id: number): Promise<Application | undefined>;
   getApplicationsByStage(stage: string): Promise<Application[]>;
   createApplication(app: InsertApplication): Promise<Application>;
@@ -77,6 +78,34 @@ export class DatabaseStorage implements IStorage {
   async getApplicationsByStage(stage: string): Promise<Application[]> {
     return db.select().from(applications)
       .where(and(eq(applications.currentStage, stage), eq(applications.status, "Pending")))
+      .orderBy(desc(applications.submissionDate));
+  }
+
+  async getApplicationsForSupervisor(supervisorUserId: number): Promise<Application[]> {
+    const supervisor = await this.getUser(supervisorUserId);
+    if (!supervisor) {
+      return [];
+    }
+
+    const supervisedScholars = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(
+        and(
+          eq(users.role, "scholar"),
+          or(eq(users.supervisor, supervisor.name), eq(users.coSupervisor, supervisor.name)),
+        ),
+      );
+
+    const scholarIds = supervisedScholars.map((scholar) => scholar.id);
+    if (scholarIds.length === 0) {
+      return [];
+    }
+
+    return db
+      .select()
+      .from(applications)
+      .where(inArray(applications.scholarId, scholarIds))
       .orderBy(desc(applications.submissionDate));
   }
 
