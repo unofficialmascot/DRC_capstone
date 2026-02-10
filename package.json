@@ -9,9 +9,14 @@
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
     "db:push": "NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit push",
-    "demo:setup": "node reset-db.cjs && node run-seed.mjs && npm run dev",
-    "dev:db": "node reset-schema.cjs && npm run db:push && node run-seed.mjs",
-    "dev:demo": "DEMO_FILE_STORAGE=true DEMO_DATA_FILE=server/data/demo-data.json npm run dev"
+    "demo:setup": "node scripts/db/reset-db.cjs && node scripts/db/run-seed.mjs && npm run dev",
+    "dev:db": "node scripts/db/reset-schema.cjs && npm run db:push && node scripts/db/run-seed.mjs",
+    "dev:demo": "DEMO_FILE_STORAGE=true DEMO_DATA_FILE=server/data/demo-data.json npm run dev",
+    "db:reset": "node scripts/db/reset-db.cjs",
+    "db:reset:schema": "node scripts/db/reset-schema.cjs",
+    "db:seed": "node scripts/db/run-seed.mjs",
+    "db:check": "node scripts/db/check-db.cjs",
+    "db:migrate:apply": "node scripts/migrations/apply-migrations.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
