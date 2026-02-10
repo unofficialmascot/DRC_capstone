@@ -1,4 +1,4 @@
-import { storage } from "../storage";
+import { storage } from "../storage/index";
 import { ApplicationDocumentService } from "./applicationDocumentService";
 import { ApplicationService } from "./applicationService";
 import { AuthService } from "./authService";
