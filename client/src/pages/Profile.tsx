@@ -27,7 +27,7 @@ export default function Profile() {
             {isLoading ? (
               <ProfileSkeleton />
             ) : user ? (
-              <ProfileCard user={user} />
+              <ProfileCard user={{ ...user, role: user.role || "scholar" }} />
             ) : (
               <div>User not found</div>
             )}

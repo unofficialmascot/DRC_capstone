@@ -29,7 +29,8 @@ export async function registerRoutes(
       const { password: _, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
     } catch (error) {
-      res.status(400).json({ message: "Invalid input" });
+      const message = error instanceof Error ? error.message : "Invalid input";
+      res.status(400).json({ message });
     }
   });
 
@@ -84,7 +85,8 @@ export async function registerRoutes(
       const { password: _, ...userWithoutPassword } = updatedUser;
       res.json(userWithoutPassword);
     } catch (error) {
-      res.status(400).json({ message: "Invalid input" });
+      const message = error instanceof Error ? error.message : "Invalid input";
+      res.status(400).json({ message });
     }
   });
 
@@ -94,6 +96,24 @@ export async function registerRoutes(
       ? Number(req.query.scholarId)
       : undefined;
     const apps = await storage.getApplications(scholarId);
+    res.json(apps);
+  });
+
+  app.get("/api/applications/supervisor", async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    const user = await storage.getUser(req.session.userId);
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    if (user.role !== "supervisor") {
+      return res.status(403).json({ message: "Only supervisors can access this endpoint" });
+    }
+
+    const apps = await storage.getApplicationsForSupervisor(user.id);
     res.json(apps);
   });
 
@@ -113,14 +133,17 @@ export async function registerRoutes(
   app.post(api.applications.create.path, async (req, res) => {
     try {
       const input = api.applications.create.input.parse(req.body);
+      const details = sanitizeApplicationDetails(input.details);
       const newApp = await storage.createApplication({
         ...input,
+        details: details as any,
         currentStage: "drc",
         status: "Pending",
       });
       res.status(201).json(newApp);
     } catch (error) {
-      res.status(400).json({ message: "Invalid input" });
+      const message = error instanceof Error ? error.message : "Invalid input";
+      res.status(400).json({ message });
     }
   });
 
@@ -240,6 +263,64 @@ async function applyApprovedChanges(application: {
       `Extension approved for scholar ${application.scholarId}: ${details.extensionDuration}`,
     );
   }
+}
+
+
+function sanitizeApplicationDetails(details: unknown) {
+  if (!details || typeof details !== "object") {
+    return details;
+  }
+
+  const record = details as Record<string, unknown>;
+  const enclosures = record.enclosures;
+  if (!Array.isArray(enclosures)) {
+    return details;
+  }
+
+  if (enclosures.length > 10) {
+    throw new Error("A maximum of 10 PDF enclosures is allowed per application");
+  }
+
+  const sanitizedEnclosures = enclosures.map((enclosure, index) => {
+    if (!enclosure || typeof enclosure !== "object") {
+      throw new Error(`Invalid enclosure at index ${index}`);
+    }
+
+    const enclosureRecord = enclosure as Record<string, unknown>;
+    const name = String(enclosureRecord.name || "").trim();
+    const contentType = String(enclosureRecord.contentType || "").trim().toLowerCase();
+    const dataUrl = String(enclosureRecord.dataUrl || "").trim();
+
+    if (!name || !dataUrl) {
+      throw new Error(`Enclosure ${index + 1} is incomplete`);
+    }
+
+    if (contentType !== "application/pdf") {
+      throw new Error(`Enclosure ${index + 1} must be a PDF`);
+    }
+
+    if (!dataUrl.startsWith("data:application/pdf;base64,")) {
+      throw new Error(`Enclosure ${index + 1} has invalid PDF encoding`);
+    }
+
+    const base64Payload = dataUrl.split(",")[1] || "";
+    const bytesEstimate = Math.ceil((base64Payload.length * 3) / 4);
+    if (bytesEstimate > 5 * 1024 * 1024) {
+      throw new Error(`Enclosure ${index + 1} exceeds the 5MB size limit`);
+    }
+
+    return {
+      name,
+      contentType: "application/pdf",
+      dataUrl,
+      uploadedAt: new Date().toISOString(),
+    };
+  });
+
+  return {
+    ...record,
+    enclosures: sanitizedEnclosures,
+  };
 }
 
 async function seedData() {

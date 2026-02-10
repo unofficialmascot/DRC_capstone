@@ -3,8 +3,14 @@ import type { User as UserType } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
+type ProfileUser = Partial<UserType> & {
+  name: string;
+  email: string;
+  role: string;
+};
+
 interface ProfileCardProps {
-  user: UserType;
+  user: ProfileUser;
 }
 
 export function ProfileCard({ user }: ProfileCardProps) {
