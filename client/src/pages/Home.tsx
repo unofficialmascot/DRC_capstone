@@ -4,7 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 import "../styles/gscholar.css";
 
 type ScholarPage = "profile" | "applications" | "research" | "fees" | "dochub" | "noticeboard";
-type ReviewerPage = "dashboard" | "reviews";
+type ReviewerPage = "dashboard" | "reviews" | "applications";
 
 interface User {
   id: number;
@@ -50,6 +50,13 @@ interface ApplicationReview {
   decision: string;
   remarks: string;
   reviewDate: string;
+}
+
+interface ApplicationEnclosure {
+  name: string;
+  contentType: "application/pdf";
+  dataUrl: string;
+  uploadedAt?: string;
 }
 
 export default function Home() {
@@ -187,7 +194,11 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
   const renderReviewerSidebar = () => (
     <ul>
       <li className={reviewerPage === "dashboard" ? "active" : ""} onClick={() => setReviewerPage("dashboard")} data-testid="nav-reviewer-dashboard">{user.role.toUpperCase()} Dashboard</li>
-      <li className={`red-button ${reviewerPage === "reviews" ? "active" : ""}`} onClick={() => setReviewerPage("reviews")} data-testid="nav-reviewer-reviews">Pending Reviews</li>
+      {user.role === "supervisor" ? (
+        <li className={`red-button ${reviewerPage === "applications" ? "active" : ""}`} onClick={() => setReviewerPage("applications")} data-testid="nav-supervisor-applications">Applications</li>
+      ) : (
+        <li className={`red-button ${reviewerPage === "reviews" ? "active" : ""}`} onClick={() => setReviewerPage("reviews")} data-testid="nav-reviewer-reviews">Pending Reviews</li>
+      )}
     </ul>
   );
 
@@ -202,13 +213,16 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
         case "noticeboard": return <ScholarNoticeBoard />;
         default: return <ScholarProfile user={user} />;
       }
-    } else if (user.role === "supervisor") {
-      return <SupervisorDashboard />;
     } else {
       switch (reviewerPage) {
-        case "dashboard": return <ReviewerDashboard role={user.role} />;
-        case "reviews": return <ReviewerApplications user={user} />;
-        default: return <ReviewerDashboard role={user.role} />;
+        case "dashboard":
+          return user.role === "supervisor" ? <SupervisorDashboard /> : <ReviewerDashboard role={user.role} />;
+        case "reviews":
+          return user.role === "supervisor" ? <SupervisorApplications user={user} /> : <ReviewerApplications user={user} />;
+        case "applications":
+          return <SupervisorApplications user={user} />;
+        default:
+          return user.role === "supervisor" ? <SupervisorDashboard /> : <ReviewerDashboard role={user.role} />;
       }
     }
   };
@@ -236,7 +250,7 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
       <div className="layout">
         <nav className={`sidebar ${!sidebarOpen ? "collapsed" : ""}`}>
           {user.role === "scholar" && renderScholarSidebar()}
-          {user.role === "supervisor" && <ul><li className="active">Supervisor Dashboard</li></ul>}
+          {user.role === "supervisor" && renderReviewerSidebar()}
           {(user.role === "drc" || user.role === "irc" || user.role === "doaa") && renderReviewerSidebar()}
         </nav>
         <main className="content">{renderContent()}</main>
@@ -488,6 +502,12 @@ function ApplicationDetailModal({ app, onClose }: { app: Application; onClose: (
             </div>
           )}
 
+          <div style={{ marginBottom: "14px" }}>
+            <strong>PDF Enclosures</strong>
+            <div style={{ marginTop: "8px" }}>
+              <ApplicationEnclosureViewer enclosures={getEnclosuresFromDetails(app.details)} />
+            </div>
+          </div>
           <div style={{ padding: "15px", background: app.status === "Approved" ? "#e8f5e9" : app.status === "Rejected" ? "#ffebee" : "#e3f2fd", borderRadius: "8px" }}>
             <strong>Status:</strong> {app.status}<br />
             <strong>Current Stage:</strong> {app.currentStage.toUpperCase()}
@@ -625,6 +645,12 @@ function ReviewerApplications({ user }: { user: User }) {
                   <pre style={{ fontSize: "13px", whiteSpace: "pre-wrap", marginTop: "10px" }}>{JSON.stringify(selectedApp.details, null, 2)}</pre>
                 </div>
               )}
+              <div style={{ marginBottom: "20px" }}>
+                <strong>PDF Enclosures:</strong>
+                <div style={{ marginTop: "8px" }}>
+                  <ApplicationEnclosureViewer enclosures={getEnclosuresFromDetails(selectedApp.details)} />
+                </div>
+              </div>
               <div className="form-group">
                 <label style={{ fontWeight: "600" }}>Your Remarks (Required)</label>
                 <textarea
@@ -661,6 +687,7 @@ function SupervisorChangeForm({ user, onSubmit, onBack, isSubmitting }: { user: 
     proposedSupervisor: "",
     reason: ""
   });
+  const [enclosures, setEnclosures] = useState<ApplicationEnclosure[]>([]);
   return (
     <div className="form-container">
       <div style={{ textAlign: "center", marginBottom: "25px" }}>
@@ -674,8 +701,9 @@ function SupervisorChangeForm({ user, onSubmit, onBack, isSubmitting }: { user: 
       <div className="form-group"><label>Current Supervisor</label><input type="text" value={formData.currentSupervisor} onChange={(e) => setFormData({ ...formData, currentSupervisor: e.target.value })} /></div>
       <div className="form-group"><label>Proposed New Supervisor</label><input type="text" value={formData.proposedSupervisor} onChange={(e) => setFormData({ ...formData, proposedSupervisor: e.target.value })} placeholder="Enter name of proposed supervisor" data-testid="input-proposed-supervisor" /></div>
       <div className="form-group"><label>Reason/Justification</label><textarea value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })} placeholder="Please provide detailed reason" style={{ height: "120px" }} /></div>
+      <EnclosureUpload onChange={setEnclosures} />
       <div style={{ display: "flex", gap: "10px" }}>
-        <button className="submit-btn" onClick={() => onSubmit(formData)} disabled={isSubmitting} data-testid="button-submit-form">{isSubmitting ? "Submitting..." : "Submit Application"}</button>
+        <button className="submit-btn" onClick={() => onSubmit({ ...formData, enclosures })} disabled={isSubmitting} data-testid="button-submit-form">{isSubmitting ? "Submitting..." : "Submit Application"}</button>
         <button className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back to Options</button>
       </div>
     </div>
@@ -691,6 +719,7 @@ function PreTalkForm({ user, onSubmit, onBack, isSubmitting }: { user: User; onS
     preTalkDate: "",
     venue: "Seminar Hall"
   });
+  const [enclosures, setEnclosures] = useState<ApplicationEnclosure[]>([]);
   return (
     <div className="form-container">
       <div style={{ textAlign: "center", marginBottom: "25px" }}>
@@ -702,8 +731,9 @@ function PreTalkForm({ user, onSubmit, onBack, isSubmitting }: { user: User; onS
       <div className="form-group"><label>Topic of Research Work</label><input type="text" value={formData.researchTopic} onChange={(e) => setFormData({ ...formData, researchTopic: e.target.value })} /></div>
       <div className="form-group"><label>Date of Pre-talk Seminar</label><input type="date" value={formData.preTalkDate} onChange={(e) => setFormData({ ...formData, preTalkDate: e.target.value })} /></div>
       <div className="form-group"><label>Venue</label><input type="text" value={formData.venue} onChange={(e) => setFormData({ ...formData, venue: e.target.value })} /></div>
+      <EnclosureUpload onChange={setEnclosures} />
       <div style={{ display: "flex", gap: "10px" }}>
-        <button className="submit-btn" onClick={() => onSubmit(formData)} disabled={isSubmitting}>{isSubmitting ? "Submitting..." : "Submit Application"}</button>
+        <button className="submit-btn" onClick={() => onSubmit({ ...formData, enclosures })} disabled={isSubmitting}>{isSubmitting ? "Submitting..." : "Submit Application"}</button>
         <button className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back</button>
       </div>
     </div>
@@ -719,6 +749,7 @@ function ExtensionForm({ user, onSubmit, onBack, isSubmitting }: { user: User; o
     reason: "",
     timeline: ""
   });
+  const [enclosures, setEnclosures] = useState<ApplicationEnclosure[]>([]);
   return (
     <div className="form-container">
       <div style={{ textAlign: "center", marginBottom: "25px" }}>
@@ -731,8 +762,9 @@ function ExtensionForm({ user, onSubmit, onBack, isSubmitting }: { user: User; o
       <div className="form-group"><label>Required Extension Duration</label><input type="text" value={formData.extensionDuration} onChange={(e) => setFormData({ ...formData, extensionDuration: e.target.value })} placeholder="e.g., 6 months" /></div>
       <div className="form-group"><label>Reason for Extension</label><textarea value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })} placeholder="Explain why you need the extension" style={{ height: "80px" }} /></div>
       <div className="form-group"><label>Expected Timeline</label><textarea value={formData.timeline} onChange={(e) => setFormData({ ...formData, timeline: e.target.value })} placeholder="When do you expect to complete?" style={{ height: "80px" }} /></div>
+      <EnclosureUpload onChange={setEnclosures} />
       <div style={{ display: "flex", gap: "10px" }}>
-        <button className="submit-btn" onClick={() => onSubmit(formData)} disabled={isSubmitting}>{isSubmitting ? "Submitting..." : "Submit Application"}</button>
+        <button className="submit-btn" onClick={() => onSubmit({ ...formData, enclosures })} disabled={isSubmitting}>{isSubmitting ? "Submitting..." : "Submit Application"}</button>
         <button className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back</button>
       </div>
     </div>
@@ -748,6 +780,7 @@ function ReRegistrationForm({ user, onSubmit, onBack, isSubmitting }: { user: Us
     mobile: user.phone || "",
     email: user.email
   });
+  const [enclosures, setEnclosures] = useState<ApplicationEnclosure[]>([]);
   return (
     <div className="form-container">
       <div style={{ textAlign: "center", marginBottom: "25px" }}>
@@ -760,8 +793,9 @@ function ReRegistrationForm({ user, onSubmit, onBack, isSubmitting }: { user: Us
       <div className="form-group"><label>Name of the Dept. & School</label><input type="text" value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })} /></div>
       <div className="form-group"><label>Mobile No.</label><input type="text" value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} /></div>
       <div className="form-group"><label>E-mail</label><input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} /></div>
+      <EnclosureUpload onChange={setEnclosures} />
       <div style={{ display: "flex", gap: "10px" }}>
-        <button className="submit-btn" onClick={() => onSubmit(formData)} disabled={isSubmitting}>{isSubmitting ? "Submitting..." : "Submit Application"}</button>
+        <button className="submit-btn" onClick={() => onSubmit({ ...formData, enclosures })} disabled={isSubmitting}>{isSubmitting ? "Submitting..." : "Submit Application"}</button>
         <button className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back</button>
       </div>
     </div>
@@ -843,6 +877,154 @@ function ScholarNoticeBoard() {
         <p style={{ color: "#666", fontSize: "14px" }}>Please ensure all fee payments are completed before the deadline.</p>
         <span style={{ fontSize: "12px", color: "#888" }}>Posted: Jan 10, 2026</span>
       </div>
+    </div>
+  );
+}
+
+
+function getEnclosuresFromDetails(details: Record<string, unknown> | undefined): ApplicationEnclosure[] {
+  if (!details || !Array.isArray(details.enclosures)) {
+    return [];
+  }
+
+  return details.enclosures.filter((entry): entry is ApplicationEnclosure => {
+    if (!entry || typeof entry !== "object") return false;
+    const enclosure = entry as Record<string, unknown>;
+    return (
+      typeof enclosure.name === "string" &&
+      enclosure.contentType === "application/pdf" &&
+      typeof enclosure.dataUrl === "string" &&
+      enclosure.dataUrl.startsWith("data:application/pdf;base64,")
+    );
+  });
+}
+
+function ApplicationEnclosureViewer({ enclosures }: { enclosures: ApplicationEnclosure[] }) {
+  if (enclosures.length === 0) {
+    return <div style={{ fontSize: "13px", color: "#666" }}>No enclosures uploaded.</div>;
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+      {enclosures.map((enclosure, index) => (
+        <div key={`${enclosure.name}-${index}`} style={{ padding: "10px", border: "1px solid #ddd", borderRadius: "6px", background: "#fff" }}>
+          <div style={{ fontWeight: 600 }}>{enclosure.name}</div>
+          <a href={enclosure.dataUrl} target="_blank" rel="noreferrer" style={{ color: "#0b6a55", fontSize: "13px" }}>View PDF</a>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SupervisorApplications({ user }: { user: User }) {
+  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+  const { data: applications = [], isLoading } = useQuery<Application[]>({
+    queryKey: ["/api/applications/supervisor", user.id],
+    queryFn: () => fetch(`/api/applications/supervisor/${user.id}`).then(res => res.json())
+  });
+
+  const { data: allUsers = [] } = useQuery<User[]>({
+    queryKey: ["/api/users"],
+    queryFn: () => fetch("/api/users").then(res => res.json())
+  });
+
+  const getScholarName = (scholarId: number) => allUsers.find(u => u.id === scholarId)?.name || `Scholar #${scholarId}`;
+
+  return (
+    <div style={{ padding: "20px" }}>
+      <h2 style={{ color: "#0b6a55", marginBottom: "20px" }}>Applications from Your Scholars</h2>
+      {isLoading ? (
+        <div>Loading...</div>
+      ) : applications.length === 0 ? (
+        <div style={{ background: "#fff", border: "1px solid #e6e6e6", padding: "20px", borderRadius: "10px", color: "#666" }}>
+          No applications found for your supervised scholars.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {applications.map((app) => {
+            const enclosures = getEnclosuresFromDetails(app.details);
+            return (
+              <div key={app.id} style={{ background: "#fff", border: "1px solid #e6e6e6", padding: "20px", borderRadius: "10px" }}>
+                <div style={{ fontWeight: 700 }}>{app.type}</div>
+                <div style={{ fontSize: "13px", color: "#666", marginBottom: "8px" }}>Scholar: {getScholarName(app.scholarId)} | Status: {app.status}</div>
+                <div style={{ fontSize: "13px", color: "#333", marginBottom: "10px" }}>PDF Enclosures: {enclosures.length}</div>
+                <button className="submit-btn" onClick={() => setSelectedApp(app)}>View Details</button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {selectedApp && (
+        <div className="modal-overlay active" onClick={() => setSelectedApp(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "760px" }}>
+            <div className="modal-header">
+              <div className="modal-title">{selectedApp.type} - {getScholarName(selectedApp.scholarId)}</div>
+              <button className="close-btn" onClick={() => setSelectedApp(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ marginBottom: "10px" }}><strong>Status:</strong> {selectedApp.status}</div>
+              <div style={{ marginBottom: "15px" }}><strong>Submitted:</strong> {new Date(selectedApp.submissionDate).toLocaleString()}</div>
+              <div style={{ background: "#f8f9fa", padding: "15px", borderRadius: "6px", marginBottom: "15px" }}>
+                <strong>Application Details</strong>
+                <pre style={{ fontSize: "13px", whiteSpace: "pre-wrap", marginTop: "8px" }}>{JSON.stringify(selectedApp.details, null, 2)}</pre>
+              </div>
+              <div>
+                <strong>PDF Enclosures</strong>
+                <div style={{ marginTop: "8px" }}>
+                  <ApplicationEnclosureViewer enclosures={getEnclosuresFromDetails(selectedApp.details)} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EnclosureUpload({ onChange }: { onChange: (enclosures: ApplicationEnclosure[]) => void }) {
+  const [files, setFiles] = useState<ApplicationEnclosure[]>([]);
+
+  const handleFiles = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(event.target.files || []);
+    const pdfFiles = selectedFiles.filter((file) => file.type === "application/pdf");
+
+    if (pdfFiles.length !== selectedFiles.length) {
+      alert("Only PDF documents are allowed as enclosures.");
+    }
+
+    const converted = await Promise.all(
+      pdfFiles.map(
+        (file) =>
+          new Promise<ApplicationEnclosure>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve({
+              name: file.name,
+              contentType: "application/pdf",
+              dataUrl: String(reader.result || "")
+            });
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          }),
+      ),
+    );
+
+    const next = [...files, ...converted];
+    setFiles(next);
+    onChange(next);
+    event.target.value = "";
+  };
+
+  return (
+    <div className="form-group">
+      <label>Application Enclosures (PDF only)</label>
+      <input type="file" accept="application/pdf" multiple onChange={handleFiles} />
+      {files.length > 0 && (
+        <ul style={{ marginTop: "8px", fontSize: "13px" }}>
+          {files.map((file, i) => <li key={`${file.name}-${i}`}>{file.name}</li>)}
+        </ul>
+      )}
     </div>
   );
 }

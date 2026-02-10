@@ -97,6 +97,11 @@ export async function registerRoutes(
     res.json(apps);
   });
 
+  app.get("/api/applications/supervisor/:supervisorId", async (req, res) => {
+    const apps = await storage.getApplicationsForSupervisor(Number(req.params.supervisorId));
+    res.json(apps);
+  });
+
   app.get("/api/applications/stage/:stage", async (req, res) => {
     const apps = await storage.getApplicationsByStage(req.params.stage);
     res.json(apps);
@@ -113,8 +118,10 @@ export async function registerRoutes(
   app.post(api.applications.create.path, async (req, res) => {
     try {
       const input = api.applications.create.input.parse(req.body);
+      const details = sanitizeApplicationDetails(input.details);
       const newApp = await storage.createApplication({
         ...input,
+        details,
         currentStage: "drc",
         status: "Pending",
       });
@@ -240,6 +247,54 @@ async function applyApprovedChanges(application: {
       `Extension approved for scholar ${application.scholarId}: ${details.extensionDuration}`,
     );
   }
+}
+
+
+function sanitizeApplicationDetails(details: unknown) {
+  if (!details || typeof details !== "object") {
+    return details;
+  }
+
+  const record = details as Record<string, unknown>;
+  const enclosures = record.enclosures;
+  if (!Array.isArray(enclosures)) {
+    return details;
+  }
+
+  const sanitizedEnclosures = enclosures.map((enclosure, index) => {
+    if (!enclosure || typeof enclosure !== "object") {
+      throw new Error(`Invalid enclosure at index ${index}`);
+    }
+
+    const enclosureRecord = enclosure as Record<string, unknown>;
+    const name = String(enclosureRecord.name || "").trim();
+    const contentType = String(enclosureRecord.contentType || "").trim().toLowerCase();
+    const dataUrl = String(enclosureRecord.dataUrl || "").trim();
+
+    if (!name || !dataUrl) {
+      throw new Error(`Enclosure ${index + 1} is incomplete`);
+    }
+
+    if (contentType !== "application/pdf") {
+      throw new Error(`Enclosure ${index + 1} must be a PDF`);
+    }
+
+    if (!dataUrl.startsWith("data:application/pdf;base64,")) {
+      throw new Error(`Enclosure ${index + 1} has invalid PDF encoding`);
+    }
+
+    return {
+      name,
+      contentType: "application/pdf",
+      dataUrl,
+      uploadedAt: new Date().toISOString(),
+    };
+  });
+
+  return {
+    ...record,
+    enclosures: sanitizedEnclosures,
+  };
 }
 
 async function seedData() {

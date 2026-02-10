@@ -39,6 +39,13 @@ export const api = {
         201: insertApplicationSchema,
       },
     },
+    listForSupervisor: {
+      method: 'GET' as const,
+      path: '/api/applications/supervisor/:supervisorId',
+      responses: {
+        200: z.array(insertApplicationSchema),
+      },
+    },
     getByStage: {
       method: 'GET' as const,
       path: '/api/applications/stage/:stage',
