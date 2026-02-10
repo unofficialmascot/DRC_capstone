@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiJson, apiRequest } from "@/lib/api";
+import { api, buildUrl } from "@shared/routes";
 import type { Application, User } from "@/types/gscholar";
 
 interface ReviewerApplicationsProps {
@@ -13,13 +14,16 @@ export default function ReviewerApplications({ user }: ReviewerApplicationsProps
   const queryClient = useQueryClient();
 
   const { data: pendingApps = [], isLoading } = useQuery<Application[]>({
-    queryKey: ["/api/applications/stage", user.role],
-    queryFn: () => fetch(`/api/applications/stage/${user.role}`).then((res) => res.json()),
+    queryKey: [api.applications.getByStage.path, user.role],
+    queryFn: () =>
+      apiJson<Application[]>(buildUrl(api.applications.getByStage.path, { stage: user.role }), {
+        method: api.applications.getByStage.method,
+      }),
   });
 
   const { data: allUsers = [] } = useQuery<User[]>({
-    queryKey: ["/api/users"],
-    queryFn: () => fetch("/api/users").then((res) => res.json()),
+    queryKey: [api.users.list.path],
+    queryFn: () => apiJson<User[]>(api.users.list.path, { method: api.users.list.method }),
   });
 
   const getScholarName = (userId: number) => {
@@ -42,10 +46,13 @@ export default function ReviewerApplications({ user }: ReviewerApplicationsProps
       decision: "approved" | "rejected";
       remarks: string;
     }) => {
-      const res = await apiRequest("POST", `/api/applications/${appId}/review`, {
-        reviewerId: user.id,
-        decision,
-        remarks: reviewRemarks,
+      const res = await apiRequest(`/api/applications/${appId}/review`, {
+        method: "POST",
+        body: {
+          reviewerId: user.id,
+          decision,
+          remarks: reviewRemarks,
+        },
       });
       return res.json();
     },

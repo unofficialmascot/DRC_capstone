@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiJson, apiRequest } from "@/lib/api";
+import { api, appendQuery, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 import type {
   Application,
@@ -49,9 +50,13 @@ export default function ScholarApplicationFormPage({
   const queryClient = useQueryClient();
 
   useQuery<Application[]>({
-    queryKey: ["/api/applications", { userId: user.id }],
-    queryFn: () =>
-      fetch(`/api/applications?userId=${user.id}`).then((res) => res.json()),
+    queryKey: [api.applications.list.path, { userId: user.id }],
+    queryFn: () => {
+      const query = api.applications.list.input?.parse({ userId: user.id });
+      return apiJson<Application[]>(appendQuery(api.applications.list.path, query), {
+        method: api.applications.list.method,
+      });
+    },
   });
 
   useEffect(() => {
@@ -63,13 +68,10 @@ export default function ScholarApplicationFormPage({
         setEligibilityLoading(true);
         setEligibilityError(null);
         const scholarIdentifier = user.scholarId ?? String(user.id);
-        const res = await fetch(
-          `/api/extensions/check-eligibility/${scholarIdentifier}`,
+        const data = await apiJson<any>(
+          buildUrl(api.extensions.checkEligibility.path, { scholarIdentifier }),
+          { method: api.extensions.checkEligibility.method },
         );
-        if (!res.ok) {
-          throw new Error("Unable to check eligibility");
-        }
-        const data = await res.json();
         setEligibility(data.eligibility);
       } catch (error: any) {
         setEligibilityError(error?.message || "Failed to check eligibility");
@@ -83,10 +85,13 @@ export default function ScholarApplicationFormPage({
 
   const submitMutation = useMutation({
     mutationFn: async (data: { type: string; details: Record<string, unknown> }) => {
-      const res = await apiRequest("POST", "/api/applications", {
-        userId: user.id,
-        type: data.type,
-        details: data.details,
+      const res = await apiRequest("/api/applications", {
+        method: "POST",
+        body: {
+          userId: user.id,
+          type: data.type,
+          details: data.details,
+        },
       });
       return res.json();
     },

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { apiJson } from "@/lib/api";
+import { api } from "@shared/routes";
 import type { User } from "@/types/gscholar";
 
 interface SupervisorDashboardProps {
@@ -12,22 +14,14 @@ export default function SupervisorDashboard({}: SupervisorDashboardProps) {
   >("scholars");
 
   const { data: scholars = [], isLoading: isLoadingScholars } = useQuery({
-    queryKey: ["/api/supervisors/scholars"],
-    queryFn: () =>
-      fetch("/api/supervisors/scholars").then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch scholars");
-        return res.json();
-      }),
+    queryKey: [api.supervisors.scholars.path],
+    queryFn: () => apiJson<any[]>(api.supervisors.scholars.path, { method: api.supervisors.scholars.method }),
     enabled: supervisorTab === "scholars",
   });
 
   const { data: applications = [], isLoading: isLoadingApplications } = useQuery({
-    queryKey: ["/api/supervisors/applications"],
-    queryFn: () =>
-      fetch("/api/supervisors/applications").then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch applications");
-        return res.json();
-      }),
+    queryKey: [api.supervisors.applications.path],
+    queryFn: () => apiJson<any[]>(api.supervisors.applications.path, { method: api.supervisors.applications.method }),
     enabled: supervisorTab === "applications",
   });
 

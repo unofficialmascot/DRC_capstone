@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiJson, apiRequest } from "@/lib/api";
+import { api, appendQuery, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 
 interface ScholarDocHubUser {
@@ -20,9 +21,12 @@ export function ScholarDocHub({ user }: { user: ScholarDocHubUser }) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  const { data: applications = [] } = useQuery({
-    queryKey: ["/api/applications", { userId: user.id }],
-    queryFn: () => fetch(`/api/applications?userId=${user.id}`).then((res) => res.json()),
+  const { data: applications = [] } = useQuery<Application[]>({
+    queryKey: [api.applications.list.path, { userId: user.id }],
+    queryFn: () => {
+      const query = api.applications.list.input?.parse({ userId: user.id });
+      return apiJson<Application[]>(appendQuery(api.applications.list.path, query), { method: api.applications.list.method });
+    },
   });
 
   useEffect(() => {
@@ -33,19 +37,21 @@ export function ScholarDocHub({ user }: { user: ScholarDocHubUser }) {
 
   const activeApplicationId = selectedAppId ? Number(selectedAppId) : undefined;
 
-  const { data: documents = [], isLoading: isLoadingDocuments } = useQuery({
-    queryKey: ["/api/applications", activeApplicationId, "documents"],
+  const { data: documents = [], isLoading: isLoadingDocuments } = useQuery<any[]>({
+    queryKey: [api.applications.documents.list.path, activeApplicationId],
     queryFn: () =>
-      fetch(`/api/applications/${activeApplicationId}/documents`).then((res) => res.json()),
+      apiJson(buildUrl(api.applications.documents.list.path, { id: activeApplicationId! }), {
+        method: api.applications.documents.list.method,
+      }),
     enabled: Boolean(activeApplicationId),
   });
 
-  const { data: checklist = [] } = useQuery({
-    queryKey: ["/api/applications", activeApplicationId, "document-checklist"],
+  const { data: checklist = [] } = useQuery<any[]>({
+    queryKey: [api.applications.documents.checklist.path, activeApplicationId],
     queryFn: () =>
-      fetch(`/api/applications/${activeApplicationId}/document-checklist`).then((res) =>
-        res.json(),
-      ),
+      apiJson(buildUrl(api.applications.documents.checklist.path, { id: activeApplicationId! }), {
+        method: api.applications.documents.checklist.method,
+      }),
     enabled: Boolean(activeApplicationId),
   });
 
@@ -100,38 +106,38 @@ export function ScholarDocHub({ user }: { user: ScholarDocHubUser }) {
     setIsUploading(true);
 
     try {
-      const uploadUrlResponse = await apiRequest(
-        "POST",
-        `/api/applications/${activeApplicationId}/upload-url`,
+      const uploadUrlPayload = await apiJson<any>(
+        buildUrl(api.applications.documents.uploadUrl.path, { id: activeApplicationId }),
         {
-          documentType,
-          fileName: selectedFile.name,
-          mimeType: selectedFile.type,
-          fileSize: selectedFile.size,
+          method: api.applications.documents.uploadUrl.method,
+          body: {
+            documentType,
+            fileName: selectedFile.name,
+            mimeType: selectedFile.type,
+            fileSize: selectedFile.size,
+          },
         },
       );
 
-      const uploadUrlPayload = await uploadUrlResponse.json();
-
-      const uploadResult = await fetch(uploadUrlPayload.uploadUrl, {
+      await apiRequest(uploadUrlPayload.uploadUrl, {
         method: "PUT",
         headers: {
           "Content-Type": selectedFile.type,
         },
         body: selectedFile,
+        includeCredentials: false,
       });
 
-      if (!uploadResult.ok) {
-        throw new Error("Upload failed. Please try again.");
-      }
-
-      await apiRequest("POST", `/api/applications/${activeApplicationId}/upload-document`, {
-        documentType,
-        fileName: selectedFile.name,
-        fileUrl: uploadUrlPayload.downloadUrl,
-        fileSize: selectedFile.size,
-        mimeType: selectedFile.type,
-        objectKey: uploadUrlPayload.objectKey,
+      await apiRequest(buildUrl(api.applications.documents.upload.path, { id: activeApplicationId }), {
+        method: api.applications.documents.upload.method,
+        body: {
+          documentType,
+          fileName: selectedFile.name,
+          fileUrl: uploadUrlPayload.downloadUrl,
+          fileSize: selectedFile.size,
+          mimeType: selectedFile.type,
+          objectKey: uploadUrlPayload.objectKey,
+        },
       });
 
       toast({
@@ -142,10 +148,10 @@ export function ScholarDocHub({ user }: { user: ScholarDocHubUser }) {
       setDocumentType("");
       setSelectedFile(null);
       queryClient.invalidateQueries({
-        queryKey: ["/api/applications", activeApplicationId, "documents"],
+        queryKey: [api.applications.documents.list.path, activeApplicationId],
       });
       queryClient.invalidateQueries({
-        queryKey: ["/api/applications", activeApplicationId, "document-checklist"],
+        queryKey: [api.applications.documents.checklist.path, activeApplicationId],
       });
     } catch (error: any) {
       toast({
