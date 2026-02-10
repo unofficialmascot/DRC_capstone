@@ -46,3 +46,7 @@ Use the following demo IDs (all with password `password123`) to log in and show 
 ### Sample records
 - Extension application: Thirupathi Kumar (`GITAM-SCH-2020-118`) with a fixed submission date (2025-01-15) and timeline details for demo walkthroughs.
 - Research progress: Thirupathi Kumar (4 completed reviews) and Priya Reddy (2 completed reviews) with fixed review dates to demonstrate reporting views.
+
+## Front-end API usage guardrail
+- Code review checklist: **no direct `fetch` in page or hook components** (`client/src/pages/*`, `client/src/hooks/*`). Use `client/src/lib/api.ts` wrappers instead.
+- Automated check: run `npm run lint:no-direct-fetch`.

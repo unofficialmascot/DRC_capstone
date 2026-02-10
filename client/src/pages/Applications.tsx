@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useApplications } from "@/hooks/use-applications";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/api";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,7 +26,7 @@ export default function Applications() {
   // Get current user
   const { data: user } = useQuery({
     queryKey: ["/api/auth/me"],
-    queryFn: () => apiRequest("GET", "/api/auth/me").then(res => res.json()),
+    queryFn: () => apiRequest("/api/auth/me", { method: "GET" }).then(res => res.json()),
   });
 
   // Get applications for current user ID
