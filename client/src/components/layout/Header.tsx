@@ -1,3 +1,4 @@
+import { Link } from "wouter";
 import { Bell, Search, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,17 +9,29 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useUser } from "@/hooks/use-users";
+import { useUser, useUpdateUser } from "@/hooks/use-users";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Sidebar } from "./Sidebar";
-import { apiRequest } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 export function Header() {
   const { data: user } = useUser(1);
+  const updateUser = useUpdateUser();
+  const { toast } = useToast();
 
-  const handleLogout = async () => {
-    await apiRequest("/api/auth/logout", { method: "POST" });
-    window.location.href = "/";
+  const handleRoleChange = (role: string) => {
+    if (!user || !user.id) return;
+    updateUser.mutate(
+      { id: user.id, role },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Role Switched",
+            description: `You are now viewing as a ${role}.`,
+          });
+        },
+      }
+    );
   };
 
   return (
@@ -34,8 +47,9 @@ export function Header() {
             <Sidebar />
           </SheetContent>
         </Sheet>
-
+        
         <div className="hidden md:flex items-center gap-3">
+          {/* Static logo image placeholder - using text for now or icon */}
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <span className="text-white font-bold font-display">G</span>
           </div>
@@ -46,9 +60,9 @@ export function Header() {
       <div className="flex items-center gap-3 md:gap-6">
         <div className="hidden md:flex relative max-w-md w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search..."
+          <input 
+            type="text" 
+            placeholder="Search..." 
             className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border-none rounded-full focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
           />
         </div>
@@ -60,24 +74,34 @@ export function Header() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className="relative h-9 w-9 rounded-full ring-2 ring-offset-2 ring-transparent hover:ring-primary/20 transition-all p-0"
-            >
-              <div className="w-full h-full rounded-full bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center text-white font-bold">
-                {user?.name?.charAt(0) || "U"}
-              </div>
+            <Button variant="ghost" className="relative h-9 w-9 rounded-full ring-2 ring-offset-2 ring-transparent hover:ring-primary/20 transition-all p-0">
+               <div className="w-full h-full rounded-full bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center text-white font-bold">
+                 {user?.name?.charAt(0) || "U"}
+               </div>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">{user?.name}</p>
-                <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                <p className="text-xs leading-none text-muted-foreground">
+                  {user?.email}
+                </p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">
+            <DropdownMenuLabel>Switch Role</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => handleRoleChange("scholar")}>
+              Scholar View
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleRoleChange("supervisor")}>
+              Supervisor View
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleRoleChange("rac")}>
+              RAC Member View
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-red-600 focus:text-red-600">
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>
