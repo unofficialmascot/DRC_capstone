@@ -38,6 +38,7 @@ export function Sidebar({ className }: SidebarProps) {
     ],
     supervisor: [
       { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+      { label: "Applications", icon: FileText, href: "/applications", highlight: true },
       { label: "RAC Reports", icon: FileText, href: "/rac-reports" },
       { label: "Notice Board", icon: Bell, href: "/notices" },
       { label: "Profile", icon: UserCircle, href: "/profile" },

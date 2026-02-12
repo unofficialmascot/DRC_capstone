@@ -4,6 +4,9 @@ import { storage } from "./storage";
 import { api } from "../shared/routes.js";
 import { z } from "zod";
 import { verifyPassword } from "./storage";
+import multer from "multer";
+import path from "path";
+import fs from "fs/promises";
 import {
   evaluateWorkflowDecision,
   getWorkflowDefinition,
@@ -56,7 +59,12 @@ export async function registerRoutes(
 
       req.session.userId = user.id;
       const { password: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      // Add username field for convenience (employeeId for employees, scholarId for scholars)
+      const userWithUsername = {
+        ...userWithoutPassword,
+        username: (user as any).employeeId || (user as any).scholarId || user.email,
+      };
+      res.json(userWithUsername);
     } catch (error) {
       res.status(400).json({ message: "Invalid input" });
     }
@@ -80,7 +88,12 @@ export async function registerRoutes(
       return res.status(401).json({ message: "User not found" });
     }
     const { password: _, ...userWithoutPassword } = user;
-    res.json(userWithoutPassword);
+    // Add username field for convenience (employeeId for employees, scholarId for scholars)
+    const userWithUsername = {
+      ...userWithoutPassword,
+      username: (user as any).employeeId || (user as any).scholarId || user.email,
+    };
+    res.json(userWithUsername);
   });
 
   // === USERS ===
@@ -184,7 +197,7 @@ export async function registerRoutes(
     try {
       const reviewInput = z
         .object({
-          reviewerId: z.string(),
+          reviewerId: z.string(), // This is employeeId (e.g., "EMP-SUPERVISOR-001")
           decision: z.enum(["approved", "rejected"]),
           remarks: z.string().min(1, "Remarks are required"),
         })
@@ -203,6 +216,7 @@ export async function registerRoutes(
           .json({ message: "Application is no longer pending" });
       }
 
+      // Get employee record
       const reviewer = await storage.getEmployee(reviewInput.reviewerId);
       if (!reviewer) {
         return res.status(404).json({ message: "Reviewer not found" });
@@ -235,18 +249,29 @@ export async function registerRoutes(
         }
       }
 
+      console.log("Creating review with:", {
+        applicationId,
+        reviewerId: reviewInput.reviewerId, // Store employeeId as text
+        stage: application.currentStage,
+        decision: reviewInput.decision,
+      });
+
       const review = await storage.createReview({
         applicationId,
-        reviewerId: reviewInput.reviewerId,
+        reviewerId: reviewInput.reviewerId, // Store employeeId (text field)
         stage: application.currentStage,
         decision: reviewInput.decision,
         remarks: reviewInput.remarks,
       });
 
+      console.log("Review created:", review);
+
       const workflowResult = evaluateWorkflowDecision(workflow, {
         currentStage,
         decision: reviewInput.decision,
       });
+
+      console.log("Workflow result:", workflowResult);
 
       if (workflowResult.isTerminal && workflowResult.finalOutcome === "Approved") {
         await applyApprovedChanges(application);
@@ -260,8 +285,14 @@ export async function registerRoutes(
 
       res.json({ review, application: updatedApp });
     } catch (error) {
-      console.error("Review error:", error);
-      res.status(400).json({ message: "Invalid input" });
+      // Avoid logging circular/complex error objects that cause console.error to fail
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.error("Review error:", errorMessage);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      res.status(500).json({ message: errorMessage });
     }
   });
 
@@ -278,6 +309,157 @@ export async function registerRoutes(
       });
     }
     res.json(stats);
+  });
+
+  // === DOCUMENTS ===
+  // Configure multer for file uploads
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  await fs.mkdir(uploadsDir, { recursive: true });
+
+  const upload = multer({
+    storage: multer.diskStorage({
+      destination: async (req, file, cb) => {
+        cb(null, uploadsDir);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + '-' + file.originalname);
+      }
+    }),
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB limit
+    },
+    fileFilter: (req, file, cb) => {
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+      if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Invalid file type. Only PDF and images are allowed.'));
+      }
+    }
+  });
+
+  // Upload document
+  app.post("/api/documents/upload", upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const { scholarId, documentType, category } = req.body;
+      if (!scholarId || !documentType || !category) {
+        // Clean up uploaded file
+        await fs.unlink(req.file.path);
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const document = await storage.createDocument({
+        scholarId,
+        documentType,
+        category,
+        fileName: req.file.originalname,
+        filePath: req.file.path,
+        fileSize: req.file.size,
+        mimeType: req.file.mimetype,
+      });
+
+      res.status(201).json(document);
+    } catch (error: any) {
+      if (req.file) {
+        await fs.unlink(req.file.path).catch(() => {});
+      }
+      res.status(500).json({ message: error.message || "Failed to upload document" });
+    }
+  });
+
+  // Get documents for a scholar
+  app.get("/api/documents", async (req, res) => {
+    try {
+      const scholarId = req.query.scholarId as string;
+      if (!scholarId) {
+        return res.status(400).json({ message: "scholarId is required" });
+      }
+      const docs = await storage.getDocuments(scholarId);
+      res.json(docs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to fetch documents" });
+    }
+  });
+
+  // View document (inline - opens in browser)
+  app.get("/api/documents/:id/view", async (req, res) => {
+    try {
+      const doc = await storage.getDocumentById(Number(req.params.id));
+      if (!doc) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      // Ensure absolute path for sendFile
+      const absolutePath = path.isAbsolute(doc.filePath) 
+        ? doc.filePath 
+        : path.resolve(doc.filePath);
+
+      // Set content type and disposition to inline (preview in browser)
+      res.setHeader('Content-Type', doc.mimeType);
+      res.setHeader('Content-Disposition', `inline; filename="${doc.fileName}"`);
+      res.sendFile(absolutePath);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to view document" });
+    }
+  });
+
+  // Download document (forced download)
+  app.get("/api/documents/:id/download", async (req, res) => {
+    try {
+      const doc = await storage.getDocumentById(Number(req.params.id));
+      if (!doc) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      res.download(doc.filePath, doc.fileName);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to download document" });
+    }
+  });
+
+  // Delete document
+  app.delete("/api/documents/:id", async (req, res) => {
+    try {
+      const doc = await storage.getDocumentById(Number(req.params.id));
+      if (!doc) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      // Delete file from filesystem
+      await fs.unlink(doc.filePath).catch(() => {});
+      
+      // Delete from database
+      await storage.deleteDocument(Number(req.params.id));
+      
+      res.json({ message: "Document deleted successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to delete document" });
+    }
+  });
+
+  // Verify document (admin/supervisor only)
+  app.patch("/api/documents/:id/verify", async (req, res) => {
+    try {
+      const { verifiedBy } = req.body;
+      if (!verifiedBy) {
+        return res.status(400).json({ message: "verifiedBy is required" });
+      }
+
+      const updated = await storage.updateDocument(Number(req.params.id), {
+        isVerified: true,
+        verifiedBy,
+        verifiedAt: new Date(),
+      });
+
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to verify document" });
+    }
   });
 
   // === SEED DATA ===
@@ -402,7 +584,13 @@ async function seedData() {
     });
 
     // Update scholars with supervisor assignments
-    // Note: This would require an updateScholar method - for now, this is documented
+    await storage.updateScholarProfile("GITAM-SCH-2020-118", {
+      supervisorId: supervisorEmployee.employeeId,
+    });
+    
+    await storage.updateScholarProfile("GITAM-SCH-2021-204", {
+      supervisorId: supervisorEmployee.employeeId,
+    });
 
     // Create DRC member User
     const drcUser = await storage.createUser({

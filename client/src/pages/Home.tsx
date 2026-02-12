@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useDocuments } from "@/hooks/use-documents";
 import "../styles/gscholar.css";
 
 type ScholarPage = "profile" | "applications" | "research" | "fees" | "dochub" | "noticeboard";
@@ -217,12 +219,12 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
         case "applications": return <ScholarApplications user={user} />;
         case "research": return <ScholarResearchProgress userId={user.id} />;
         case "fees": return <ScholarFeeDetails />;
-        case "dochub": return <ScholarDocHub />;
+        case "dochub": return <ScholarDocHub scholarId={user.scholarId || ""} />;
         case "noticeboard": return <ScholarNoticeBoard />;
         default: return <ScholarProfile user={user} />;
       }
     } else if (user.role === "supervisor") {
-      return <SupervisorDashboard />;
+      return <SupervisorDashboard user={user} />;
     } else {
       switch (reviewerPage) {
         case "dashboard": return <ReviewerDashboard role={user.role} />;
@@ -235,7 +237,7 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <header className="header">
-        <button className="toggle-btn" onClick={() => setSidebarOpen(!sidebarOpen)} data-testid="button-sidebar-toggle">☰</button>
+        <button type="button" className="toggle-btn" onClick={() => setSidebarOpen(!sidebarOpen)} data-testid="button-sidebar-toggle">☰</button>
         <div className="logo"><span style={{ fontWeight: "bold", fontSize: "18px" }}>GITAM</span></div>
         <div className="title">G-Scholar Hub</div>
         <span className="role-label">{getRoleLabel()}</span>
@@ -724,6 +726,13 @@ function ScholarApplications({ user }: { user: User }) {
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const queryClient = useQueryClient();
 
+  const getDisplayStatus = (app: Application) => {
+    if (app.status === "Pending" && app.currentStage !== "supervisor") {
+      return "Submitted";
+    }
+    return app.status;
+  };
+
   const { data: applications = [], isLoading } = useQuery<Application[]>({
     queryKey: ["/api/applications", { scholarId: user.scholarId }],
     queryFn: () => fetch(`/api/applications?scholarId=${user.scholarId}`).then(res => res.json())
@@ -739,7 +748,9 @@ function ScholarApplications({ user }: { user: User }) {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/applications", { scholarId: user.scholarId }],
+      });
       alert("Application submitted successfully! It will be reviewed by the Supervisor.");
       setView("options");
       setFormType(null);
@@ -765,8 +776,8 @@ function ScholarApplications({ user }: { user: User }) {
 
       {view === "options" && (
         <div className="applications-options">
-          <button className="application-option" onClick={() => { setView("apply"); setFormType(null); }} data-testid="button-apply">Apply</button>
-          <button className="application-option" onClick={() => setView("track")} data-testid="button-track">Track Your Application</button>
+          <button type="button" className="application-option" onClick={() => { setView("apply"); setFormType(null); }} data-testid="button-apply">Apply</button>
+          <button type="button" className="application-option" onClick={() => setView("track")} data-testid="button-track">Track Your Application</button>
         </div>
       )}
 
@@ -774,12 +785,12 @@ function ScholarApplications({ user }: { user: User }) {
         <div className="dropdown-container" style={{ display: "block" }}>
           <div className="dropdown-box" data-testid="dropdown-application-type">Select Application Type ▼</div>
           <div className="dropdown-content" style={{ display: "block", position: "relative" }}>
-            <button onClick={() => setFormType("supervisor")} data-testid="button-supervisor-change">Change of Supervisor</button>
-            <button onClick={() => setFormType("pretalk")} data-testid="button-pretalk">Apply for Pre-talk</button>
-            <button onClick={() => setFormType("extension")} data-testid="button-extension">Extension of Ph.D Duration</button>
-            <button onClick={() => setFormType("reregistration")} data-testid="button-reregistration">Ph.D Re-Registration</button>
+            <button type="button" onClick={() => setFormType("supervisor")} data-testid="button-supervisor-change">Change of Supervisor</button>
+            <button type="button" onClick={() => setFormType("pretalk")} data-testid="button-pretalk">Apply for Pre-talk</button>
+            <button type="button" onClick={() => setFormType("extension")} data-testid="button-extension">Extension of Ph.D Duration</button>
+            <button type="button" onClick={() => setFormType("reregistration")} data-testid="button-reregistration">Ph.D Re-Registration</button>
           </div>
-          <button className="submit-btn" onClick={() => setView("options")} style={{ marginTop: "20px", background: "#6c757d" }} data-testid="button-back-options">Back to Options</button>
+          <button type="button" className="submit-btn" onClick={() => setView("options")} style={{ marginTop: "20px", background: "#6c757d" }} data-testid="button-back-options">Back to Options</button>
         </div>
       )}
 
@@ -801,7 +812,7 @@ function ScholarApplications({ user }: { user: User }) {
 
       {view === "track" && (
         <>
-          <button className="submit-btn" onClick={() => setView("options")} style={{ marginBottom: "20px", background: "#6c757d" }} data-testid="button-back-options-track">Back to Options</button>
+          <button type="button" className="submit-btn" onClick={() => setView("options")} style={{ marginBottom: "20px", background: "#6c757d" }} data-testid="button-back-options-track">Back to Options</button>
           {isLoading ? (
             <div style={{ textAlign: "center", padding: "40px" }}>Loading applications...</div>
           ) : applications.length === 0 ? (
@@ -810,6 +821,15 @@ function ScholarApplications({ user }: { user: User }) {
             <div className="tracking-container">
               {applications.map((app) => {
                 const progress = getStageProgress(app.currentStage, app.status);
+                const displayStatus = getDisplayStatus(app);
+                const statusClass =
+                  displayStatus === "Submitted"
+                    ? "completed"
+                    : app.status === "Pending"
+                      ? "in-progress"
+                      : app.status === "Approved"
+                        ? "completed"
+                        : "rejected";
                 return (
                   <div className="application-card" key={app.id}>
                     <div className="application-header">
@@ -827,8 +847,10 @@ function ScholarApplications({ user }: { user: User }) {
                       </div>
                     </div>
                     <div className="application-footer">
-                      <div className={`status-badge ${app.status === "Pending" ? "in-progress" : app.status === "Approved" ? "completed" : "rejected"}`}>{app.status}</div>
-                      <button className="details-btn" onClick={() => setSelectedApp(app)} data-testid={`button-details-${app.id}`}>More Details →</button>
+                      <div className={`status-badge ${statusClass}`}>
+                        {displayStatus}
+                      </div>
+                      <button type="button" className="details-btn" onClick={() => setSelectedApp(app)} data-testid={`button-details-${app.id}`}>More Details →</button>
                     </div>
                   </div>
                 );
@@ -857,7 +879,7 @@ function ApplicationDetailModal({ app, onClose }: { app: Application; onClose: (
       <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "700px" }}>
         <div className="modal-header">
           <div className="modal-title">{app.type} Application</div>
-          <button className="close-btn" onClick={onClose} data-testid="button-close-modal">×</button>
+          <button type="button" className="close-btn" onClick={onClose} data-testid="button-close-modal">×</button>
         </div>
         <div className="modal-body">
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "30px", padding: "20px", background: "#f8f9fa", borderRadius: "8px" }}>
@@ -959,9 +981,9 @@ function ReviewerApplications({ user }: { user: User }) {
     queryFn: () => fetch("/api/users").then(res => res.json())
   });
 
-  const getScholarName = (scholarId: number) => {
-    const scholar = allUsers.find(u => u.id === scholarId);
-    return scholar?.name || `Scholar #${scholarId}`;
+  const getScholarName = (scholarId: string) => {
+    const scholar = allUsers.find(u => u.scholarId === scholarId);
+    return scholar?.name || scholarId;
   };
 
   const reviewMutation = useMutation({
@@ -1012,7 +1034,7 @@ function ReviewerApplications({ user }: { user: User }) {
                   <pre style={{ fontSize: "13px", whiteSpace: "pre-wrap", marginTop: "10px" }}>{JSON.stringify(app.details, null, 2)}</pre>
                 </div>
               )}
-              <button className="submit-btn" onClick={() => setSelectedApp(app)} style={{ marginRight: "10px" }} data-testid={`button-review-${app.id}`}>Review Application</button>
+              <button type="button" className="submit-btn" onClick={() => setSelectedApp(app)} style={{ marginRight: "10px" }} data-testid={`button-review-${app.id}`}>Review Application</button>
             </div>
           ))}
         </div>
@@ -1023,7 +1045,7 @@ function ReviewerApplications({ user }: { user: User }) {
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "600px" }}>
             <div className="modal-header">
               <div className="modal-title">Review: {selectedApp.type}</div>
-              <button className="close-btn" onClick={() => setSelectedApp(null)}>×</button>
+              <button type="button" className="close-btn" onClick={() => setSelectedApp(null)}>×</button>
             </div>
             <div className="modal-body">
               <div style={{ marginBottom: "20px" }}>
@@ -1048,10 +1070,10 @@ function ReviewerApplications({ user }: { user: User }) {
                 />
               </div>
               <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
-                <button className="submit-btn" style={{ background: "#27ae60", flex: 1 }} onClick={() => handleReview("approved")} disabled={reviewMutation.isPending} data-testid="button-approve">
+                <button type="button" className="submit-btn" style={{ background: "#27ae60", flex: 1 }} onClick={() => handleReview("approved")} disabled={reviewMutation.isPending} data-testid="button-approve">
                   {reviewMutation.isPending ? "Processing..." : "Approve"}
                 </button>
-                <button className="submit-btn" style={{ background: "#e74c3c", flex: 1 }} onClick={() => handleReview("rejected")} disabled={reviewMutation.isPending} data-testid="button-reject">
+                <button type="button" className="submit-btn" style={{ background: "#e74c3c", flex: 1 }} onClick={() => handleReview("rejected")} disabled={reviewMutation.isPending} data-testid="button-reject">
                   {reviewMutation.isPending ? "Processing..." : "Reject"}
                 </button>
               </div>
@@ -1087,8 +1109,8 @@ function SupervisorChangeForm({ user, onSubmit, onBack, isSubmitting }: { user: 
       <div className="form-group"><label>Proposed New Supervisor</label><input type="text" value={formData.proposedSupervisor} onChange={(e) => setFormData({ ...formData, proposedSupervisor: e.target.value })} placeholder="Enter name of proposed supervisor" data-testid="input-proposed-supervisor" /></div>
       <div className="form-group"><label>Reason/Justification</label><textarea value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })} placeholder="Please provide detailed reason" style={{ height: "120px" }} /></div>
       <div style={{ display: "flex", gap: "10px" }}>
-        <button className="submit-btn" onClick={() => onSubmit(formData)} disabled={isSubmitting} data-testid="button-submit-form">{isSubmitting ? "Submitting..." : "Submit Application"}</button>
-        <button className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back to Options</button>
+        <button type="button" className="submit-btn" onClick={() => onSubmit(formData)} disabled={isSubmitting} data-testid="button-submit-form">{isSubmitting ? "Submitting..." : "Submit Application"}</button>
+        <button type="button" className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back to Options</button>
       </div>
     </div>
   );
@@ -1115,8 +1137,8 @@ function PreTalkForm({ user, onSubmit, onBack, isSubmitting }: { user: User; onS
       <div className="form-group"><label>Date of Pre-talk Seminar</label><input type="date" value={formData.preTalkDate} onChange={(e) => setFormData({ ...formData, preTalkDate: e.target.value })} /></div>
       <div className="form-group"><label>Venue</label><input type="text" value={formData.venue} onChange={(e) => setFormData({ ...formData, venue: e.target.value })} /></div>
       <div style={{ display: "flex", gap: "10px" }}>
-        <button className="submit-btn" onClick={() => onSubmit(formData)} disabled={isSubmitting}>{isSubmitting ? "Submitting..." : "Submit Application"}</button>
-        <button className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back</button>
+        <button type="button" className="submit-btn" onClick={() => onSubmit(formData)} disabled={isSubmitting}>{isSubmitting ? "Submitting..." : "Submit Application"}</button>
+        <button type="button" className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back</button>
       </div>
     </div>
   );
@@ -1144,8 +1166,8 @@ function ExtensionForm({ user, onSubmit, onBack, isSubmitting }: { user: User; o
       <div className="form-group"><label>Reason for Extension</label><textarea value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })} placeholder="Explain why you need the extension" style={{ height: "80px" }} /></div>
       <div className="form-group"><label>Expected Timeline</label><textarea value={formData.timeline} onChange={(e) => setFormData({ ...formData, timeline: e.target.value })} placeholder="When do you expect to complete?" style={{ height: "80px" }} /></div>
       <div style={{ display: "flex", gap: "10px" }}>
-        <button className="submit-btn" onClick={() => onSubmit(formData)} disabled={isSubmitting}>{isSubmitting ? "Submitting..." : "Submit Application"}</button>
-        <button className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back</button>
+        <button type="button" className="submit-btn" onClick={() => onSubmit(formData)} disabled={isSubmitting}>{isSubmitting ? "Submitting..." : "Submit Application"}</button>
+        <button type="button" className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back</button>
       </div>
     </div>
   );
@@ -1173,8 +1195,8 @@ function ReRegistrationForm({ user, onSubmit, onBack, isSubmitting }: { user: Us
       <div className="form-group"><label>Mobile No.</label><input type="text" value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} /></div>
       <div className="form-group"><label>E-mail</label><input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} /></div>
       <div style={{ display: "flex", gap: "10px" }}>
-        <button className="submit-btn" onClick={() => onSubmit(formData)} disabled={isSubmitting}>{isSubmitting ? "Submitting..." : "Submit Application"}</button>
-        <button className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back</button>
+        <button type="button" className="submit-btn" onClick={() => onSubmit(formData)} disabled={isSubmitting}>{isSubmitting ? "Submitting..." : "Submit Application"}</button>
+        <button type="button" className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back</button>
       </div>
     </div>
   );
@@ -1229,14 +1251,200 @@ function ScholarFeeDetails() {
   );
 }
 
-function ScholarDocHub() {
+function ScholarDocHub({ scholarId }: { scholarId: string }) {
+  const { documents, viewDocument, downloadDocument, uploadDocument, isUploading } = useDocuments(scholarId);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadForm, setUploadForm] = useState({
+    file: null as File | null,
+    documentType: '',
+    category: '',
+  });
+
+  const documentTypes = {
+    personal: [
+      { value: 'aadhaar', label: 'Aadhaar Card', description: 'Government issued identification document with unique 12-digit number' },
+      { value: 'pan', label: 'PAN Card', description: 'Permanent Account Number card for financial transactions' },
+      { value: 'passport', label: 'Passport Photos', description: 'Recent passport-sized photographs for official documents' },
+    ],
+    academic: [
+      { value: 'grade_cards', label: 'Grade Cards', description: 'All semester grade cards and mark sheets from previous qualifications' },
+      { value: 'degree_certificates', label: 'Degree Certificates', description: "Bachelor's and Master's degree certificates and provisional certificates" },
+      { value: 'transfer_certificate', label: 'Transfer Certificate', description: 'TC from previous institution with conduct and character details' },
+    ],
+  };
+
+  const handleUpload = () => {
+    if (!uploadForm.file || !uploadForm.documentType || !uploadForm.category) {
+      return;
+    }
+
+    uploadDocument({
+      file: uploadForm.file,
+      scholarId,
+      documentType: uploadForm.documentType,
+      category: uploadForm.category,
+    });
+
+    setUploadOpen(false);
+    setUploadForm({ file: null, documentType: '', category: '' });
+  };
+
+  const getDocumentInfo = (type: string, category: string) => {
+    const categoryDocs = documentTypes[category as keyof typeof documentTypes] || [];
+    return categoryDocs.find(d => d.value === type);
+  };
+
+  const renderDocumentCard = (type: string, category: string) => {
+    const info = getDocumentInfo(type, category);
+    if (!info) return null;
+
+    const doc = documents.find(d => d.documentType === type);
+
+    return (
+      <div key={type} style={{ background: '#fff', borderRadius: '10px', padding: '20px', border: '1px solid #e6e6e6', marginBottom: '15px' }}>
+        <div style={{ marginBottom: '15px' }}>
+          <h4 style={{ color: '#0b6a55', marginBottom: '8px' }}>{info.label}</h4>
+          <p style={{ color: '#666', fontSize: '14px' }}>{info.description}</p>
+        </div>
+        {doc && (
+          <div style={{ fontSize: '13px', color: '#666', marginBottom: '10px' }}>
+            <span>Uploaded: {new Date(doc.uploadedAt).toLocaleDateString()}</span>
+            {doc.isVerified && (
+              <span style={{ marginLeft: '10px', color: '#27ae60', fontWeight: '600' }}>✓ Verified</span>
+            )}
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button 
+            type="button"
+            className="submit-btn" 
+            style={{ padding: '8px 16px', fontSize: '14px' }}
+            onClick={() => doc && viewDocument(doc.id)}
+            disabled={!doc}
+          >
+            {doc ? '👁 View' : 'No file'}
+          </button>
+          <button 
+            type="button"
+            className="submit-btn" 
+            style={{ padding: '8px 16px', fontSize: '14px', background: '#27ae60' }}
+            onClick={() => doc && downloadDocument(doc.id)}
+            disabled={!doc}
+          >
+            ⬇ Download
+          </button>
+          <button 
+            type="button"
+            className="submit-btn" 
+            style={{ padding: '8px 16px', fontSize: '14px', background: '#f39c12' }}
+            onClick={() => {
+              setUploadForm({ file: null, documentType: type, category: category });
+              setUploadOpen(true);
+            }}
+          >
+            ⬆ Upload
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div style={{ padding: "20px" }}>
-      <h2 style={{ color: "#0b6a55", marginBottom: "20px" }}>Document Hub</h2>
-      <div style={{ background: "#fff", padding: "20px", borderRadius: "10px", border: "1px solid #e6e6e6" }}>
-        <p style={{ color: "#666" }}>Upload and manage your research documents here.</p>
-        <button className="submit-btn" style={{ marginTop: "15px" }}>Upload Document</button>
+      <h2 style={{ color: "#0b6a55", marginBottom: "20px" }}>Doc-Hub</h2>
+      
+      {/* Personal Identification Documents */}
+      <div style={{ marginBottom: '30px' }}>
+        <h3 style={{ color: '#0b6a55', marginBottom: '15px', fontSize: '18px' }}>Personal Identification Documents</h3>
+        {documentTypes.personal.map(doc => renderDocumentCard(doc.value, 'personal'))}
       </div>
+
+      {/* Academic Documents */}
+      <div style={{ marginBottom: '30px' }}>
+        <h3 style={{ color: '#0b6a55', marginBottom: '15px', fontSize: '18px' }}>Academic Documents</h3>
+        {documentTypes.academic.map(doc => renderDocumentCard(doc.value, 'academic'))}
+      </div>
+
+      {/* Upload Modal */}
+      {uploadOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }} onClick={() => setUploadOpen(false)}>
+          <div style={{
+            background: '#fff',
+            borderRadius: '12px',
+            padding: '30px',
+            width: '90%',
+            maxWidth: '500px'
+          }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ color: '#0b6a55', marginBottom: '20px' }}>Upload Document</h3>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Document Category</label>
+              <select 
+                value={uploadForm.category} 
+                onChange={(e) => setUploadForm({ ...uploadForm, category: e.target.value, documentType: '' })}
+                style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }}
+              >
+                <option value="">Select category</option>
+                <option value="personal">Personal Identification</option>
+                <option value="academic">Academic Documents</option>
+              </select>
+            </div>
+            {uploadForm.category && (
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Document Type</label>
+                <select 
+                  value={uploadForm.documentType} 
+                  onChange={(e) => setUploadForm({ ...uploadForm, documentType: e.target.value })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }}
+                >
+                  <option value="">Select document type</option>
+                  {documentTypes[uploadForm.category as keyof typeof documentTypes]?.map(doc => (
+                    <option key={doc.value} value={doc.value}>{doc.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>File (PDF, JPG, PNG - max 10MB)</label>
+              <input 
+                type="file" 
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={(e) => setUploadForm({ ...uploadForm, file: e.target.files?.[0] || null })}
+                style={{ width: '100%', padding: '10px' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button 
+                type="button"
+                className="submit-btn"
+                onClick={handleUpload}
+                disabled={isUploading}
+                style={{ flex: 1 }}
+              >
+                {isUploading ? 'Uploading...' : 'Upload'}
+              </button>
+              <button 
+                type="button"
+                className="submit-btn"
+                onClick={() => setUploadOpen(false)}
+                style={{ flex: 1, background: '#666' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1259,14 +1467,291 @@ function ScholarNoticeBoard() {
   );
 }
 
-function SupervisorDashboard() {
+function SupervisorDashboard({ user }: { user: User }) {
+  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [remarks, setRemarks] = useState("");
+  const [decision, setDecision] = useState<"approved" | "rejected">("approved");
+  const queryClient = useQueryClient();
+
+  const getDisplayStatus = (app: Application) => {
+    if (app.status === "Pending" && app.currentStage !== "supervisor") {
+      return "Submitted";
+    }
+    return app.status;
+  };
+  
+  const { data: applications = [], isLoading } = useQuery<Application[]>({
+    queryKey: ['/api/applications'],
+    queryFn: async () => {
+      const res = await fetch('/api/applications');
+      if (!res.ok) throw new Error('Failed to fetch applications');
+      return res.json();
+    },
+  });
+
+  const pendingApplications = applications.filter(app => app.status === 'Pending' && app.currentStage === 'supervisor');
+
+  const submitReviewMutation = useMutation({
+    mutationFn: async (review: { decision: "approved" | "rejected"; remarks: string }) => {
+      if (!selectedApp) throw new Error("No application selected");
+      const res = await fetch(`/api/applications/${selectedApp.id}/review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reviewerId: user.username,
+          decision: review.decision,
+          remarks: review.remarks,
+        }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to submit review");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/applications'] });
+      setSelectedApp(null);
+      setShowReviewForm(false);
+      setRemarks("");
+      alert("Review submitted successfully!");
+    },
+    onError: (error: Error) => {
+      alert(error.message || "Failed to submit review");
+    },
+  });
+
+  const handleSubmitReview = () => {
+    if (!remarks.trim()) {
+      alert("Please provide remarks for your decision");
+      return;
+    }
+    submitReviewMutation.mutate({ decision, remarks });
+  };
+
+  if (selectedApp) {
+    return (
+      <div style={{ padding: "20px" }}>
+        <button 
+          type="button"
+          className="submit-btn" 
+          onClick={() => setSelectedApp(null)} 
+          style={{ marginBottom: "20px", background: "#666" }}
+        >
+          ← Back to Applications
+        </button>
+        
+        <h2 style={{ color: "#0b6a55", marginBottom: "20px" }}>Application Details</h2>
+        
+        <div style={{ background: "#fff", padding: "25px", borderRadius: "10px", border: "1px solid #e6e6e6", marginBottom: "20px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: "20px" }}>
+            <div>
+              <strong style={{ color: "#0b6a55" }}>Application ID:</strong> {selectedApp.id}
+            </div>
+            <div>
+              <strong style={{ color: "#0b6a55" }}>Scholar ID:</strong> {selectedApp.scholarId}
+            </div>
+            <div>
+              <strong style={{ color: "#0b6a55" }}>Type:</strong> {selectedApp.type}
+            </div>
+            <div>
+              <strong style={{ color: "#0b6a55" }}>Status:</strong> 
+              <span style={{
+                marginLeft: "10px",
+                background: getDisplayStatus(selectedApp) === 'Submitted' ? '#27ae60' :
+                           selectedApp.status === 'Approved' ? '#27ae60' : 
+                           selectedApp.status === 'Rejected' ? '#e74c3c' : '#f39c12',
+                color: 'white',
+                padding: '4px 10px',
+                borderRadius: '15px',
+                fontSize: '13px'
+              }}>
+                {getDisplayStatus(selectedApp)}
+              </span>
+            </div>
+            <div>
+              <strong style={{ color: "#0b6a55" }}>Current Stage:</strong> {selectedApp.currentStage}
+            </div>
+            <div>
+              <strong style={{ color: "#0b6a55" }}>Submitted:</strong> {new Date(selectedApp.submissionDate).toLocaleString()}
+            </div>
+          </div>
+          
+          {selectedApp.details && Object.keys(selectedApp.details).length > 0 && (
+            <>
+              <hr style={{ margin: "20px 0", border: "none", borderTop: "1px solid #e6e6e6" }} />
+              <h4 style={{ color: "#0b6a55", marginBottom: "15px" }}>Application Details</h4>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "10px" }}>
+                {Object.entries(selectedApp.details).map(([key, value]) => (
+                  <div key={key} style={{ padding: "10px", background: "#f8f9fa", borderRadius: "6px" }}>
+                    <strong style={{ textTransform: "capitalize", color: "#555" }}>
+                      {key.replace(/([A-Z])/g, ' $1').trim()}:
+                    </strong>
+                    <span style={{ marginLeft: "10px", color: "#333" }}>
+                      {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {selectedApp.status === 'Pending' && selectedApp.currentStage === 'supervisor' && (
+          <div style={{ background: "#fff", padding: "25px", borderRadius: "10px", border: "1px solid #e6e6e6" }}>
+            <h4 style={{ color: "#0b6a55", marginBottom: "15px" }}>Review Application</h4>
+            
+            {!showReviewForm ? (
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  type="button"
+                  className="submit-btn"
+                  onClick={() => { setDecision("approved"); setShowReviewForm(true); }}
+                  style={{ background: "#27ae60" }}
+                >
+                  ✓ Approve
+                </button>
+                <button
+                  type="button"
+                  className="submit-btn"
+                  onClick={() => { setDecision("rejected"); setShowReviewForm(true); }}
+                  style={{ background: "#e74c3c" }}
+                >
+                  ✗ Reject
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div style={{ marginBottom: "15px" }}>
+                  <strong style={{ color: decision === "approved" ? "#27ae60" : "#e74c3c" }}>
+                    Decision: {decision === "approved" ? "Approve" : "Reject"}
+                  </strong>
+                </div>
+                <div style={{ marginBottom: "15px" }}>
+                  <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>
+                    Remarks *
+                  </label>
+                  <textarea
+                    value={remarks}
+                    onChange={(e) => setRemarks(e?.target?.value || "")}
+                    placeholder="Provide your remarks for this decision..."
+                    rows={4}
+                    style={{
+                      width: "100%",
+                      padding: "10px",
+                      border: "1px solid #ddd",
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                    }}
+                  />
+                </div>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button
+                    type="button"
+                    className="submit-btn"
+                    onClick={handleSubmitReview}
+                    disabled={submitReviewMutation.isPending}
+                    style={{ background: decision === "approved" ? "#27ae60" : "#e74c3c" }}
+                  >
+                    {submitReviewMutation.isPending ? "Submitting..." : "Submit Review"}
+                  </button>
+                  <button
+                    type="button"
+                    className="submit-btn"
+                    onClick={() => { setShowReviewForm(false); setRemarks(""); }}
+                    style={{ background: "#666" }}
+                    disabled={submitReviewMutation.isPending}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: "20px" }}>
       <h2 style={{ color: "#0b6a55", marginBottom: "20px" }}>Supervisor Dashboard</h2>
-      <div className="stats-container">
-        <div className="stat-card"><div className="stat-info"><div className="stat-label">Assigned Scholars</div><div className="stat-value">5</div></div><div className="stat-icon" style={{ color: "#0b6a55" }}>👥</div></div>
-        <div className="stat-card"><div className="stat-info"><div className="stat-label">Pending Reports</div><div className="stat-value">2</div></div><div className="stat-icon" style={{ color: "#f39c12" }}>📄</div></div>
+      
+      <div className="stats-container" style={{ marginBottom: "30px" }}>
+        <div className="stat-card">
+          <div className="stat-info">
+            <div className="stat-label">Pending Reviews</div>
+            <div className="stat-value">{pendingApplications.length}</div>
+          </div>
+          <div className="stat-icon" style={{ color: "#f39c12" }}>📄</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-info">
+            <div className="stat-label">Total Applications</div>
+            <div className="stat-value">{applications.length}</div>
+          </div>
+          <div className="stat-icon" style={{ color: "#0b6a55" }}>📋</div>
+        </div>
       </div>
+
+      <h3 style={{ color: "#0b6a55", marginBottom: "15px" }}>Scholar Applications</h3>
+      
+      {isLoading ? (
+        <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>Loading applications...</div>
+      ) : applications.length === 0 ? (
+        <div style={{ background: "#fff", padding: "40px", borderRadius: "10px", border: "1px solid #e6e6e6", textAlign: "center", color: "#666" }}>
+          No applications submitted yet
+        </div>
+      ) : (
+        <div style={{ background: "#fff", borderRadius: "10px", border: "1px solid #e6e6e6", overflow: "hidden" }}>
+          <table className="info-table">
+            <thead>
+              <tr>
+                <th>Scholar ID</th>
+                <th>Type</th>
+                <th>Submitted</th>
+                <th>Status</th>
+                <th>Stage</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {applications.map(app => (
+                <tr key={app.id}>
+                  <td>{app.scholarId}</td>
+                  <td>{app.type}</td>
+                  <td>{new Date(app.submissionDate).toLocaleDateString()}</td>
+                  <td>
+                    <span className="pill" style={{
+                      background: getDisplayStatus(app) === 'Submitted' ? '#27ae60' :
+                                 app.status === 'Approved' ? '#27ae60' : 
+                                 app.status === 'Rejected' ? '#e74c3c' : '#f39c12',
+                      color: 'white',
+                      padding: '4px 10px',
+                      borderRadius: '15px',
+                      fontSize: '13px'
+                    }}>
+                      {getDisplayStatus(app)}
+                    </span>
+                  </td>
+                  <td style={{ textTransform: 'capitalize' }}>{app.currentStage}</td>
+                  <td>
+                    <button 
+                      type="button"
+                      className="submit-btn" 
+                      onClick={() => setSelectedApp(app)}
+                      style={{ padding: "6px 12px", fontSize: "13px" }}
+                    >
+                      View Details
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

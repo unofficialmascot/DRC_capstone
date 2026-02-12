@@ -118,11 +118,28 @@ export const notices = pgTable("notices", {
   targetRole: text("target_role"),
 });
 
+// === DOCUMENTS ===
+export const documents = pgTable("documents", {
+  id: serial("id").primaryKey(),
+  scholarId: text("scholar_id").notNull(),
+  documentType: text("document_type").notNull(), // 'aadhaar', 'pan', 'passport', 'grade_cards', 'degree_certificates', 'transfer_certificate'
+  category: text("category").notNull(), // 'personal' or 'academic'
+  fileName: text("file_name").notNull(),
+  filePath: text("file_path").notNull(),
+  fileSize: integer("file_size").notNull(), // in bytes
+  mimeType: text("mime_type").notNull(),
+  uploadedAt: timestamp("uploaded_at").defaultNow(),
+  isVerified: boolean("is_verified").default(false),
+  verifiedBy: text("verified_by"), // employee_id who verified
+  verifiedAt: timestamp("verified_at"),
+});
+
 // === SCHEMAS ===
 export const insertUserSchema = createInsertSchema(users);
 export const insertApplicationSchema = createInsertSchema(applications);
 export const insertApplicationReviewSchema = createInsertSchema(applicationReviews);
 export const insertNoticeSchema = createInsertSchema(notices);
+export const insertDocumentSchema = createInsertSchema(documents);
 
 // === TYPES ===
 export type User = typeof users.$inferSelect;
@@ -135,3 +152,5 @@ export type InsertApplicationReview = z.infer<typeof insertApplicationReviewSche
 export type Notice = typeof notices.$inferSelect;
 export type InsertNotice = z.infer<typeof insertNoticeSchema>;
 export type ResearchProgress = typeof researchProgress.$inferSelect;
+export type Document = typeof documents.$inferSelect;
+export type InsertDocument = z.infer<typeof insertDocumentSchema>;

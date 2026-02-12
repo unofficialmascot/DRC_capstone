@@ -7,13 +7,16 @@ import {
   applications, 
   researchProgress, 
   applicationReviews,
+  documents,
   type Scholar,
   type User, 
   type InsertUser, 
   type Application, 
   type InsertApplication,
   type ApplicationReview,
-  type InsertApplicationReview
+  type InsertApplicationReview,
+  type Document,
+  type InsertDocument
 } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -21,7 +24,7 @@ import bcrypt from "bcryptjs";
 export interface IStorage {
   // Users
   getUser(id: number): Promise<User | undefined>;
-  getUserWithScholar(id: number): Promise<(User & Partial<Scholar>) | undefined>;
+  getUserWithScholar(id: number): Promise<(User & Partial<Scholar> & Partial<typeof employees.$inferSelect>) | undefined>;
   getUserByScholarId(scholarId: string): Promise<(User & Partial<Scholar>) | undefined>;
   getUserByEmployeeId(employeeId: string): Promise<(User & Partial<typeof employees.$inferSelect>) | undefined>;
   getAllUsers(): Promise<User[]>;
@@ -47,6 +50,17 @@ export interface IStorage {
   createScholarProfile(
     profile: typeof scholars.$inferInsert,
   ): Promise<typeof scholars.$inferSelect>;
+  updateScholarProfile(
+    scholarId: string,
+    updates: Partial<typeof scholars.$inferInsert>,
+  ): Promise<typeof scholars.$inferSelect>;
+  
+  // Documents
+  getDocuments(scholarId: string): Promise<Document[]>;
+  getDocumentById(id: number): Promise<Document | undefined>;
+  createDocument(doc: InsertDocument): Promise<Document>;
+  updateDocument(id: number, updates: Partial<InsertDocument>): Promise<Document>;
+  deleteDocument(id: number): Promise<void>;
   
   // Stats
   getResearchProgress(scholarId: string): Promise<typeof researchProgress.$inferSelect | undefined>;
@@ -61,19 +75,28 @@ export class DatabaseStorage implements IStorage {
 
   async getUserWithScholar(
     id: number,
-  ): Promise<(User & Partial<Scholar>) | undefined> {
+  ): Promise<(User & Partial<Scholar> & Partial<typeof employees.$inferSelect>) | undefined> {
     const [record] = await db
       .select()
       .from(users)
       .leftJoin(scholars, eq(scholars.userId, users.id))
+      .leftJoin(employees, eq(employees.userId, users.id))
       .where(eq(users.id, id));
 
     if (!record) {
       return undefined;
     }
 
-    const { id: _scholarRecordId, ...scholarData } = record.scholars ?? {};
-    return { ...scholarData, ...record.users };
+    // Merge all parts of the record
+    const result = { ...record.users };
+    if (record.scholars) {
+      Object.assign(result, record.scholars);
+    }
+    if (record.employees) {
+      Object.assign(result, record.employees);
+    }
+
+    return result;
   }
 
   async getUserByScholarId(
@@ -150,14 +173,64 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getApplicationById(id: number): Promise<Application | undefined> {
-    const [app] = await db.select().from(applications).where(eq(applications.id, id));
-    return app;
+    const [result] = await db
+      .select()
+      .from(applications)
+      .leftJoin(scholars, eq(scholars.scholarId, applications.scholarId))
+      .leftJoin(users, eq(users.id, scholars.userId))
+      .where(eq(applications.id, id));
+    
+    if (!result) {
+      return undefined;
+    }
+
+    // Get documents for this scholar
+    const docs = await db
+      .select()
+      .from(documents)
+      .where(eq(documents.scholarId, result.applications.scholarId))
+      .orderBy(desc(documents.uploadedAt));
+
+    // Merge scholar and user data
+    const scholarData = result.scholars && result.users ? {
+      ...result.scholars,
+      name: result.users.name,
+      email: result.users.email,
+      phone: result.users.phone,
+    } : undefined;
+
+    return {
+      ...result.applications,
+      scholar: scholarData,
+      documents: docs,
+    } as any;
   }
 
   async getApplicationsByStage(stage: string): Promise<Application[]> {
-    return db.select().from(applications)
+    const results = await db
+      .select()
+      .from(applications)
+      .leftJoin(scholars, eq(scholars.scholarId, applications.scholarId))
+      .leftJoin(users, eq(users.id, scholars.userId))
       .where(and(eq(applications.currentStage, stage), eq(applications.status, "Pending")))
       .orderBy(desc(applications.submissionDate));
+
+    return results.map(result => {
+      const scholarData = result.scholars && result.users ? {
+        scholarId: result.scholars.scholarId,
+        name: result.users.name,
+        email: result.users.email,
+        phone: result.users.phone,
+        department: result.scholars.department,
+        researchArea: result.scholars.researchArea,
+        researchTitle: result.scholars.researchTitle,
+      } : undefined;
+
+      return {
+        ...result.applications,
+        scholar: scholarData,
+      } as any;
+    });
   }
 
   async getApplicationsForSupervisor(employeeId: string): Promise<Application[]> {
@@ -226,6 +299,18 @@ export class DatabaseStorage implements IStorage {
     return newProfile;
   }
 
+  async updateScholarProfile(
+    scholarId: string,
+    updates: Partial<typeof scholars.$inferInsert>,
+  ): Promise<typeof scholars.$inferSelect> {
+    const [updatedProfile] = await db
+      .update(scholars)
+      .set(updates)
+      .where(eq(scholars.scholarId, scholarId))
+      .returning();
+    return updatedProfile;
+  }
+
   async getResearchProgress(scholarId: string): Promise<typeof researchProgress.$inferSelect | undefined> {
     const [stats] = await db.select().from(researchProgress).where(eq(researchProgress.scholarId, scholarId));
     return stats;
@@ -234,6 +319,30 @@ export class DatabaseStorage implements IStorage {
   async createResearchProgress(stats: typeof researchProgress.$inferInsert): Promise<typeof researchProgress.$inferSelect> {
     const [newStats] = await db.insert(researchProgress).values(stats).returning();
     return newStats;
+  }
+
+  // Documents
+  async getDocuments(scholarId: string): Promise<Document[]> {
+    return db.select().from(documents).where(eq(documents.scholarId, scholarId));
+  }
+
+  async getDocumentById(id: number): Promise<Document | undefined> {
+    const [doc] = await db.select().from(documents).where(eq(documents.id, id));
+    return doc;
+  }
+
+  async createDocument(doc: InsertDocument): Promise<Document> {
+    const [newDoc] = await db.insert(documents).values(doc).returning();
+    return newDoc;
+  }
+
+  async updateDocument(id: number, updates: Partial<InsertDocument>): Promise<Document> {
+    const [updated] = await db.update(documents).set(updates).where(eq(documents.id, id)).returning();
+    return updated;
+  }
+
+  async deleteDocument(id: number): Promise<void> {
+    await db.delete(documents).where(eq(documents.id, id));
   }
 }
 
