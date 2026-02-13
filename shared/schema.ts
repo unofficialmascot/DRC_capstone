@@ -45,6 +45,8 @@ export const scholars = pgTable("scholars", {
   // Supervisor assignments
   supervisorId: text("supervisor_id"), // Primary supervisor (employee_id)
   coSupervisorId: text("co_supervisor_id"), // Co-supervisor (employee_id)
+  extensionMonthsGranted: integer("extension_months_granted").default(0),
+  lastExtensionApprovedAt: timestamp("last_extension_approved_at"),
   
   // Personal Details
   fatherName: text("father_name"),
@@ -61,6 +63,15 @@ export const scholars = pgTable("scholars", {
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const supervisorChangeHistory = pgTable("supervisor_change_history", {
+  id: serial("id").primaryKey(),
+  scholarId: text("scholar_id").notNull(),
+  applicationId: integer("application_id").notNull(),
+  previousSupervisorId: text("previous_supervisor_id"),
+  newSupervisorId: text("new_supervisor_id").notNull(),
+  changedAt: timestamp("changed_at").defaultNow(),
 });
 
 // === RAC MEMBERS ===
@@ -143,6 +154,7 @@ export const insertApplicationSchema = createInsertSchema(applications, {
 export const insertApplicationReviewSchema = createInsertSchema(applicationReviews);
 export const insertNoticeSchema = createInsertSchema(notices);
 export const insertDocumentSchema = createInsertSchema(documents);
+export const insertSupervisorChangeHistorySchema = createInsertSchema(supervisorChangeHistory);
 
 // === TYPES ===
 export type User = typeof users.$inferSelect;
@@ -157,3 +169,5 @@ export type InsertNotice = z.infer<typeof insertNoticeSchema>;
 export type ResearchProgress = typeof researchProgress.$inferSelect;
 export type Document = typeof documents.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
+export type SupervisorChangeHistory = typeof supervisorChangeHistory.$inferSelect;
+export type InsertSupervisorChangeHistory = z.infer<typeof insertSupervisorChangeHistorySchema>;

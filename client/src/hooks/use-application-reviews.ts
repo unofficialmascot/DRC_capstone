@@ -58,6 +58,7 @@ export function useApplicationById(applicationId: number) {
       if (!res.ok) throw new Error("Failed to fetch application");
       return res.json();
     },
+    enabled: applicationId > 0,
   });
 }
 

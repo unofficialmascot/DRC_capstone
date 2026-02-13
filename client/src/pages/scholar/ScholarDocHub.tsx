@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useDocuments } from "@/hooks/use-documents";
+import { DOC_HUB_DOCUMENT_TYPES } from "@shared/enclosures";
 
 export default function ScholarDocHub({ scholarId }: { scholarId: string }) {
   const { documents, viewDocument, downloadDocument, uploadDocument, isUploading } = useDocuments(scholarId);
@@ -10,18 +11,7 @@ export default function ScholarDocHub({ scholarId }: { scholarId: string }) {
     category: "",
   });
 
-  const documentTypes = {
-    personal: [
-      { value: "aadhaar", label: "Aadhaar Card", description: "Government issued identification document with unique 12-digit number" },
-      { value: "pan", label: "PAN Card", description: "Permanent Account Number card for financial transactions" },
-      { value: "passport", label: "Passport Photos", description: "Recent passport-sized photographs for official documents" },
-    ],
-    academic: [
-      { value: "grade_cards", label: "Grade Cards", description: "All semester grade cards and mark sheets from previous qualifications" },
-      { value: "degree_certificates", label: "Degree Certificates", description: "Bachelor's and Master's degree certificates and provisional certificates" },
-      { value: "transfer_certificate", label: "Transfer Certificate", description: "TC from previous institution with conduct and character details" },
-    ],
-  };
+  const documentTypes = DOC_HUB_DOCUMENT_TYPES;
 
   const handleUpload = () => {
     if (!uploadForm.file || !uploadForm.documentType || !uploadForm.category) {
@@ -113,6 +103,11 @@ export default function ScholarDocHub({ scholarId }: { scholarId: string }) {
         {documentTypes.academic.map((doc) => renderDocumentCard(doc.value, "academic"))}
       </div>
 
+      <div style={{ marginBottom: "30px" }}>
+        <h3 style={{ color: "#0b6a55", marginBottom: "15px", fontSize: "18px" }}>Research & Enclosure Documents</h3>
+        {documentTypes.research.map((doc) => renderDocumentCard(doc.value, "research"))}
+      </div>
+
       {uploadOpen && (
         <div style={{
           position: "fixed",
@@ -144,6 +139,7 @@ export default function ScholarDocHub({ scholarId }: { scholarId: string }) {
                 <option value="">Select category</option>
                 <option value="personal">Personal Identification</option>
                 <option value="academic">Academic Documents</option>
+                <option value="research">Research & Enclosures</option>
               </select>
             </div>
             {uploadForm.category && (

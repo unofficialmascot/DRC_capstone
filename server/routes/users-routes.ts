@@ -4,9 +4,22 @@ import { storage } from "../storage";
 import { handleRouteError, notFound, parseIdParam } from "./http";
 
 export function registerUserRoutes(app: Express): void {
+  app.get("/api/users/supervisors", async (_req, res) => {
+    try {
+      const supervisors = await storage.listSupervisors();
+      res.json(supervisors);
+    } catch (error) {
+      return handleRouteError(res, error);
+    }
+  });
+
   app.get(api.users.get.path, async (req, res) => {
     try {
-      const userId = parseIdParam(String(req.params.id), "user id");
+      const rawUserId = String(req.params.id);
+      if (!/^\d+$/.test(rawUserId)) {
+        throw notFound("User not found");
+      }
+      const userId = parseIdParam(rawUserId, "user id");
       const user = await storage.getUserWithScholar(userId);
       if (!user) {
         throw notFound("User not found");
@@ -35,7 +48,11 @@ export function registerUserRoutes(app: Express): void {
   app.put(api.users.update.path, async (req, res) => {
     try {
       const updates = api.users.update.input.parse(req.body);
-      const userId = parseIdParam(String(req.params.id), "user id");
+      const rawUserId = String(req.params.id);
+      if (!/^\d+$/.test(rawUserId)) {
+        throw notFound("User not found");
+      }
+      const userId = parseIdParam(rawUserId, "user id");
       const updatedUser = await storage.updateUser(userId, updates);
       const { password: _, ...userWithoutPassword } = updatedUser;
       res.json(userWithoutPassword);

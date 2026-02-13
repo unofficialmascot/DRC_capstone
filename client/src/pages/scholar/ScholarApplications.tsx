@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useApplications, useCreateApplication } from "@/hooks/use-applications";
 import { useApplicationReviews } from "@/hooks/use-application-reviews";
+import { APP_SETTINGS } from "@shared/app-settings";
 import type { Application, ApplicationReview } from "@shared/schema";
 import type { PublicUser } from "@/lib/types";
 import ExtensionForm from "@/pages/scholar/forms/ExtensionForm";
@@ -73,13 +74,18 @@ function ApplicationTrackingCard({ app }: { app: Application }) {
             const stepState = getStepState(index);
             const review = reviews.find((item) => item.stage === step.key);
             const showMeta = stepState === "completed" || stepState === "rejected";
+            const showPendingLabel = stepState === "current" && app.status === "Pending";
+            const endCapState: StepState = app.status === "Approved" ? "completed" : "future";
 
             return (
               <div className="stepper-step" key={step.key}>
+                {index === 0 && <div className={`stepper-cap start ${stepState}`}></div>}
                 {index > 0 && (
                   <div className={`stepper-line ${getStepState(index - 1) === "completed" ? "completed" : "upcoming"}`}></div>
                 )}
-                <div className={`stepper-node ${stepState}`}>{index + 1}</div>
+                {index === TRACKING_STEPS.length - 1 && <div className={`stepper-cap end ${endCapState}`}></div>}
+                <div className="stepper-step-status">{showPendingLabel ? "Pending" : "\u00A0"}</div>
+                <div className={`stepper-node ${stepState}`}></div>
                 <div className="stepper-label">{step.label}</div>
                 {showMeta && review && (
                   <>
@@ -112,7 +118,15 @@ export default function ScholarApplications({ user }: { user: PublicUser }) {
 
   const createApplication = useCreateApplication();
 
+  const submissionsDisabled = APP_SETTINGS.applicationSubmissionMode === "none";
+  const enforceSingleActivePerType =
+    APP_SETTINGS.applicationSubmissionMode === "single-active-per-type";
+
   const hasActiveApplication = (type: string): boolean => {
+    if (!enforceSingleActivePerType) {
+      return false;
+    }
+
     return applications.some(
       (app) => app.type === type && app.status !== "Approved" && app.status !== "Rejected"
     );
@@ -125,6 +139,11 @@ export default function ScholarApplications({ user }: { user: PublicUser }) {
   };
 
   const handleFormTypeSelection = (formTypeKey: string, typeName: string) => {
+    if (submissionsDisabled) {
+      alert("Application submissions are currently disabled by settings.");
+      return;
+    }
+
     if (hasActiveApplication(typeName)) {
       const activeApp = getActiveApplication(typeName);
       alert(
@@ -139,13 +158,18 @@ export default function ScholarApplications({ user }: { user: PublicUser }) {
   };
 
   const submitApplication = (type: string, details: Record<string, unknown>) => {
+    if (submissionsDisabled) {
+      alert("Application submissions are currently disabled by settings.");
+      return;
+    }
+
     if (!user.scholarId) {
       alert("Scholar ID is missing. Please log in again.");
       return;
     }
     
     // Double-check before submission
-    if (hasActiveApplication(type)) {
+    if (enforceSingleActivePerType && hasActiveApplication(type)) {
       alert(`You already have an active ${type} application. Please wait for it to be processed.`);
       return;
     }
@@ -172,13 +196,27 @@ export default function ScholarApplications({ user }: { user: PublicUser }) {
 
       {view === "options" && (
         <div className="applications-options">
-          <button type="button" className="application-option" onClick={() => { setView("apply"); setFormType(null); }} data-testid="button-apply">Apply</button>
+          <button
+            type="button"
+            className="application-option"
+            onClick={() => { setView("apply"); setFormType(null); }}
+            data-testid="button-apply"
+            disabled={submissionsDisabled}
+            style={submissionsDisabled ? { opacity: 0.6, cursor: "not-allowed" } : undefined}
+          >
+            Apply
+          </button>
           <button type="button" className="application-option" onClick={() => setView("track")} data-testid="button-track">Track Your Application</button>
         </div>
       )}
 
       {view === "apply" && !formType && (
         <div className="dropdown-container" style={{ display: "block" }}>
+          {submissionsDisabled && (
+            <div style={{ marginBottom: "12px", color: "#c0392b", fontWeight: 600 }}>
+              Application submissions are disabled by settings.
+            </div>
+          )}
           <div className="dropdown-box" data-testid="dropdown-application-type">Select Application Type ▼</div>
           <div className="dropdown-content" style={{ display: "block", position: "relative" }}>
             <button 

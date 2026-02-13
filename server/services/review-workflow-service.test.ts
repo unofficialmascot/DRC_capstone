@@ -136,3 +136,132 @@ test("submitApplicationReview returns updated app and review on success", async 
     },
   );
 });
+
+test("submitApplicationReview updates scholar extension data on terminal approval", async () => {
+  let scholarProfileUpdates: Record<string, unknown> | undefined;
+
+  await withMockedStorage(
+    {
+      getApplicationById: async () => ({
+        id: 31,
+        scholarId: "GITAM-SCH-2020-118",
+        type: "Extension",
+        status: "Pending",
+        currentStage: "doaa",
+        details: { extensionDuration: "6 months" },
+      }),
+      getEmployee: async () => ({
+        id: 4,
+        employeeId: "EMP-DOAA-001",
+      }),
+      getUserByScholarId: async () => ({
+        id: 1,
+        scholarId: "GITAM-SCH-2020-118",
+        extensionMonthsGranted: 12,
+      }),
+      createReview: async (payload: unknown) => payload,
+      updateScholarProfile: async (
+        _scholarId: string,
+        updates: Record<string, unknown>,
+      ) => {
+        scholarProfileUpdates = updates;
+        return updates;
+      },
+      updateApplication: async (
+        _applicationId: number,
+        updates: Record<string, unknown>,
+      ) => ({
+        id: 31,
+        currentStage: updates.currentStage,
+        status: updates.status,
+        finalOutcome: updates.finalOutcome,
+      }),
+    },
+    async () => {
+      const result = await submitApplicationReview(31, {
+        reviewerId: "EMP-DOAA-001",
+        decision: "approved",
+        remarks: "Final approval",
+      });
+
+      assert.equal((result.application as { status: string }).status, "Approved");
+      assert.equal(
+        scholarProfileUpdates?.extensionMonthsGranted,
+        18,
+      );
+      assert.ok(
+        scholarProfileUpdates?.lastExtensionApprovedAt instanceof Date,
+      );
+    },
+  );
+});
+
+test("submitApplicationReview updates supervisor and writes history on terminal supervisor-change approval", async () => {
+  let scholarProfileUpdates: Record<string, unknown> | undefined;
+  let historyPayload: Record<string, unknown> | undefined;
+
+  await withMockedStorage(
+    {
+      getApplicationById: async () => ({
+        id: 41,
+        scholarId: "GITAM-SCH-2020-118",
+        type: "Supervisor Change",
+        status: "Pending",
+        currentStage: "doaa",
+        details: {
+          proposedSupervisorEmployeeId: "EMP-SUPERVISOR-002",
+          proposedSupervisorName: "Dr. Priya Menon",
+        },
+      }),
+      getEmployee: async () => ({
+        id: 4,
+        employeeId: "EMP-DOAA-001",
+      }),
+      getUserByEmployeeId: async () => ({
+        id: 22,
+        employeeId: "EMP-SUPERVISOR-002",
+        role: "supervisor",
+      }),
+      getUserByScholarId: async () => ({
+        id: 1,
+        scholarId: "GITAM-SCH-2020-118",
+        supervisorId: "EMP-SUPERVISOR-001",
+      }),
+      createReview: async (payload: unknown) => payload,
+      updateScholarProfile: async (
+        _scholarId: string,
+        updates: Record<string, unknown>,
+      ) => {
+        scholarProfileUpdates = updates;
+        return updates;
+      },
+      createSupervisorChangeHistory: async (payload: Record<string, unknown>) => {
+        historyPayload = payload;
+        return payload;
+      },
+      updateApplication: async (
+        _applicationId: number,
+        updates: Record<string, unknown>,
+      ) => ({
+        id: 41,
+        currentStage: updates.currentStage,
+        status: updates.status,
+        finalOutcome: updates.finalOutcome,
+      }),
+    },
+    async () => {
+      const result = await submitApplicationReview(41, {
+        reviewerId: "EMP-DOAA-001",
+        decision: "approved",
+        remarks: "Approved in final stage",
+      });
+
+      assert.equal((result.application as { status: string }).status, "Approved");
+      assert.equal(scholarProfileUpdates?.supervisorId, "EMP-SUPERVISOR-002");
+      assert.equal(historyPayload?.scholarId, "GITAM-SCH-2020-118");
+      assert.equal(historyPayload?.applicationId, 41);
+      assert.equal(historyPayload?.previousSupervisorId, "EMP-SUPERVISOR-001");
+      assert.equal(historyPayload?.newSupervisorId, "EMP-SUPERVISOR-002");
+    },
+  );
+});

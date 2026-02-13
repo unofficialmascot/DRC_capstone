@@ -1,8 +1,21 @@
 import { useState } from "react";
 import { useApplications } from "@/hooks/use-applications";
-import { useSubmitReview } from "@/hooks/use-application-reviews";
+import { useApplicationById, useSubmitReview } from "@/hooks/use-application-reviews";
+import ApplicationEnclosuresPanel from "@/components/applications/ApplicationEnclosuresPanel";
 import type { Application } from "@shared/schema";
 import type { PublicUser } from "@/lib/types";
+
+type ApplicationDocument = {
+  id: number;
+  fileName: string;
+  documentType: string;
+  category: string;
+  uploadedAt: string;
+};
+
+type ApplicationDetailsPayload = Application & {
+  documents?: ApplicationDocument[];
+};
 
 export default function SupervisorDashboard({ user }: { user: PublicUser }) {
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
@@ -27,6 +40,10 @@ export default function SupervisorDashboard({ user }: { user: PublicUser }) {
   );
 
   const reviewMutation = useSubmitReview(selectedApp?.id ?? 0);
+  const { data: selectedApplicationDetail } = useApplicationById(selectedApp?.id ?? 0) as {
+    data: ApplicationDetailsPayload | undefined;
+  };
+  const displayApplication = (selectedApplicationDetail ?? selectedApp) as ApplicationDetailsPayload | null;
 
   const handleSubmitReview = () => {
     if (!remarks.trim()) {
@@ -53,7 +70,7 @@ export default function SupervisorDashboard({ user }: { user: PublicUser }) {
     );
   };
 
-  if (selectedApp) {
+  if (selectedApp && displayApplication) {
     return (
       <div style={{ padding: "20px" }}>
         <button 
@@ -70,43 +87,45 @@ export default function SupervisorDashboard({ user }: { user: PublicUser }) {
         <div style={{ background: "#fff", padding: "25px", borderRadius: "10px", border: "1px solid #e6e6e6", marginBottom: "20px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: "20px" }}>
             <div>
-              <strong style={{ color: "#0b6a55" }}>Application ID:</strong> {selectedApp.id}
+              <strong style={{ color: "#0b6a55" }}>Name:</strong> {displayApplication.id}
             </div>
             <div>
-              <strong style={{ color: "#0b6a55" }}>Scholar ID:</strong> {selectedApp.scholarId}
+              <strong style={{ color: "#0b6a55" }}>Scholar ID:</strong> {displayApplication.scholarId}
             </div>
             <div>
-              <strong style={{ color: "#0b6a55" }}>Type:</strong> {selectedApp.type}
+              <strong style={{ color: "#0b6a55" }}>Type:</strong> {displayApplication.type}
             </div>
             <div>
               <strong style={{ color: "#0b6a55" }}>Status:</strong> 
               <span style={{
                 marginLeft: "10px",
-                background: getDisplayStatus(selectedApp) === "Submitted" ? "#27ae60" :
-                           selectedApp.status === "Approved" ? "#27ae60" : 
-                           selectedApp.status === "Rejected" ? "#e74c3c" : "#f39c12",
+                background: getDisplayStatus(displayApplication) === "Submitted" ? "#27ae60" :
+                           displayApplication.status === "Approved" ? "#27ae60" : 
+                           displayApplication.status === "Rejected" ? "#e74c3c" : "#f39c12",
                 color: "white",
                 padding: "4px 10px",
                 borderRadius: "15px",
                 fontSize: "13px",
               }}>
-                {getDisplayStatus(selectedApp)}
+                {getDisplayStatus(displayApplication)}
               </span>
             </div>
             <div>
-              <strong style={{ color: "#0b6a55" }}>Current Stage:</strong> {selectedApp.currentStage}
+              <strong style={{ color: "#0b6a55" }}>Current Stage:</strong> {displayApplication.currentStage}
             </div>
             <div>
-              <strong style={{ color: "#0b6a55" }}>Submitted:</strong> {new Date(selectedApp.submissionDate as unknown as string).toLocaleString()}
+              <strong style={{ color: "#0b6a55" }}>Submitted:</strong> {new Date(displayApplication.submissionDate as unknown as string).toLocaleString()}
             </div>
           </div>
           
-          {Boolean(selectedApp.details && Object.keys(selectedApp.details as Record<string, unknown>).length > 0) && (
+          {Boolean(displayApplication.details && Object.keys(displayApplication.details as Record<string, unknown>).length > 0) && (
             <>
               <hr style={{ margin: "20px 0", border: "none", borderTop: "1px solid #e6e6e6" }} />
               <h4 style={{ color: "#0b6a55", marginBottom: "15px" }}>Application Details</h4>
               <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "10px" }}>
-                {Object.entries(selectedApp.details as Record<string, unknown>).map(([key, value]) => (
+                {Object.entries(displayApplication.details as Record<string, unknown>)
+                  .filter(([key]) => key !== "enclosures")
+                  .map(([key, value]) => (
                   <div key={key} style={{ padding: "10px", background: "#f8f9fa", borderRadius: "6px" }}>
                     <strong style={{ textTransform: "capitalize", color: "#555" }}>
                       {key.replace(/([A-Z])/g, " $1").trim()}:
@@ -117,7 +136,28 @@ export default function SupervisorDashboard({ user }: { user: PublicUser }) {
                   </div>
                 ))}
               </div>
+              <ApplicationEnclosuresPanel details={displayApplication.details} />
             </>
+          )}
+
+          {Array.isArray(displayApplication.documents) && displayApplication.documents.length > 0 && (
+            <div style={{ marginTop: "20px", borderTop: "1px solid #e6e6e6", paddingTop: "20px" }}>
+              <h4 style={{ color: "#0b6a55", marginBottom: "12px" }}>Attached Documents</h4>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "10px" }}>
+                {displayApplication.documents.map((document: ApplicationDocument) => (
+                  <div key={document.id} style={{ border: "1px solid #e6e6e6", borderRadius: "8px", padding: "10px", background: "#f8f9fa" }}>
+                    <div style={{ fontWeight: 600, color: "#333", marginBottom: "4px" }}>{document.fileName}</div>
+                    <div style={{ fontSize: "12px", color: "#666", marginBottom: "8px" }}>
+                      {document.documentType} • {document.category} • {new Date(document.uploadedAt).toLocaleDateString()}
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button type="button" className="submit-btn" style={{ padding: "6px 10px", fontSize: "12px" }} onClick={() => window.open(`/api/documents/${document.id}/view`, "_blank")}>View</button>
+                      <button type="button" className="submit-btn" style={{ padding: "6px 10px", fontSize: "12px", background: "#27ae60" }} onClick={() => window.open(`/api/documents/${document.id}/download`, "_blank")}>Download</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 

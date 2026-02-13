@@ -73,19 +73,101 @@ export async function submitApplicationReview(
 }
 
 async function applyApprovedChanges(application: {
+  id: number;
   scholarId: string;
   type: string;
   details: unknown;
 }) {
   const details = application.details as Record<string, unknown>;
 
-  if (application.type === "Supervisor Change" && details?.proposedSupervisor) {
-    console.log(`Supervisor change approved: ${details.proposedSupervisor}`);
+  if (application.type === "Supervisor Change") {
+    await applySupervisorChangeApproval(application, details);
   }
 
-  if (application.type === "Extension" && details?.extensionDuration) {
-    console.log(
-      `Extension approved for scholar ${application.scholarId}: ${details.extensionDuration}`,
-    );
+  if (application.type === "Extension") {
+    await applyExtensionApproval(application, details);
   }
+}
+
+async function applySupervisorChangeApproval(
+  application: { id: number; scholarId: string },
+  details: Record<string, unknown>,
+) {
+  const proposedSupervisorId =
+    getStringValue(details.proposedSupervisorEmployeeId) ||
+    getStringValue(details.proposedSupervisorId);
+
+  if (!proposedSupervisorId) {
+    throw badRequest("Approved supervisor change is missing proposed supervisor employee ID");
+  }
+
+  const proposedSupervisor = await storage.getUserByEmployeeId(proposedSupervisorId);
+  if (!proposedSupervisor || proposedSupervisor.role !== "supervisor") {
+    throw badRequest("Proposed supervisor is invalid");
+  }
+
+  const scholar = await storage.getUserByScholarId(application.scholarId);
+  if (!scholar) {
+    throw notFound("Scholar not found for approved supervisor change");
+  }
+
+  const previousSupervisorId = scholar.supervisorId ?? null;
+  await storage.updateScholarProfile(application.scholarId, {
+    supervisorId: proposedSupervisorId,
+  });
+
+  await storage.createSupervisorChangeHistory({
+    scholarId: application.scholarId,
+    applicationId: application.id,
+    previousSupervisorId,
+    newSupervisorId: proposedSupervisorId,
+  });
+}
+
+async function applyExtensionApproval(
+  application: { scholarId: string },
+  details: Record<string, unknown>,
+) {
+  const extensionMonths = extractExtensionMonths(details.extensionDuration);
+  if (!extensionMonths || extensionMonths < 1) {
+    throw badRequest("Approved extension is missing a valid extension duration");
+  }
+
+  const scholar = await storage.getUserByScholarId(application.scholarId);
+  if (!scholar) {
+    throw notFound("Scholar not found for approved extension");
+  }
+
+  const existingMonths = Number(scholar.extensionMonthsGranted ?? 0);
+  await storage.updateScholarProfile(application.scholarId, {
+    extensionMonthsGranted: existingMonths + extensionMonths,
+    lastExtensionApprovedAt: new Date(),
+  });
+}
+
+function getStringValue(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function extractExtensionMonths(duration: unknown): number | null {
+  if (typeof duration === "number" && Number.isFinite(duration)) {
+    return Math.max(0, Math.round(duration));
+  }
+
+  if (typeof duration !== "string") {
+    return null;
+  }
+
+  const match = duration.match(/\d+/);
+  if (!match) {
+    return null;
+  }
+
+  const value = Number(match[0]);
+  return Number.isFinite(value) ? value : null;
 }

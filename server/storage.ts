@@ -18,6 +18,13 @@ import { ApplicationRepository } from "./repositories/application-repository";
 import { DocumentRepository } from "./repositories/document-repository";
 import { ResearchRepository } from "./repositories/research-repository";
 
+export interface SupervisorOption {
+  employeeId: string;
+  name: string;
+  department: string | null;
+  designation: string | null;
+}
+
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserWithScholar(id: number): Promise<(User & Partial<Scholar> & Partial<typeof employees.$inferSelect>) | undefined>;
@@ -29,6 +36,13 @@ export interface IStorage {
 
   getEmployee(employeeId: string): Promise<typeof employees.$inferSelect | undefined>;
   createEmployee(emp: typeof employees.$inferInsert): Promise<typeof employees.$inferSelect>;
+  listSupervisors(): Promise<SupervisorOption[]>;
+  createSupervisorChangeHistory(entry: {
+    scholarId: string;
+    applicationId: number;
+    previousSupervisorId?: string | null;
+    newSupervisorId: string;
+  }): Promise<unknown>;
 
   getApplications(scholarId?: string): Promise<Application[]>;
   getApplicationById(id: number): Promise<Application | undefined>;
@@ -104,6 +118,19 @@ export class DatabaseStorage implements IStorage {
 
   async createEmployee(emp: typeof employees.$inferInsert): Promise<typeof employees.$inferSelect> {
     return this.users.createEmployee(emp);
+  }
+
+  async listSupervisors(): Promise<SupervisorOption[]> {
+    return this.users.listSupervisors();
+  }
+
+  async createSupervisorChangeHistory(entry: {
+    scholarId: string;
+    applicationId: number;
+    previousSupervisorId?: string | null;
+    newSupervisorId: string;
+  }): Promise<unknown> {
+    return this.users.createSupervisorChangeHistory(entry);
   }
 
   async getApplications(scholarId?: string): Promise<Application[]> {

@@ -709,7 +709,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 6px;
+  gap: 0;
   margin-top: 10px;
 }
 
@@ -720,9 +720,17 @@ body {
   min-width: 0;
 }
 
+.stepper-step-status {
+  min-height: 16px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0b6a55;
+}
+
 .stepper-line {
   position: absolute;
-  top: 14px;
+  top: 40px;
   left: -50%;
   width: 100%;
   height: 4px;
@@ -738,17 +746,42 @@ body {
   background: #e74c3c;
 }
 
+.stepper-cap {
+  position: absolute;
+  top: 40px;
+  height: 4px;
+  border-radius: 999px;
+  z-index: 1;
+}
+
+.stepper-cap.start {
+  left: -8px;
+  width: calc(50% + 8px);
+}
+
+.stepper-cap.end {
+  right: -8px;
+  width: calc(50% + 8px);
+}
+
+.stepper-cap.completed,
+.stepper-cap.current {
+  background: #27ae60;
+}
+
+.stepper-cap.future,
+.stepper-cap.rejected {
+  background: #e74c3c;
+}
+
 .stepper-node {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  width: 6px;
+  height: 36px;
+  border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto;
-  font-size: 12px;
-  font-weight: 700;
-  color: #fff;
   position: relative;
   z-index: 2;
 }
@@ -758,8 +791,7 @@ body {
 }
 
 .stepper-node.current {
-  background: #f4b400;
-  color: #2d2d2d;
+  background: #27ae60;
 }
 
 .stepper-node.future {

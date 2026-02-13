@@ -1,14 +1,22 @@
 import bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "../db";
 import {
   users,
   scholars,
   employees,
+  supervisorChangeHistory,
   type Scholar,
   type User,
   type InsertUser,
 } from "@shared/schema";
+
+export interface SupervisorOption {
+  employeeId: string;
+  name: string;
+  department: string | null;
+  designation: string | null;
+}
 
 export class UserRepository {
   async getUser(id: number): Promise<User | undefined> {
@@ -145,5 +153,34 @@ export class UserRepository {
     }
 
     return scholar.supervisorId === employeeId || scholar.coSupervisorId === employeeId;
+  }
+
+  async listSupervisors(): Promise<SupervisorOption[]> {
+    const rows = await db
+      .select({
+        employeeId: employees.employeeId,
+        name: users.name,
+        department: employees.department,
+        designation: employees.designation,
+      })
+      .from(employees)
+      .innerJoin(users, eq(users.id, employees.userId))
+      .where(and(eq(users.role, "supervisor")));
+
+    return rows;
+  }
+
+  async createSupervisorChangeHistory(entry: {
+    scholarId: string;
+    applicationId: number;
+    previousSupervisorId?: string | null;
+    newSupervisorId: string;
+  }): Promise<typeof supervisorChangeHistory.$inferSelect> {
+    const [historyRow] = await db
+      .insert(supervisorChangeHistory)
+      .values(entry)
+      .returning();
+
+    return historyRow;
   }
 }

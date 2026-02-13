@@ -1,10 +1,22 @@
-import { useUser } from "@/hooks/use-users";
+import { useSupervisors, useUser } from "@/hooks/use-users";
 import type { PublicUser } from "@/lib/types";
 
 export default function ScholarProfile({ user }: { user: PublicUser }) {
   const { data: freshUser } = useUser(user.id);
+  const { data: supervisors = [] } = useSupervisors();
 
   const displayUser = (freshUser || user) as PublicUser;
+  const findSupervisorName = (employeeId?: string | null) => {
+    if (!employeeId) {
+      return "N/A";
+    }
+
+    const supervisor = supervisors.find((item) => item.employeeId === employeeId);
+    return supervisor ? `${supervisor.name}` : employeeId;
+  };
+
+  const supervisorDisplay = findSupervisorName(displayUser.supervisorId);
+  const coSupervisorDisplay = findSupervisorName(displayUser.coSupervisorId);
   const feeStructure = [
     { year: "2023-24", phase: "Phase I", batch: "June 2022", firstYear: "₹90,000", secondYear: "₹85,000", thirdYear: "₹80,000", fourthYear: "₹75,000" },
     { year: "2024-25", phase: "Phase II", batch: "June 2023", firstYear: "₹95,000", secondYear: "₹88,000", thirdYear: "₹82,000", fourthYear: "₹78,000" },
@@ -158,8 +170,8 @@ export default function ScholarProfile({ user }: { user: PublicUser }) {
           </div>
           <div className="pd-row">
             <span className="pd-label">Phase</span><span className="pd-value">{displayUser.phase || "N/A"}</span>
-            <span className="pd-label">Supervisor</span><span className="pd-value" data-testid="text-supervisor">{displayUser.supervisorId || "N/A"}</span>
-            <span className="pd-label">Co-Supervisor</span><span className="pd-value">{displayUser.coSupervisorId || "N/A"}</span>
+            <span className="pd-label">Supervisor</span><span className="pd-value" data-testid="text-supervisor">{supervisorDisplay}</span>
+            <span className="pd-label">Co-Supervisor</span><span className="pd-value">{coSupervisorDisplay}</span>
           </div>
           <div className="pd-row">
             <span className="pd-label">Date of Joining</span><span className="pd-value">{displayUser.joiningDate || "N/A"}</span>

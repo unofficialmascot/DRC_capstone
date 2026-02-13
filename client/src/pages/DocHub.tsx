@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DOC_HUB_DOCUMENT_TYPES } from "@shared/enclosures";
 
 type Document = {
   id: number;
@@ -29,16 +30,9 @@ type Document = {
 };
 
 const documentTypes = {
-  personal: [
-    { value: 'aadhaar', label: 'Aadhaar Card', icon: FileText, description: 'Government issued identification document with unique 12-digit number' },
-    { value: 'pan', label: 'PAN Card', icon: CreditCard, description: 'Permanent Account Number card for financial transactions' },
-    { value: 'passport', label: 'Passport Photos', icon: ImageIcon, description: 'Recent passport-sized photographs for official documents' },
-  ],
-  academic: [
-    { value: 'grade_cards', label: 'Grade Cards', icon: GraduationCap, description: 'All semester grade cards and mark sheets from previous qualifications' },
-    { value: 'degree_certificates', label: 'Degree Certificates', icon: FileCheck, description: "Bachelor's and Master's degree certificates and provisional certificates" },
-    { value: 'transfer_certificate', label: 'Transfer Certificate', icon: FileText, description: 'TC from previous institution with conduct and character details' },
-  ],
+  personal: DOC_HUB_DOCUMENT_TYPES.personal.map((item) => ({ ...item, icon: item.value === "pan" ? CreditCard : item.value === "passport" ? ImageIcon : FileText })),
+  academic: DOC_HUB_DOCUMENT_TYPES.academic.map((item) => ({ ...item, icon: item.value === "grade_cards" ? GraduationCap : item.value === "degree_certificates" ? FileCheck : FileText })),
+  research: DOC_HUB_DOCUMENT_TYPES.research.map((item) => ({ ...item, icon: FileText })),
 };
 
 export default function DocHub() {
@@ -244,10 +238,18 @@ export default function DocHub() {
             </section>
 
             {/* Academic Documents */}
-            <section>
+            <section className="mb-8">
               <h2 className="text-xl font-semibold text-teal-700 mb-4">Academic Documents</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {documentTypes.academic.map(doc => renderDocumentCard(doc.value, 'academic'))}
+              </div>
+            </section>
+
+            {/* Research & Enclosures Documents */}
+            <section>
+              <h2 className="text-xl font-semibold text-teal-700 mb-4">Research & Enclosure Documents</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {documentTypes.research.map(doc => renderDocumentCard(doc.value, 'research'))}
               </div>
             </section>
           </div>
@@ -276,6 +278,7 @@ export default function DocHub() {
                 <SelectContent>
                   <SelectItem value="personal">Personal Identification</SelectItem>
                   <SelectItem value="academic">Academic Documents</SelectItem>
+                  <SelectItem value="research">Research & Enclosures</SelectItem>
                 </SelectContent>
               </Select>
             </div>

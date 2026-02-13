@@ -2,6 +2,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import type { InsertUser } from "@shared/schema";
 
+export interface SupervisorOption {
+  employeeId: string;
+  name: string;
+  department?: string | null;
+  designation?: string | null;
+}
+
 // GET /api/users/:id
 export function useUser(id?: number | string) {
   return useQuery({
@@ -43,6 +50,19 @@ export function useUpdateUser() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [api.users.get.path] });
       queryClient.invalidateQueries({ queryKey: [api.users.get.path, data.id] });
+    },
+  });
+}
+
+export function useSupervisors() {
+  return useQuery({
+    queryKey: ["users", "supervisors"],
+    queryFn: async (): Promise<SupervisorOption[]> => {
+      const res = await fetch("/api/users/supervisors", { credentials: "include" });
+      if (!res.ok) {
+        throw new Error("Failed to fetch supervisors");
+      }
+      return res.json();
     },
   });
 }
