@@ -136,7 +136,10 @@ export const documents = pgTable("documents", {
 
 // === SCHEMAS ===
 export const insertUserSchema = createInsertSchema(users);
-export const insertApplicationSchema = createInsertSchema(applications);
+export const insertApplicationSchema = createInsertSchema(applications, {
+  details: z.record(z.unknown()).optional(), // Explicitly allow any object for details field
+  submissionDate: z.union([z.string(), z.date()]).optional(), // API returns dates as strings
+});
 export const insertApplicationReviewSchema = createInsertSchema(applicationReviews);
 export const insertNoticeSchema = createInsertSchema(notices);
 export const insertDocumentSchema = createInsertSchema(documents);

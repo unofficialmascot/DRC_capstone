@@ -21,7 +21,9 @@ export function useCreateApplication() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: InsertApplication) => {
+      console.log("Creating application with data:", data);
       const validated = api.applications.create.input.parse(data);
+      console.log("Validated data:", validated);
       const res = await fetch(api.applications.create.path, {
         method: api.applications.create.method,
         headers: { "Content-Type": "application/json" },
@@ -29,7 +31,15 @@ export function useCreateApplication() {
         credentials: "include",
       });
 
-      if (!res.ok) throw new Error("Failed to create application");
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: "Failed to create application" }));
+        console.error("Server error response:", error);
+        if (error.errors && Array.isArray(error.errors)) {
+          const errorMessages = error.errors.map((e: any) => `${e.path?.join('.')}: ${e.message}`).join(', ');
+          throw new Error(errorMessages || error.message);
+        }
+        throw new Error(error.message || "Failed to create application");
+      }
       return api.applications.create.responses[201].parse(await res.json());
     },
     onSuccess: () => {

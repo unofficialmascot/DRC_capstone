@@ -173,7 +173,9 @@ export async function registerRoutes(
 
   app.post(api.applications.create.path, async (req, res) => {
     try {
+      console.log("Received application data:", JSON.stringify(req.body, null, 2));
       const input = api.applications.create.input.parse(req.body);
+      console.log("Validated input:", JSON.stringify(input, null, 2));
       const newApp = await storage.createApplication({
         ...input,
         currentStage: "supervisor",
@@ -181,7 +183,17 @@ export async function registerRoutes(
       });
       res.status(201).json(newApp);
     } catch (error) {
-      res.status(400).json({ message: "Invalid input" });
+      console.error("Application creation error:", error);
+      if (error instanceof Error && 'issues' in error) {
+        const zodError = error as any;
+        console.error("Zod validation errors:", JSON.stringify(zodError.issues, null, 2));
+        res.status(400).json({ 
+          message: "Invalid input", 
+          errors: zodError.issues 
+        });
+      } else {
+        res.status(400).json({ message: error instanceof Error ? error.message : "Invalid input" });
+      }
     }
   });
 
