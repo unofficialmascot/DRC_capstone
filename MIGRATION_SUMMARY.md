@@ -137,3 +137,5 @@ See `SCHEMA_NORMALIZATION.md` for:
 - Database indexes
 - SQL query examples
 - Normalization details
+
+For day-to-day setup, checks, and backend tests, see `CONTRIBUTING.md`.

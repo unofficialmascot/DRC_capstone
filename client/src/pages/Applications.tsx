@@ -205,7 +205,7 @@ export default function Applications() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {applications?.map((app) => (
+                    {applications?.map((app: Application) => (
                       <div key={app.id} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl shadow-sm">
                         <div className="flex items-center gap-4">
                           <div className={cn("w-2 h-12 rounded-full", 
@@ -297,7 +297,11 @@ export default function Applications() {
           {selectedApplication && (
             <ApplicationDetailView
               application={selectedApplication}
-              onApprove={isSupervisor && selectedApplication.status === "Pending"}
+              onApprove={
+                isSupervisor && selectedApplication.status === "Pending"
+                  ? handleApprove
+                  : undefined
+              }
               onReject={handleReject}
               canReview={true} // This should be determined by the user's role and application stage
             />
