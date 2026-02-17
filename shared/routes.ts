@@ -1,5 +1,15 @@
 import { z } from 'zod';
-import { insertUserSchema, insertApplicationSchema, insertApplicationReviewSchema } from './schema';
+import {
+  insertUserSchema,
+  insertApplicationSchema,
+  insertApplicationReviewSchema,
+  insertDrcChairmanDecisionSchema,
+  insertNoticeSchema,
+  insertDrcMeetingSchema,
+  insertDrcAgendaPointSchema,
+  insertDrcMeetingMinutesSchema,
+  insertDrcMinuteItemSchema,
+} from './schema';
 
 export const api = {
   users: {
@@ -71,6 +81,125 @@ export const api = {
           completedReviews: z.number(),
           pendingReports: z.number(),
           publications: z.number(),
+        }),
+      },
+    },
+  },
+  drcMeetings: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/drc-meetings',
+      responses: {
+        200: z.array(insertDrcMeetingSchema),
+      },
+    },
+    notifications: {
+      method: 'GET' as const,
+      path: '/api/drc-meetings/notifications',
+      responses: {
+        200: z.array(insertNoticeSchema),
+      },
+    },
+    getOpen: {
+      method: 'GET' as const,
+      path: '/api/drc-meetings/open',
+      responses: {
+        200: z.union([
+          z.object({
+            meeting: insertDrcMeetingSchema,
+            applications: z.array(insertApplicationSchema),
+            extraPoints: z.array(insertDrcAgendaPointSchema),
+          }),
+          z.null(),
+        ]),
+      },
+    },
+    schedule: {
+      method: 'POST' as const,
+      path: '/api/drc-meetings/schedule',
+      input: z.object({
+        meetingDate: z.union([z.string(), z.date()]),
+        extraPoints: z.array(z.string().min(1)).optional(),
+      }),
+      responses: {
+        201: z.object({
+          meeting: insertDrcMeetingSchema,
+          applications: z.array(insertApplicationSchema),
+          extraPoints: z.array(insertDrcAgendaPointSchema),
+        }),
+      },
+    },
+    getAgenda: {
+      method: 'GET' as const,
+      path: '/api/drc-meetings/:id/agenda',
+      responses: {
+        200: z.object({
+          meeting: insertDrcMeetingSchema,
+          applications: z.array(insertApplicationSchema),
+          extraPoints: z.array(insertDrcAgendaPointSchema),
+        }),
+      },
+    },
+    close: {
+      method: 'POST' as const,
+      path: '/api/drc-meetings/:id/close',
+      responses: {
+        200: z.object({
+          meeting: insertDrcMeetingSchema,
+          applications: z.array(insertApplicationSchema),
+          extraPoints: z.array(insertDrcAgendaPointSchema),
+        }),
+      },
+    },
+    downloadAgendaPdf: {
+      method: 'GET' as const,
+      path: '/api/drc-meetings/:id/agenda.pdf',
+      responses: {
+        200: z.any(),
+      },
+    },
+  }
+  ,
+  drcChairman: {
+    listMinutes: {
+      method: 'GET' as const,
+      path: '/api/drc-chairman/minutes',
+      responses: {
+        200: z.array(
+          z.object({
+            meeting: insertDrcMeetingSchema,
+            minutes: insertDrcMeetingMinutesSchema,
+          }),
+        ),
+      },
+    },
+    getMinutes: {
+      method: 'GET' as const,
+      path: '/api/drc-chairman/minutes/:meetingId',
+      responses: {
+        200: z.object({
+          meeting: insertDrcMeetingSchema,
+          minutes: insertDrcMeetingMinutesSchema,
+          items: z.array(
+            insertDrcMinuteItemSchema.extend({
+              application: insertApplicationSchema.nullable(),
+              chairmanDecision: insertDrcChairmanDecisionSchema.nullable(),
+            }),
+          ),
+        }),
+      },
+    },
+    decide: {
+      method: 'POST' as const,
+      path: '/api/drc-chairman/minutes/:meetingId/applications/:applicationId/decision',
+      input: z.object({
+        decision: z.enum(['approved', 'rejected']),
+        remarks: z.string().min(1),
+      }),
+      responses: {
+        200: z.object({
+          application: insertApplicationSchema,
+          chairmanDecision: insertDrcChairmanDecisionSchema,
         }),
       },
     },

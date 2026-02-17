@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { z } from "zod";
 import { storage } from "../storage";
 import { submitApplicationReview } from "../services/review-workflow-service";
-import { handleRouteError, parseIdParam } from "./http";
+import { forbidden, handleRouteError, parseIdParam, unauthorized } from "./http";
 
 export function registerReviewRoutes(app: Express): void {
   app.get("/api/applications/:id/reviews", async (req, res) => {
@@ -17,6 +17,19 @@ export function registerReviewRoutes(app: Express): void {
 
   app.post("/api/applications/:id/review", async (req, res) => {
     try {
+      if (!req.session.userId) {
+        throw unauthorized("Not authenticated");
+      }
+
+      const sessionUser = await storage.getUserWithScholar(req.session.userId);
+      if (!sessionUser) {
+        throw unauthorized("User session is invalid");
+      }
+
+      if (sessionUser.role === "drc_convener" || sessionUser.role === "drc_chairman") {
+        throw forbidden("This role cannot submit member reviews");
+      }
+
       const reviewInput = z
         .object({
           reviewerId: z.string(),

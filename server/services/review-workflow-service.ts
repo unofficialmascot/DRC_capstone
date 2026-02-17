@@ -54,6 +54,10 @@ export async function submitApplicationReview(
     remarks: input.remarks,
   });
 
+  if (currentStage === "drc") {
+    return { review, application };
+  }
+
   const workflowResult = evaluateWorkflowDecision(workflow, {
     currentStage,
     decision: input.decision,

@@ -7,7 +7,7 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   password: text("password").notNull(), // HASHED password using bcryptjs
-  role: text("role").notNull(), // 'scholar', 'supervisor', 'drc', 'irc', 'doaa', 'admin'
+  role: text("role").notNull(), // 'scholar', 'supervisor', 'drc', 'drc_convener', 'drc_chairman', 'irc', 'doaa', 'admin'
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   phone: text("phone"),
@@ -110,6 +110,57 @@ export const applicationReviews = pgTable("application_reviews", {
   reviewDate: timestamp("review_date").defaultNow(),
 });
 
+// === DRC MEETINGS / AGENDA ===
+export const drcMeetings = pgTable("drc_meetings", {
+  id: serial("id").primaryKey(),
+  meetingDate: timestamp("meeting_date").notNull(),
+  scheduledBy: text("scheduled_by").notNull(), // employee_id
+  scheduledAt: timestamp("scheduled_at").defaultNow(),
+  closedAt: timestamp("closed_at"),
+  closedBy: text("closed_by"), // employee_id
+});
+
+export const drcMeetingApplications = pgTable("drc_meeting_applications", {
+  id: serial("id").primaryKey(),
+  meetingId: integer("meeting_id").notNull(),
+  applicationId: integer("application_id").notNull(),
+  addedAt: timestamp("added_at").defaultNow(),
+});
+
+export const drcAgendaPoints = pgTable("drc_agenda_points", {
+  id: serial("id").primaryKey(),
+  meetingId: integer("meeting_id").notNull(),
+  point: text("point").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const drcMeetingMinutes = pgTable("drc_meeting_minutes", {
+  id: serial("id").primaryKey(),
+  meetingId: integer("meeting_id").notNull(),
+  generatedBy: text("generated_by").notNull(), // employee_id (convener)
+  generatedAt: timestamp("generated_at").defaultNow(),
+});
+
+export const drcMinuteItems = pgTable("drc_minute_items", {
+  id: serial("id").primaryKey(),
+  meetingId: integer("meeting_id").notNull(),
+  applicationId: integer("application_id").notNull(),
+  approvalCount: integer("approval_count").notNull().default(0),
+  rejectionCount: integer("rejection_count").notNull().default(0),
+  memberSummary: jsonb("member_summary"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const drcChairmanDecisions = pgTable("drc_chairman_decisions", {
+  id: serial("id").primaryKey(),
+  meetingId: integer("meeting_id").notNull(),
+  applicationId: integer("application_id").notNull(),
+  chairmanId: text("chairman_id").notNull(), // employee_id
+  decision: text("decision").notNull(), // approved | rejected
+  remarks: text("remarks").notNull(),
+  decidedAt: timestamp("decided_at").defaultNow(),
+});
+
 // === RESEARCH PROGRESS ===
 export const researchProgress = pgTable("research_progress", {
   id: serial("id").primaryKey(),
@@ -152,6 +203,12 @@ export const insertApplicationSchema = createInsertSchema(applications, {
   submissionDate: z.union([z.string(), z.date()]).optional(), // API returns dates as strings
 });
 export const insertApplicationReviewSchema = createInsertSchema(applicationReviews);
+export const insertDrcMeetingSchema = createInsertSchema(drcMeetings);
+export const insertDrcMeetingApplicationSchema = createInsertSchema(drcMeetingApplications);
+export const insertDrcAgendaPointSchema = createInsertSchema(drcAgendaPoints);
+export const insertDrcMeetingMinutesSchema = createInsertSchema(drcMeetingMinutes);
+export const insertDrcMinuteItemSchema = createInsertSchema(drcMinuteItems);
+export const insertDrcChairmanDecisionSchema = createInsertSchema(drcChairmanDecisions);
 export const insertNoticeSchema = createInsertSchema(notices);
 export const insertDocumentSchema = createInsertSchema(documents);
 export const insertSupervisorChangeHistorySchema = createInsertSchema(supervisorChangeHistory);
@@ -164,6 +221,18 @@ export type Application = typeof applications.$inferSelect;
 export type InsertApplication = z.infer<typeof insertApplicationSchema>;
 export type ApplicationReview = typeof applicationReviews.$inferSelect;
 export type InsertApplicationReview = z.infer<typeof insertApplicationReviewSchema>;
+export type DrcMeeting = typeof drcMeetings.$inferSelect;
+export type InsertDrcMeeting = z.infer<typeof insertDrcMeetingSchema>;
+export type DrcMeetingApplication = typeof drcMeetingApplications.$inferSelect;
+export type InsertDrcMeetingApplication = z.infer<typeof insertDrcMeetingApplicationSchema>;
+export type DrcAgendaPoint = typeof drcAgendaPoints.$inferSelect;
+export type InsertDrcAgendaPoint = z.infer<typeof insertDrcAgendaPointSchema>;
+export type DrcMeetingMinutes = typeof drcMeetingMinutes.$inferSelect;
+export type InsertDrcMeetingMinutes = z.infer<typeof insertDrcMeetingMinutesSchema>;
+export type DrcMinuteItem = typeof drcMinuteItems.$inferSelect;
+export type InsertDrcMinuteItem = z.infer<typeof insertDrcMinuteItemSchema>;
+export type DrcChairmanDecision = typeof drcChairmanDecisions.$inferSelect;
+export type InsertDrcChairmanDecision = z.infer<typeof insertDrcChairmanDecisionSchema>;
 export type Notice = typeof notices.$inferSelect;
 export type InsertNotice = z.infer<typeof insertNoticeSchema>;
 export type ResearchProgress = typeof researchProgress.$inferSelect;

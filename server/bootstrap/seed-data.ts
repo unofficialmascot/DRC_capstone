@@ -1,6 +1,72 @@
 import { storage } from "../storage";
 
+interface EnsureEmployeeUserInput {
+  employeeId: string;
+  role: string;
+  name: string;
+  email: string;
+  phone: string;
+  designation: string;
+  department: string;
+}
+
+async function ensureEmployeeUser(input: EnsureEmployeeUserInput): Promise<boolean> {
+  const existing = await storage.getUserByEmployeeId(input.employeeId).catch(() => null);
+  if (existing) {
+    return false;
+  }
+
+  const user = await storage.createUser({
+    password: "password123",
+    role: input.role,
+    name: input.name,
+    email: input.email,
+    phone: input.phone,
+  });
+
+  await storage.createEmployee({
+    employeeId: input.employeeId,
+    userId: user.id,
+    designation: input.designation,
+    department: input.department,
+  });
+
+  return true;
+}
+
+async function ensureDrcLeadershipAccounts(): Promise<void> {
+  const createdConvener = await ensureEmployeeUser({
+    employeeId: "EMP-DRC-CONVENER-001",
+    role: "drc_convener",
+    name: "Dr. S. Convener",
+    email: "convener.drc@gitam.edu",
+    phone: "9876543241",
+    designation: "Professor",
+    department: "Computer Science",
+  });
+
+  const createdChairman = await ensureEmployeeUser({
+    employeeId: "EMP-DRC-CHAIRMAN-001",
+    role: "drc_chairman",
+    name: "Dr. DRC Chairman",
+    email: "chairman.drc@gitam.edu",
+    phone: "9876543242",
+    designation: "Professor",
+    department: "Computer Science",
+  });
+
+  if (createdConvener || createdChairman) {
+    console.log("Ensured DRC leadership accounts (convener/chairman)");
+  }
+}
+
 export async function seedData(): Promise<void> {
+  try {
+    await ensureDrcLeadershipAccounts();
+  } catch (_error) {
+    console.log("Note: Could not ensure DRC leadership accounts during startup.");
+  }
+
   try {
     const existingScholar = await storage.getUserByScholarId("GITAM-SCH-2020-118").catch(() => null);
     if (existingScholar) {
@@ -113,6 +179,8 @@ export async function seedData(): Promise<void> {
       department: "Computer Science",
     });
 
+    await ensureDrcLeadershipAccounts();
+
     const ircUser = await storage.createUser({
       password: "password123",
       role: "irc",
@@ -178,6 +246,8 @@ export async function seedData(): Promise<void> {
     console.log("  - GITAM-SCH-2021-204 / password123 (Scholar)");
     console.log("  - EMP-SUPERVISOR-001 / password123 (Supervisor)");
     console.log("  - EMP-DRC-001 / password123 (DRC Member)");
+    console.log("  - EMP-DRC-CONVENER-001 / password123 (DRC Convener)");
+    console.log("  - EMP-DRC-CHAIRMAN-001 / password123 (DRC Chairman)");
     console.log("  - EMP-IRC-001 / password123 (IRC Member)");
     console.log("  - EMP-DOAA-001 / password123 (DoAA Officer)");
   } catch (seedError: any) {

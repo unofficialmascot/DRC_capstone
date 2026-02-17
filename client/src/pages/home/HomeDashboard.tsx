@@ -9,10 +9,12 @@ import ScholarDocHub from "@/pages/scholar/ScholarDocHub";
 import ScholarNoticeBoard from "@/pages/scholar/ScholarNoticeBoard";
 import ReviewerDashboard from "@/pages/reviewer/ReviewerDashboard";
 import ReviewerApplications from "@/pages/reviewer/ReviewerApplications";
+import ReviewerMeetings from "@/pages/reviewer/ReviewerMeetings";
+import ChairmanMinutes from "@/pages/reviewer/ChairmanMinutes";
 import SupervisorDashboard from "@/pages/supervisor/SupervisorDashboard";
 
 type ScholarPage = "profile" | "applications" | "research" | "fees" | "dochub" | "noticeboard";
-type ReviewerPage = "dashboard" | "reviews";
+type ReviewerPage = "dashboard" | "reviews" | "meetings" | "minutes";
 
 export default function HomeDashboard({ user, onLogout }: { user: PublicUser; onLogout: () => void }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -32,6 +34,8 @@ export default function HomeDashboard({ user, onLogout }: { user: PublicUser; on
       case "scholar": return "Scholar";
       case "supervisor": return "Supervisor";
       case "drc": return "DRC Member";
+      case "drc_convener": return "DRC Convener";
+      case "drc_chairman": return "DRC Chairman";
       case "irc": return "IRC Member";
       case "doaa": return "DoAA Officer";
       default: return user.role;
@@ -51,8 +55,21 @@ export default function HomeDashboard({ user, onLogout }: { user: PublicUser; on
 
   const renderReviewerSidebar = () => (
     <ul>
-      <li className={reviewerPage === "dashboard" ? "active" : ""} onClick={() => setReviewerPage("dashboard")} data-testid="nav-reviewer-dashboard">{user.role?.toUpperCase()} Dashboard</li>
-      <li className={`red-button ${reviewerPage === "reviews" ? "active" : ""}`} onClick={() => setReviewerPage("reviews")} data-testid="nav-reviewer-reviews">Pending Reviews</li>
+      <li className={reviewerPage === "dashboard" ? "active" : ""} onClick={() => setReviewerPage("dashboard")} data-testid="nav-reviewer-dashboard">
+        {user.role === "drc_convener"
+          ? "DRC Convener Dashboard"
+          : user.role === "drc_chairman"
+            ? "DRC Chairman Dashboard"
+            : `${user.role?.toUpperCase()} Dashboard`}
+      </li>
+      {(user.role === "drc" || user.role === "irc" || user.role === "doaa") && (
+        <li className={`red-button ${reviewerPage === "reviews" ? "active" : ""}`} onClick={() => setReviewerPage("reviews")} data-testid="nav-reviewer-reviews">Pending Reviews</li>
+      )}
+      {user.role === "drc_convener" && (
+        <li className={`red-button ${reviewerPage === "reviews" ? "active" : ""}`} onClick={() => setReviewerPage("reviews")} data-testid="nav-reviewer-reviews">Meeting Agenda</li>
+      )}
+      {user.role === "drc" && <li className={`red-button ${reviewerPage === "meetings" ? "active" : ""}`} onClick={() => setReviewerPage("meetings")} data-testid="nav-reviewer-meetings">Meetings</li>}
+      {user.role === "drc_chairman" && <li className={`red-button ${reviewerPage === "minutes" ? "active" : ""}`} onClick={() => setReviewerPage("minutes")} data-testid="nav-reviewer-minutes">Minutes</li>}
     </ul>
   );
 
@@ -73,6 +90,8 @@ export default function HomeDashboard({ user, onLogout }: { user: PublicUser; on
       switch (reviewerPage) {
         case "dashboard": return <ReviewerDashboard role={user.role} />;
         case "reviews": return <ReviewerApplications user={user} />;
+        case "meetings": return <ReviewerMeetings role={user.role} />;
+        case "minutes": return <ChairmanMinutes />;
         default: return <ReviewerDashboard role={user.role} />;
       }
     }
@@ -102,7 +121,7 @@ export default function HomeDashboard({ user, onLogout }: { user: PublicUser; on
         <nav className={`sidebar ${!sidebarOpen ? "collapsed" : ""}`}>
           {user.role === "scholar" && renderScholarSidebar()}
           {user.role === "supervisor" && <ul><li className="active">Supervisor Dashboard</li></ul>}
-          {(user.role === "drc" || user.role === "irc" || user.role === "doaa") && renderReviewerSidebar()}
+          {(user.role === "drc" || user.role === "drc_convener" || user.role === "drc_chairman" || user.role === "irc" || user.role === "doaa") && renderReviewerSidebar()}
         </nav>
         <main className="content">{renderContent()}</main>
       </div>
