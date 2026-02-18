@@ -6,18 +6,18 @@ import {
   forbidden,
   handleRouteError,
   notFound,
-  parseIdParam,
+  parsePositiveIntParam,
   unauthorized,
 } from "./http";
 
-test("parseIdParam returns numeric id for valid input", () => {
-  const value = parseIdParam("42", "application id");
+test("parsePositiveIntParam returns numeric id for valid input", () => {
+  const value = parsePositiveIntParam("42", "application id");
   assert.equal(value, 42);
 });
 
-test("parseIdParam throws ApiError for invalid input", () => {
+test("parsePositiveIntParam throws ApiError for invalid input", () => {
   assert.throws(
-    () => parseIdParam("abc", "application id"),
+    () => parsePositiveIntParam("abc", "application id"),
     (error: unknown) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, 400);
@@ -25,6 +25,12 @@ test("parseIdParam throws ApiError for invalid input", () => {
       return true;
     },
   );
+});
+
+test("parsePositiveIntParam rejects non-positive or non-integer input", () => {
+  assert.throws(() => parsePositiveIntParam("0", "application id"));
+  assert.throws(() => parsePositiveIntParam("1.5", "application id"));
+  assert.throws(() => parsePositiveIntParam("Infinity", "application id"));
 });
 
 test("ApiError helpers set expected status codes", () => {

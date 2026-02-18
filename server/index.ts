@@ -4,6 +4,7 @@ import session from "express-session";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { LOGGING_CONFIG } from "./logging-config";
 
 const app = express();
 const httpServer = createServer(app);
@@ -54,27 +55,60 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
+function redactForLogging(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(redactForLogging);
+  }
+
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>).map(([key, nestedValue]) => {
+      if (LOGGING_CONFIG.defaultRedactedKeys.has(key.toLowerCase())) {
+        return [key, "[REDACTED]"];
+      }
+      return [key, redactForLogging(nestedValue)];
+    });
+
+    return Object.fromEntries(entries);
+  }
+
+  return value;
+}
+
+const shouldCaptureResponsePreview = process.env.NODE_ENV !== "production";
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+  let capturedJsonResponse: unknown;
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
+  if (shouldCaptureResponsePreview) {
+    const originalResJson = res.json;
+    res.json = function (bodyJson, ...args) {
+      capturedJsonResponse = bodyJson;
+      return originalResJson.apply(res, [bodyJson, ...args]);
+    };
+  }
 
   res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      log(logLine);
+    if (!path.startsWith("/api")) {
+      return;
     }
+
+    const duration = Date.now() - start;
+    let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+
+    if (shouldCaptureResponsePreview && capturedJsonResponse !== undefined) {
+      const preview = JSON.stringify(redactForLogging(capturedJsonResponse));
+      if (preview) {
+        const truncated =
+          preview.length > LOGGING_CONFIG.responsePreviewMaxLength
+            ? `${preview.slice(0, LOGGING_CONFIG.responsePreviewMaxLength)}...`
+            : preview;
+        logLine += ` :: ${truncated}`;
+      }
+    }
+
+    log(logLine);
   });
 
   next();

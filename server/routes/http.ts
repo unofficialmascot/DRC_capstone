@@ -28,9 +28,12 @@ export function notFound(message: string): ApiError {
   return new ApiError(404, message);
 }
 
-export function parseIdParam(value: string, fieldName = "id"): number {
+/**
+ * Parses a route param as a positive integer (e.g. "12" is valid; "0", "1.2", and "abc" are invalid).
+ */
+export function parsePositiveIntParam(value: string, fieldName = "id"): number {
   const parsed = Number(value);
-  if (Number.isNaN(parsed)) {
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed <= 0) {
     throw badRequest(`Invalid ${fieldName}`);
   }
   return parsed;
