@@ -1,22 +1,67 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-async function throwIfResNotOk(res: Response) {
-  if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+export class ApiClientError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+    public readonly details?: unknown,
+  ) {
+    super(message);
+    this.name = "ApiClientError";
   }
 }
 
-export async function apiRequest(
-  method: string,
-  url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
+type ApiRequestOptions = {
+  method: string;
+  url: string;
+  body?: unknown;
+  headers?: HeadersInit;
+  signal?: AbortSignal;
+  credentials?: RequestCredentials;
+};
+
+async function throwIfResNotOk(res: Response) {
+  if (res.ok) {
+    return;
+  }
+
+  const contentType = res.headers.get("content-type") ?? "";
+
+  if (contentType.includes("application/json")) {
+    const json = await res.json().catch(() => null);
+    if (json && typeof json === "object") {
+      const payload = json as Record<string, unknown>;
+      const message =
+        typeof payload.message === "string"
+          ? payload.message
+          : `${res.status}: ${res.statusText}`;
+      throw new ApiClientError(res.status, message, payload);
+    }
+  }
+
+  const text = (await res.text()) || res.statusText;
+  throw new ApiClientError(res.status, `${res.status}: ${text}`);
+}
+
+export async function apiRequest({
+  method,
+  url,
+  body,
+  headers,
+  signal,
+  credentials = "include",
+}: ApiRequestOptions): Promise<Response> {
+  const requestHeaders: HeadersInit = {
+    ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+    ...(headers ?? {}),
+  };
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
+    headers: requestHeaders,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+    credentials,
+    signal,
   });
 
   await throwIfResNotOk(res);

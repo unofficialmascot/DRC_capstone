@@ -2,12 +2,12 @@ import type { Express } from "express";
 import { z } from "zod";
 import { storage } from "../storage";
 import { submitApplicationReview } from "../services/review-workflow-service";
-import { forbidden, handleRouteError, parseIdParam, unauthorized } from "./http";
+import { forbidden, handleRouteError, parsePositiveIntParam, unauthorized } from "./http";
 
 export function registerReviewRoutes(app: Express): void {
   app.get("/api/applications/:id/reviews", async (req, res) => {
     try {
-      const applicationId = parseIdParam(req.params.id, "application id");
+      const applicationId = parsePositiveIntParam(req.params.id, "application id");
       const reviews = await storage.getReviewsForApplication(applicationId);
       res.json(reviews);
     } catch (error) {
@@ -38,7 +38,7 @@ export function registerReviewRoutes(app: Express): void {
         })
         .parse(req.body);
 
-      const applicationId = parseIdParam(req.params.id, "application id");
+      const applicationId = parsePositiveIntParam(req.params.id, "application id");
       const result = await submitApplicationReview(applicationId, reviewInput);
       res.json(result);
     } catch (error) {

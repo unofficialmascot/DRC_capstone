@@ -3,7 +3,7 @@ import { api } from "../../shared/routes.js";
 import { APP_SETTINGS } from "../../shared/app-settings.js";
 import { storage } from "../storage";
 import { buildApplicationEnclosureSnapshot } from "../services/application-enclosure-service";
-import { badRequest, handleRouteError, notFound, parseIdParam, unauthorized } from "./http";
+import { badRequest, handleRouteError, notFound, parsePositiveIntParam, unauthorized } from "./http";
 
 export function registerApplicationRoutes(app: Express): void {
   app.get(api.applications.list.path, async (req, res) => {
@@ -44,7 +44,7 @@ export function registerApplicationRoutes(app: Express): void {
 
   app.get("/api/applications/:id", async (req, res) => {
     try {
-      const applicationId = parseIdParam(req.params.id, "application id");
+      const applicationId = parsePositiveIntParam(req.params.id, "application id");
       const appById = await storage.getApplicationById(applicationId);
       if (!appById) {
         throw notFound("Application not found");

@@ -17,7 +17,7 @@ import {
 } from "../services/pdf/drc-agenda-pdf-service";
 import {
   handleRouteError,
-  parseIdParam,
+  parsePositiveIntParam,
   unauthorized,
 } from "./http";
 
@@ -67,7 +67,7 @@ export function registerDrcMeetingRoutes(app: Express): void {
         throw unauthorized("Not authenticated");
       }
 
-      const meetingId = parseIdParam(req.params.meetingId, "meeting id");
+      const meetingId = parsePositiveIntParam(req.params.meetingId, "meeting id");
       const result = await getChairmanMinutesDetails(req.session.userId, meetingId);
       res.json(result);
     } catch (error) {
@@ -88,8 +88,8 @@ export function registerDrcMeetingRoutes(app: Express): void {
         })
         .parse(req.body);
 
-      const meetingId = parseIdParam(req.params.meetingId, "meeting id");
-      const applicationId = parseIdParam(req.params.applicationId, "application id");
+      const meetingId = parsePositiveIntParam(req.params.meetingId, "meeting id");
+      const applicationId = parsePositiveIntParam(req.params.applicationId, "application id");
 
       const result = await submitChairmanApplicationDecision(req.session.userId, {
         meetingId,
@@ -130,7 +130,7 @@ export function registerDrcMeetingRoutes(app: Express): void {
         throw unauthorized("Not authenticated");
       }
 
-      const meetingId = parseIdParam(req.params.id, "meeting id");
+      const meetingId = parsePositiveIntParam(req.params.id, "meeting id");
       const agenda = await getDrcMeetingAgenda(req.session.userId, meetingId);
       res.json(agenda);
     } catch (error) {
@@ -157,7 +157,7 @@ export function registerDrcMeetingRoutes(app: Express): void {
         throw unauthorized("Not authenticated");
       }
 
-      const meetingId = parseIdParam(req.params.id, "meeting id");
+      const meetingId = parsePositiveIntParam(req.params.id, "meeting id");
       const agenda = await closeDrcMeeting(req.session.userId, meetingId);
       res.json(agenda);
     } catch (error) {
@@ -171,7 +171,7 @@ export function registerDrcMeetingRoutes(app: Express): void {
         throw unauthorized("Not authenticated");
       }
 
-      const meetingId = parseIdParam(req.params.id, "meeting id");
+      const meetingId = parsePositiveIntParam(req.params.id, "meeting id");
       const agenda = await getDrcMeetingAgenda(req.session.userId, meetingId);
       const pdfBuffer = await buildDrcAgendaPdf(agenda);
       const filename = buildDrcAgendaPdfFilename(

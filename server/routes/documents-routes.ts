@@ -3,7 +3,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
 import { storage } from "../storage";
-import { badRequest, handleRouteError, notFound, parseIdParam } from "./http";
+import { badRequest, handleRouteError, notFound, parsePositiveIntParam } from "./http";
 
 export async function registerDocumentRoutes(app: Express): Promise<void> {
   const uploadsDir = path.join(process.cwd(), "uploads");
@@ -78,7 +78,7 @@ export async function registerDocumentRoutes(app: Express): Promise<void> {
 
   app.get("/api/documents/:id/view", async (req, res) => {
     try {
-      const documentId = parseIdParam(req.params.id, "document id");
+      const documentId = parsePositiveIntParam(req.params.id, "document id");
       const doc = await storage.getDocumentById(documentId);
       if (!doc) {
         throw notFound("Document not found");
@@ -98,7 +98,7 @@ export async function registerDocumentRoutes(app: Express): Promise<void> {
 
   app.get("/api/documents/:id/download", async (req, res) => {
     try {
-      const documentId = parseIdParam(req.params.id, "document id");
+      const documentId = parsePositiveIntParam(req.params.id, "document id");
       const doc = await storage.getDocumentById(documentId);
       if (!doc) {
         throw notFound("Document not found");
@@ -112,7 +112,7 @@ export async function registerDocumentRoutes(app: Express): Promise<void> {
 
   app.delete("/api/documents/:id", async (req, res) => {
     try {
-      const documentId = parseIdParam(req.params.id, "document id");
+      const documentId = parsePositiveIntParam(req.params.id, "document id");
       const doc = await storage.getDocumentById(documentId);
       if (!doc) {
         throw notFound("Document not found");
@@ -134,7 +134,7 @@ export async function registerDocumentRoutes(app: Express): Promise<void> {
         throw badRequest("verifiedBy is required");
       }
 
-      const documentId = parseIdParam(req.params.id, "document id");
+      const documentId = parsePositiveIntParam(req.params.id, "document id");
 
       const updated = await storage.updateDocument(documentId, {
         isVerified: true,
