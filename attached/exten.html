@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ph.D. Extension Application - GITAM</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background: #f5f7fa;
+      color: #222;
+      line-height: 1.6;
+      padding: 40px 20px;
+    }
+
+    .document-form {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      padding: 40px;
+      border: 1px solid #e1e5e9;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+
+    /* HEADER STYLING */
+    .gitam-header {
+      text-align: center;
+      margin-bottom: 25px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #0b6a55;
+    }
+
+    .gitam-title {
+      font-weight: bold;
+      font-size: 20px;
+      color: #0b6a55;
+      text-transform: uppercase;
+    }
+
+    .gitam-subtitle {
+      font-size: 15px;
+      margin: 4px 0;
+      color: #444;
+      font-weight: 600;
+    }
+
+    .gitam-accreditation {
+      font-size: 13px;
+      margin: 4px 0;
+      color: #666;
+    }
+
+    .gitam-address {
+      font-size: 12px;
+      color: #777;
+    }
+
+    .document-title {
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      margin: 25px 0;
+      color: #0b6a55;
+      text-decoration: underline;
+    }
+
+    /* FORM SECTIONS */
+    .form-section {
+      margin-bottom: 30px;
+      padding: 20px;
+      border: 1px solid #eee;
+      border-radius: 10px;
+    }
+
+    .form-section-title {
+      font-weight: bold;
+      margin-bottom: 15px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #eee;
+      color: #0b6a55;
+      font-size: 16px;
+    }
+
+    /* TABLE STYLING */
+    .table-form {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+
+    .table-form th, .table-form td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: left;
+    }
+
+    .table-form th {
+      background-color: #f8fafc;
+      font-weight: 600;
+    }
+
+    /* INPUT STYLING */
+    input[type="text"], input[type="date"], input[type="number"], select, textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    input:focus, textarea:focus {
+      border-color: #0b6a55;
+      box-shadow: 0 0 0 2px rgba(11, 106, 85, 0.1);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    /* CHECKBOX GROUP */
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+
+    .checkbox-group input {
+      margin-right: 12px;
+      width: 16px;
+      height: 16px;
+    }
+
+    /* SIGNATURE AREA */
+    .signature-line {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 40px;
+    }
+
+    .signature-box {
+      width: 45%;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .signature-space {
+      height: 60px;
+      border-bottom: 1px solid #333;
+      margin-bottom: 10px;
+    }
+
+    /* BUTTONS */
+    .btn-container {
+      text-align: center;
+      margin-top: 30px;
+    }
+
+    .submit-btn {
+      background: linear-gradient(135deg, #0b6a55 0%, #0a5947 100%);
+      color: white;
+      border: none;
+      padding: 15px 40px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      box-shadow: 0 4px 10px rgba(11, 106, 85, 0.3);
+      transition: 0.3s;
+    }
+
+    .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(11, 106, 85, 0.4);
+    }
+
+    @media print {
+      body { background: white; padding: 0; }
+      .submit-btn { display: none; }
+      .document-form { border: none; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="document-form">
+    <div class="gitam-header">
+      <div class="gitam-title">Gandhi Institute of Technology and Management (GITAM)</div>
+      <div class="gitam-subtitle">(Deemed to be University)</div>
+      <div class="gitam-subtitle">GITAM School of Technology - Hyderabad</div>
+      <div class="gitam-accreditation">Accredited by NAAC with A+ Grade</div>
+      <div class="gitam-address">Rudraram, Patancheru Mandal, Sangareddy (Dist) - 502 329, T.S., INDIA</div>
+    </div>
+
+    <div class="document-title">PH.D. RESEARCH SCHOLAR DATA SHEET FOR EXTENSION OF PH.D. DURATION</div>
+
+    <div class="form-section">
+      <div class="form-section-title">1. (a) Research Scholar Details</div>
+      <table class="table-form">
+        <tr>
+          <td style="width: 35%;">Name of the Candidate</td>
+          <td><input type="text" value="Thirupathi XYZ"></td>
+        </tr>
+        <tr>
+          <td>Date of Registration & Department</td>
+          <td><input type="text" value="15-08-2023, Computer Science"></td>
+        </tr>
+        <tr>
+          <td>Program Registration Category</td>
+          <td><input type="text" value="Full Time (FT)"></td>
+        </tr>
+        <tr>
+          <td>Phone No. & Email Id</td>
+          <td><input type="text" value="9876543210, scholar@example.com"></td>
+        </tr>
+        <tr>
+          <td>Name of the Research Supervisor</td>
+          <td><input type="text" value="Dr. Supervisor Name"></td>
+        </tr>
+        <tr>
+          <td>Area of Research</td>
+          <td><input type="text" value="Machine Learning"></td>
+        </tr>
+        <tr>
+          <td>Title of the Research Work</td>
+          <td><input type="text" value="Advanced Machine Learning Algorithms for Predictive Analytics"></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">1. (b) Extension Duration Required Details</div>
+      <table class="table-form">
+        <thead>
+          <tr>
+            <th>Registration Date</th>
+            <th>Duration Eligible</th>
+            <th>Required Extension till Date</th>
+            <th>Months Required</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><input type="date" value="2023-08-15"></td>
+            <td><input type="text" value="3 Years"></td>
+            <td><input type="date"></td>
+            <td><input type="text" placeholder="e.g. 6 Months"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">2. Brief Details of Research Progress</div>
+      <textarea placeholder="Outline the quantum of work completed to date..."></textarea>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">3. Details of Publications</div>
+      <table class="table-form">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>National</th>
+            <th>International</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Conferences</td>
+            <td><input type="number" value="1"></td>
+            <td><input type="number" value="2"></td>
+          </tr>
+          <tr>
+            <td>SCI Journals</td>
+            <td><input type="number" value="0"></td>
+            <td><input type="number" value="1"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">4. Enclosures (Check all that apply)</div>
+      <div class="checkbox-group">
+        <input type="checkbox"> <label>Copy of Admission Letter</label>
+      </div>
+      <div class="checkbox-group">
+        <input type="checkbox"> <label>Marks Memo of Course Work</label>
+      </div>
+      <div class="checkbox-group">
+        <input type="checkbox"> <label>Copy of all Fee Receipts</label>
+      </div>
+      <div class="checkbox-group">
+        <input type="checkbox"> <label>Progress Report signed by Supervisor</label>
+      </div>
+    </div>
+
+    <div class="signature-line">
+      <div class="signature-box">
+        <div class="signature-space"></div>
+        <div>Signature of the Research Scholar</div>
+      </div>
+      <div class="signature-box">
+        <div class="signature-space"></div>
+        <div>Signature of the Research Supervisor</div>
+      </div>
+    </div>
+
+    <div class="btn-container">
+      <button class="submit-btn" onclick="window.print()">Print / Submit Application</button>
+    </div>
+  </div>
+
+</body>
+</html>

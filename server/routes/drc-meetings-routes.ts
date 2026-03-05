@@ -2,6 +2,8 @@ import type { Express } from "express";
 import { z } from "zod";
 import {
   closeDrcMeeting,
+  clearDrcMeetingNotifications,
+  getChairmanDashboardData,
   getDrcMeetingAgenda,
   getChairmanMinutesDetails,
   getOpenDrcMeetingAgenda,
@@ -22,6 +24,33 @@ import {
 } from "./http";
 
 export function registerDrcMeetingRoutes(app: Express): void {
+  app.get("/api/drc-chairman/dashboard", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        throw unauthorized("Not authenticated");
+      }
+
+      const category = z
+        .enum([
+          "total",
+          "awarded",
+          "thesis_submitted",
+          "deregistered",
+          "terminated",
+          "re_registered",
+          "pre_talk_pending",
+          "extension_requests",
+        ])
+        .optional()
+        .parse(req.query.category);
+
+      const result = await getChairmanDashboardData(req.session.userId, category);
+      res.json(result);
+    } catch (error) {
+      return handleRouteError(res, error);
+    }
+  });
+
   app.get("/api/drc-meetings", async (req, res) => {
     try {
       if (!req.session.userId) {
@@ -43,6 +72,19 @@ export function registerDrcMeetingRoutes(app: Express): void {
 
       const notifications = await listDrcMeetingNotifications(req.session.userId);
       res.json(notifications);
+    } catch (error) {
+      return handleRouteError(res, error);
+    }
+  });
+
+  app.post("/api/drc-meetings/notifications/clear", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        throw unauthorized("Not authenticated");
+      }
+
+      const result = await clearDrcMeetingNotifications(req.session.userId);
+      res.json(result);
     } catch (error) {
       return handleRouteError(res, error);
     }

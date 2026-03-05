@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "../db";
 import {
   applications,
@@ -9,6 +9,7 @@ import {
   drcMeetingMinutes,
   drcMeetings,
   drcMinuteItems,
+  noticeDismissals,
   notices,
   scholars,
   users,
@@ -20,6 +21,7 @@ import {
   type DrcMeetingMinutes,
   type DrcMinuteItem,
   type Notice,
+  type NotificationType,
 } from "@shared/schema";
 
 export class DrcMeetingRepository {
@@ -294,24 +296,279 @@ export class DrcMeetingRepository {
     title: string;
     content: string;
     targetRole: string;
+    notificationType?: NotificationType;
+    relatedApplicationId?: number;
+    relatedMeetingId?: number;
   }): Promise<Notice> {
-    const [notice] = await db
-      .insert(notices)
-      .values({
-        title: input.title,
-        content: input.content,
-        targetRole: input.targetRole,
-      })
-      .returning();
+    try {
+      const [notice] = await db
+        .insert(notices)
+        .values({
+          title: input.title,
+          content: input.content,
+          targetRole: input.targetRole,
+          notificationType: input.notificationType ?? "general",
+          relatedApplicationId: input.relatedApplicationId,
+          relatedMeetingId: input.relatedMeetingId,
+        })
+        .returning();
 
-    return notice;
+      return notice;
+    } catch (error) {
+      if (!isMissingNoticeMetadataColumns(error)) {
+        throw error;
+      }
+
+      await ensureNoticeMetadataColumns();
+
+      const [notice] = await db
+        .insert(notices)
+        .values({
+          title: input.title,
+          content: input.content,
+          targetRole: input.targetRole,
+          notificationType: input.notificationType ?? "general",
+          relatedApplicationId: input.relatedApplicationId,
+          relatedMeetingId: input.relatedMeetingId,
+        })
+        .returning();
+
+      return notice;
+    }
   }
 
-  async listRoleNotices(targetRole: string): Promise<Notice[]> {
-    return db
-      .select()
-      .from(notices)
-      .where(eq(notices.targetRole, targetRole))
-      .orderBy(desc(notices.date));
+  async listRoleNotices(targetRole: string, userId: number): Promise<Notice[]> {
+    return this.listRoleNoticesForRoles([targetRole], userId);
   }
+
+  async listRoleNoticesForRoles(targetRoles: string[], userId: number): Promise<Notice[]> {
+    try {
+      const rows = await listRoleNoticesWithDismissalsForRoles(targetRoles, userId);
+
+      return rows.map((row) => row.notices);
+    } catch (error) {
+      if (isMissingNoticeMetadataColumns(error)) {
+        await ensureNoticeMetadataColumns();
+        const rows = await listRoleNoticesWithDismissalsForRoles(targetRoles, userId);
+        return rows.map((row) => row.notices);
+      }
+
+      if (!isMissingNoticeDismissalsTable(error)) {
+        throw error;
+      }
+
+      await ensureNoticeDismissalsTable();
+      const rows = await listRoleNoticesWithDismissalsForRoles(targetRoles, userId);
+      return rows.map((row) => row.notices);
+    }
+  }
+
+  async clearRoleNotices(targetRole: string, userId: number): Promise<number> {
+    return this.clearRoleNoticesForRoles([targetRole], userId);
+  }
+
+  async clearRoleNoticesForRoles(targetRoles: string[], userId: number): Promise<number> {
+    try {
+      const pendingNotices = await listPendingRoleNoticesForRoles(targetRoles, userId);
+
+      if (pendingNotices.length === 0) {
+        return 0;
+      }
+
+      await db
+        .insert(noticeDismissals)
+        .values(
+          pendingNotices.map((notice) => ({
+            userId,
+            noticeId: notice.id,
+          })),
+        )
+        .onConflictDoNothing();
+
+      return pendingNotices.length;
+    } catch (error) {
+      if (!isMissingNoticeDismissalsTable(error)) {
+        throw error;
+      }
+
+      await ensureNoticeDismissalsTable();
+      const pendingNotices = await listPendingRoleNoticesForRoles(targetRoles, userId);
+
+      if (pendingNotices.length === 0) {
+        return 0;
+      }
+
+      await db
+        .insert(noticeDismissals)
+        .values(
+          pendingNotices.map((notice) => ({
+            userId,
+            noticeId: notice.id,
+          })),
+        )
+        .onConflictDoNothing();
+
+      return pendingNotices.length;
+    }
+  }
+
+  async clearNoticeForRoles(input: {
+    noticeId: number;
+    targetRoles: string[];
+    userId: number;
+  }): Promise<boolean> {
+    try {
+      const allowed = await isNoticeVisibleForRoles(input.noticeId, input.targetRoles, input.userId);
+      if (!allowed) {
+        return false;
+      }
+
+      await db
+        .insert(noticeDismissals)
+        .values({
+          userId: input.userId,
+          noticeId: input.noticeId,
+        })
+        .onConflictDoNothing();
+
+      return true;
+    } catch (error) {
+      if (!isMissingNoticeDismissalsTable(error)) {
+        throw error;
+      }
+
+      await ensureNoticeDismissalsTable();
+
+      const allowed = await isNoticeVisibleForRoles(input.noticeId, input.targetRoles, input.userId);
+      if (!allowed) {
+        return false;
+      }
+
+      await db
+        .insert(noticeDismissals)
+        .values({
+          userId: input.userId,
+          noticeId: input.noticeId,
+        })
+        .onConflictDoNothing();
+
+      return true;
+    }
+  }
+}
+
+async function listRoleNoticesWithDismissalsForRoles(targetRoles: string[], userId: number) {
+  const roles = targetRoles.length > 0 ? targetRoles : ["all"];
+
+  return db
+    .select()
+    .from(notices)
+    .leftJoin(
+      noticeDismissals,
+      and(
+        eq(noticeDismissals.noticeId, notices.id),
+        eq(noticeDismissals.userId, userId),
+      ),
+    )
+    .where(and(inArray(notices.targetRole, roles), isNull(noticeDismissals.id)))
+    .orderBy(desc(notices.date));
+}
+
+async function listPendingRoleNoticesForRoles(targetRoles: string[], userId: number) {
+  const roles = targetRoles.length > 0 ? targetRoles : ["all"];
+
+  return db
+    .select({ id: notices.id })
+    .from(notices)
+    .leftJoin(
+      noticeDismissals,
+      and(
+        eq(noticeDismissals.noticeId, notices.id),
+        eq(noticeDismissals.userId, userId),
+      ),
+    )
+    .where(and(inArray(notices.targetRole, roles), isNull(noticeDismissals.id)));
+}
+
+async function isNoticeVisibleForRoles(noticeId: number, targetRoles: string[], userId: number) {
+  const roles = targetRoles.length > 0 ? targetRoles : ["all"];
+  const rows = await db
+    .select({ id: notices.id })
+    .from(notices)
+    .leftJoin(
+      noticeDismissals,
+      and(
+        eq(noticeDismissals.noticeId, notices.id),
+        eq(noticeDismissals.userId, userId),
+      ),
+    )
+    .where(
+      and(
+        eq(notices.id, noticeId),
+        inArray(notices.targetRole, roles),
+        isNull(noticeDismissals.id),
+      ),
+    )
+    .limit(1);
+
+  return rows.length > 0;
+}
+
+async function ensureNoticeDismissalsTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS notice_dismissals (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      notice_id INTEGER NOT NULL,
+      dismissed_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
+  await db.execute(sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS notice_dismissals_user_notice_idx
+    ON notice_dismissals (user_id, notice_id)
+  `);
+}
+
+async function ensureNoticeMetadataColumns(): Promise<void> {
+  await db.execute(sql`
+    ALTER TABLE notices
+      ADD COLUMN IF NOT EXISTS notification_type TEXT NOT NULL DEFAULT 'general',
+      ADD COLUMN IF NOT EXISTS related_application_id INTEGER,
+      ADD COLUMN IF NOT EXISTS related_meeting_id INTEGER
+  `);
+}
+
+function isMissingNoticeDismissalsTable(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const maybeCode = "code" in error ? (error as { code?: unknown }).code : undefined;
+  const maybeMessage = "message" in error ? (error as { message?: unknown }).message : undefined;
+
+  return (
+    maybeCode === "42P01" &&
+    typeof maybeMessage === "string" &&
+    maybeMessage.includes("notice_dismissals")
+  );
+}
+
+function isMissingNoticeMetadataColumns(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const maybeCode = "code" in error ? (error as { code?: unknown }).code : undefined;
+  const maybeMessage = "message" in error ? (error as { message?: unknown }).message : undefined;
+
+  return (
+    maybeCode === "42703" &&
+    typeof maybeMessage === "string" &&
+    (
+      maybeMessage.includes("notification_type") ||
+      maybeMessage.includes("related_application_id") ||
+      maybeMessage.includes("related_meeting_id")
+    )
+  );
 }

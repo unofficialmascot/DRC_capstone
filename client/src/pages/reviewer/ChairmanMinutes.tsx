@@ -4,15 +4,25 @@ import {
   useChairmanMinutesDetails,
   useChairmanMinutesMeetings,
 } from "@/hooks/use-application-reviews";
+import { useToast } from "@/hooks/use-toast";
+
+function formatDateTime(value: unknown): string {
+  if (!value) {
+    return "-";
+  }
+
+  return new Date(String(value)).toLocaleString();
+}
 
 export default function ChairmanMinutes() {
   const [selectedMeetingId, setSelectedMeetingId] = useState<number | null>(null);
   const [remarksByApp, setRemarksByApp] = useState<Record<number, string>>({});
+  const { toast } = useToast();
 
   const { data: meetings = [], isLoading: isMeetingsLoading } = useChairmanMinutesMeetings(true);
 
   const effectiveMeetingId = useMemo(() => {
-    if (selectedMeetingId) {
+    if (selectedMeetingId !== null) {
       return selectedMeetingId;
     }
 
@@ -36,7 +46,11 @@ export default function ChairmanMinutes() {
 
     const remarks = remarksByApp[applicationId]?.trim();
     if (!remarks) {
-      alert("Please add remarks before submitting chairman decision.");
+      toast({
+        title: "Action Required",
+        description: "Please add remarks before submitting chairman decision.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -87,7 +101,7 @@ export default function ChairmanMinutes() {
         ) : (
           <>
             <div style={{ fontSize: "13px", color: "#555", marginBottom: "14px" }}>
-              Meeting Date: {new Date(details.meeting.meetingDate as unknown as string).toLocaleString()} | Generated: {new Date(details.minutes.generatedAt as unknown as string).toLocaleString()}
+              Meeting Date: {formatDateTime(details.meeting.meetingDate)} | Generated: {formatDateTime(details.minutes.generatedAt)}
             </div>
 
             {details.items.length === 0 ? (

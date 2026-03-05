@@ -48,7 +48,7 @@ export default function ScholarDocHub({ scholarId }: { scholarId: string }) {
         </div>
         {doc && (
           <div style={{ fontSize: "13px", color: "#666", marginBottom: "10px" }}>
-            <span>Uploaded: {new Date(doc.uploadedAt).toLocaleDateString()}</span>
+            <span>Uploaded: {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : "N/A"}</span>
             {doc.isVerified && (
               <span style={{ marginLeft: "10px", color: "#27ae60", fontWeight: "600" }}>✓ Verified</span>
             )}

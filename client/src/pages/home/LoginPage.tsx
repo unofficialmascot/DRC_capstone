@@ -1,27 +1,30 @@
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { api } from "@shared/routes";
 import type { PublicUser } from "@/lib/types";
 
 export default function LoginPage({ onLogin }: { onLogin: (user: PublicUser) => void }) {
   const [id, setId] = useState("");
   const [idType, setIdType] = useState<"scholar" | "employee">("scholar");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setIsSubmitting(true);
 
     try {
-      const body = idType === "scholar" 
+      const body = idType === "scholar"
         ? { scholarId: id, password }
         : { employeeId: id, password };
+      const validatedInput = api.auth.login.input.parse(body);
 
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
+      const res = await fetch(api.auth.login.path, {
+        method: api.auth.login.method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        credentials: "include",
+        body: JSON.stringify(validatedInput),
       });
 
       if (!res.ok) {
@@ -29,10 +32,18 @@ export default function LoginPage({ onLogin }: { onLogin: (user: PublicUser) => 
         throw new Error(data.message || "Login failed");
       }
 
-      const user = await res.json();
+      const user = api.auth.login.responses[200].parse(await res.json()) as PublicUser;
+      toast({
+        title: "Success",
+        description: "Logged in successfully.",
+      });
       onLogin(user);
-    } catch (err: any) {
-      setError(err.message || "Login failed");
+    } catch (err: unknown) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Login failed",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -70,7 +81,6 @@ export default function LoginPage({ onLogin }: { onLogin: (user: PublicUser) => 
               <label>Password</label>
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter password" required data-testid="input-password" />
             </div>
-            {error && <div style={{ color: "#e74c3c", marginBottom: "15px", textAlign: "center" }}>{error}</div>}
             <button className="submit-btn" type="submit" disabled={isSubmitting} style={{ width: "100%" }} data-testid="button-login">
               {isSubmitting ? "Logging in..." : "Login"}
             </button>
@@ -82,6 +92,8 @@ export default function LoginPage({ onLogin }: { onLogin: (user: PublicUser) => 
               <div style={{ marginBottom: "5px" }}><strong>GITAM-SCH-2021-204</strong> / password123 - Scholar</div>
               <div style={{ marginBottom: "5px" }}><strong>EMP-SUPERVISOR-001</strong> / password123 - Supervisor</div>
               <div style={{ marginBottom: "5px" }}><strong>EMP-DRC-001</strong> / password123 - DRC Member</div>
+              <div style={{ marginBottom: "5px" }}><strong>EMP-DRC-CONVENER-001</strong> / password123 - DRC Convener</div>
+              <div style={{ marginBottom: "5px" }}><strong>EMP-DRC-CHAIRMAN-001</strong> / password123 - DRC Chairman</div>
               <div style={{ marginBottom: "5px" }}><strong>EMP-IRC-001</strong> / password123 - IRC Member</div>
               <div><strong>EMP-DOAA-001</strong> / password123 - DoAA Officer</div>
             </div>

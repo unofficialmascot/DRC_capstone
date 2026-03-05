@@ -265,3 +265,65 @@ test("submitApplicationReview updates supervisor and writes history on terminal 
     },
   );
 });
+
+test("submitApplicationReview updates scholar phase/status on terminal thesis-submission approval", async () => {
+  let scholarProfileUpdates: Record<string, unknown> | undefined;
+
+  await withMockedStorage(
+    {
+      getApplicationById: async () => ({
+        id: 51,
+        scholarId: "GITAM-SCH-2020-118",
+        type: "Thesis Submission",
+        status: "Pending",
+        currentStage: "doaa",
+        details: {
+          thesisTitle: "Machine Learning Models for Dynamic Resource Allocation",
+        },
+      }),
+      getEmployee: async () => ({
+        id: 5,
+        employeeId: "EMP-DOAA-001",
+      }),
+      getUserByScholarId: async () => ({
+        id: 1,
+        scholarId: "GITAM-SCH-2020-118",
+        phase: "Phase III",
+        status: "Active",
+        researchTitle: "Existing Thesis Topic",
+      }),
+      createReview: async (payload: unknown) => payload,
+      updateScholarProfile: async (
+        _scholarId: string,
+        updates: Record<string, unknown>,
+      ) => {
+        scholarProfileUpdates = updates;
+        return updates;
+      },
+      updateApplication: async (
+        _applicationId: number,
+        updates: Record<string, unknown>,
+      ) => ({
+        id: 51,
+        currentStage: updates.currentStage,
+        status: updates.status,
+        finalOutcome: updates.finalOutcome,
+      }),
+    },
+    async () => {
+      const result = await submitApplicationReview(51, {
+        reviewerId: "EMP-DOAA-001",
+        decision: "approved",
+        remarks: "Approved for thesis submission",
+      });
+
+      assert.equal((result.application as { status: string }).status, "Approved");
+      assert.equal(scholarProfileUpdates?.phase, "Thesis Submission");
+      assert.equal(scholarProfileUpdates?.status, "Graduated");
+      assert.equal(
+        scholarProfileUpdates?.researchTitle,
+        "Machine Learning Models for Dynamic Resource Allocation",
+      );
+    },
+  );
+});

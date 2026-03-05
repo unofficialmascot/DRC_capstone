@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import { useSupervisors } from "@/hooks/use-users";
 import type { PublicUser } from "@/lib/types";
 
@@ -15,66 +16,257 @@ export default function SupervisorChangeForm({
 }) {
   const { data: supervisors = [], isLoading: supervisorsLoading } = useSupervisors();
 
+  const currentSupervisor = supervisors.find(
+    (supervisor) => supervisor.employeeId === user.supervisorId,
+  );
+
   const [formData, setFormData] = useState({
-    scholarName: user.name,
-    department: user.department || "Computer Science",
+    scholarName: user.name || "",
+    department: user.department || "N/A",
     regdNo: user.scholarId || "",
     joiningDate: user.joiningDate || "",
-    currentSupervisor: user.supervisorId || "",
-    proposedSupervisor: "",
-    reason: "",
+    basicQualification: "N/A",
+    researchArea: user.researchArea || "N/A",
+    currentSupervisorEmployeeId: user.supervisorId || "",
+    currentSupervisorName: currentSupervisor?.name || user.supervisorId || "N/A",
+    currentSupervisorDesignation: currentSupervisor?.designation || "N/A",
+    existingCoSupervisorName: user.coSupervisorId || "N/A",
+    existingCoSupervisorDesignation: "N/A",
+    proposedSupervisorEmployeeId: "",
+    proposedSupervisorName: "",
+    proposedCoSupervisorName: "",
+    effectFromDate: "",
+    reasonJustification: "",
   });
+
+  useEffect(() => {
+    if (!currentSupervisor) {
+      return;
+    }
+
+    setFormData((previous) => ({
+      ...previous,
+      currentSupervisorName:
+        previous.currentSupervisorName === previous.currentSupervisorEmployeeId || previous.currentSupervisorName === "N/A"
+          ? currentSupervisor.name
+          : previous.currentSupervisorName,
+      currentSupervisorDesignation:
+        previous.currentSupervisorDesignation === "N/A"
+          ? currentSupervisor.designation || "N/A"
+          : previous.currentSupervisorDesignation,
+    }));
+  }, [currentSupervisor]);
+
+  const cardStyle: CSSProperties = {
+    maxWidth: "900px",
+    margin: "0 auto",
+    background: "white",
+    padding: "40px",
+    border: "1px solid #e1e5e9",
+    borderRadius: "12px",
+    boxShadow: "0 5px 15px rgba(0,0,0,0.05)",
+  };
+
+  const sectionStyle: CSSProperties = {
+    marginBottom: "30px",
+    padding: "20px",
+    border: "1px solid #eee",
+    borderRadius: "10px",
+  };
+
+  const sectionTitleStyle: CSSProperties = {
+    fontWeight: "bold",
+    marginBottom: "15px",
+    paddingBottom: "8px",
+    borderBottom: "1px solid #eee",
+    color: "#0b6a55",
+    fontSize: "16px",
+  };
+
+  const tableStyle: CSSProperties = {
+    width: "100%",
+    borderCollapse: "collapse",
+    margin: "12px 0",
+    fontSize: "14px",
+  };
+
+  const tableCellStyle: CSSProperties = {
+    border: "1px solid #ddd",
+    padding: "10px",
+  };
+
+  const labelCellStyle: CSSProperties = {
+    ...tableCellStyle,
+    backgroundColor: "#f8fafc",
+    fontWeight: 600,
+    width: "25%",
+  };
+
+  const inputStyle: CSSProperties = {
+    width: "100%",
+    padding: "8px",
+    border: "1px solid #ccc",
+    borderRadius: "4px",
+    fontSize: "14px",
+  };
+
+  const buildSubmitPayload = () => ({
+    scholarName: formData.scholarName,
+    department: formData.department,
+    regdNo: formData.regdNo,
+    joiningDate: formData.joiningDate,
+    basicQualification: formData.basicQualification,
+    researchArea: formData.researchArea,
+    currentSupervisorEmployeeId: formData.currentSupervisorEmployeeId,
+    currentSupervisorName: formData.currentSupervisorName,
+    currentSupervisorDesignation: formData.currentSupervisorDesignation,
+    existingCoSupervisorName: formData.existingCoSupervisorName,
+    existingCoSupervisorDesignation: formData.existingCoSupervisorDesignation,
+    proposedSupervisorEmployeeId: formData.proposedSupervisorEmployeeId,
+    proposedSupervisorName: formData.proposedSupervisorName,
+    proposedCoSupervisorName: formData.proposedCoSupervisorName,
+    effectFromDate: formData.effectFromDate,
+    reasonJustification: formData.reasonJustification,
+  });
+
   return (
-    <div className="form-container">
-      <div style={{ textAlign: "center", marginBottom: "25px" }}>
-        <div style={{ fontSize: "18px", fontWeight: "bold", color: "#0b6a55" }}>GANDHI INSTITUTE OF TECHNOLOGY AND MANAGEMENT (GITAM)</div>
-        <div style={{ fontSize: "14px", color: "#666" }}>(DEEMED TO BE UNIVERSITY)</div>
+    <div style={cardStyle}>
+      <div style={{ textAlign: "center", marginBottom: "25px", paddingBottom: "20px", borderBottom: "2px solid #0b6a55" }}>
+        <div style={{ fontWeight: "bold", fontSize: "19px", color: "#0b6a55", textTransform: "uppercase" }}>GANDHI INSTITUTE OF TECHNOLOGY AND MANAGEMENT (GITAM)</div>
+        <div style={{ fontSize: "15px", margin: "4px 0", color: "#444", fontWeight: 600 }}>(DEEMED TO BE UNIVERSITY)</div>
+        <div style={{ fontSize: "15px", margin: "4px 0", color: "#444", fontWeight: 600 }}>School of Technology</div>
+        <div style={{ fontSize: "13px", margin: "4px 0", color: "#666" }}>Accredited by NAAC with A+ Grade</div>
+        <div style={{ fontSize: "12px", color: "#777" }}>Rudraram, Patancheru Mandal, Sangareddy (Dist) - 502 329, T.S., INDIA</div>
       </div>
-      <div className="form-title">Request for Change/Addition of Supervisor(s)</div>
-      <div className="form-group"><label>Name of the Scholar</label><input type="text" value={formData.scholarName} onChange={(e) => setFormData({ ...formData, scholarName: e.target.value })} /></div>
-      <div className="form-group"><label>Department</label><input type="text" value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })} /></div>
-      <div className="form-group"><label>Regd. No.</label><input type="text" value={formData.regdNo} onChange={(e) => setFormData({ ...formData, regdNo: e.target.value })} /></div>
-      <div className="form-group"><label>Current Supervisor</label><input type="text" value={formData.currentSupervisor} onChange={(e) => setFormData({ ...formData, currentSupervisor: e.target.value })} /></div>
-      <div className="form-group">
-        <label>Proposed New Supervisor</label>
-        <select
-          value={formData.proposedSupervisor}
-          onChange={(e) => setFormData({ ...formData, proposedSupervisor: e.target.value })}
-          data-testid="select-proposed-supervisor"
-          disabled={supervisorsLoading}
-        >
-          <option value="">{supervisorsLoading ? "Loading supervisors..." : "Select a supervisor"}</option>
-          {supervisors
-            .filter((supervisor) => supervisor.employeeId !== formData.currentSupervisor)
-            .map((supervisor) => (
-              <option key={supervisor.employeeId} value={supervisor.employeeId}>
-                {supervisor.name} ({supervisor.employeeId})
-              </option>
-            ))}
-        </select>
+
+      <div style={{ textAlign: "center", fontSize: "17px", fontWeight: "bold", margin: "25px 0", color: "#0b6a55", textDecoration: "underline", textTransform: "uppercase" }}>
+        Request for Change / Addition of Supervisor(s)
       </div>
-      <div className="form-group"><label>Reason/Justification</label><textarea value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })} placeholder="Please provide detailed reason" style={{ height: "120px" }} /></div>
-      <div style={{ display: "flex", gap: "10px" }}>
+
+      <div style={sectionStyle}>
+        <div style={sectionTitleStyle}>Scholar Details</div>
+        <table style={tableStyle}>
+          <tbody>
+            <tr>
+              <td style={labelCellStyle}>Name of Scholar</td>
+              <td style={tableCellStyle}><input style={inputStyle} type="text" value={formData.scholarName} onChange={(e) => setFormData({ ...formData, scholarName: e.target.value })} /></td>
+              <td style={labelCellStyle}>Department</td>
+              <td style={tableCellStyle}><input style={inputStyle} type="text" value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })} /></td>
+            </tr>
+            <tr>
+              <td style={labelCellStyle}>Regd. No.</td>
+              <td style={tableCellStyle}><input style={inputStyle} type="text" value={formData.regdNo} onChange={(e) => setFormData({ ...formData, regdNo: e.target.value })} /></td>
+              <td style={labelCellStyle}>Date of Joining</td>
+              <td style={tableCellStyle}><input style={inputStyle} type="date" value={formData.joiningDate} onChange={(e) => setFormData({ ...formData, joiningDate: e.target.value })} /></td>
+            </tr>
+            <tr>
+              <td style={labelCellStyle}>Basic Qualification</td>
+              <td style={tableCellStyle}><input style={inputStyle} type="text" value={formData.basicQualification} onChange={(e) => setFormData({ ...formData, basicQualification: e.target.value })} /></td>
+              <td style={labelCellStyle}>Research Area</td>
+              <td style={tableCellStyle}><input style={inputStyle} type="text" value={formData.researchArea} onChange={(e) => setFormData({ ...formData, researchArea: e.target.value })} /></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style={sectionStyle}>
+        <div style={sectionTitleStyle}>Existing Supervisor Details</div>
+        <table style={tableStyle}>
+          <tbody>
+            <tr>
+              <td style={labelCellStyle}>Supervisor Name</td>
+              <td style={tableCellStyle}><input style={inputStyle} type="text" value={formData.currentSupervisorName} onChange={(e) => setFormData({ ...formData, currentSupervisorName: e.target.value })} /></td>
+              <td style={labelCellStyle}>Designation</td>
+              <td style={tableCellStyle}><input style={inputStyle} type="text" value={formData.currentSupervisorDesignation} onChange={(e) => setFormData({ ...formData, currentSupervisorDesignation: e.target.value })} /></td>
+            </tr>
+            <tr>
+              <td style={labelCellStyle}>Co-Supervisor Name</td>
+              <td style={tableCellStyle}><input style={inputStyle} type="text" value={formData.existingCoSupervisorName} onChange={(e) => setFormData({ ...formData, existingCoSupervisorName: e.target.value })} /></td>
+              <td style={labelCellStyle}>Designation</td>
+              <td style={tableCellStyle}><input style={inputStyle} type="text" value={formData.existingCoSupervisorDesignation} onChange={(e) => setFormData({ ...formData, existingCoSupervisorDesignation: e.target.value })} /></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style={sectionStyle}>
+        <div style={sectionTitleStyle}>Proposed Supervisor Details</div>
+        <table style={tableStyle}>
+          <tbody>
+            <tr>
+              <td style={labelCellStyle}>New Supervisor</td>
+              <td style={tableCellStyle}>
+                <select
+                  style={inputStyle}
+                  value={formData.proposedSupervisorEmployeeId}
+                  onChange={(e) => {
+                    const nextEmployeeId = e.target.value;
+                    const selectedSupervisor = supervisors.find(
+                      (supervisor) => supervisor.employeeId === nextEmployeeId,
+                    );
+
+                    setFormData({
+                      ...formData,
+                      proposedSupervisorEmployeeId: nextEmployeeId,
+                      proposedSupervisorName: selectedSupervisor?.name || "",
+                    });
+                  }}
+                  data-testid="select-proposed-supervisor"
+                  disabled={supervisorsLoading}
+                >
+                  <option value="">{supervisorsLoading ? "Loading supervisors..." : "Select a supervisor"}</option>
+                  {supervisors
+                    .filter((supervisor) => supervisor.employeeId !== formData.currentSupervisorEmployeeId)
+                    .map((supervisor) => (
+                      <option key={supervisor.employeeId} value={supervisor.employeeId}>
+                        {supervisor.name} ({supervisor.employeeId})
+                      </option>
+                    ))}
+                </select>
+              </td>
+              <td style={labelCellStyle}>New Co-Supervisor</td>
+              <td style={tableCellStyle}><input style={inputStyle} type="text" value={formData.proposedCoSupervisorName} onChange={(e) => setFormData({ ...formData, proposedCoSupervisorName: e.target.value })} placeholder="Proposed Co-Supervisor Name" /></td>
+            </tr>
+            <tr>
+              <td style={labelCellStyle}>Effect From</td>
+              <td style={tableCellStyle} colSpan={3}><input style={inputStyle} type="date" value={formData.effectFromDate} onChange={(e) => setFormData({ ...formData, effectFromDate: e.target.value })} /></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style={sectionStyle}>
+        <div style={sectionTitleStyle}>Reason / Justification</div>
+        <textarea
+          style={{ ...inputStyle, minHeight: "120px", resize: "vertical" }}
+          value={formData.reasonJustification}
+          onChange={(e) => setFormData({ ...formData, reasonJustification: e.target.value })}
+          placeholder="Please provide detailed reason and justification for the change/addition of supervisor(s)..."
+        />
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: "60px", padding: "0 10px" }}>
+        <div style={{ width: "45%", textAlign: "center" }}>
+          <hr style={{ border: "none", borderTop: "1px solid #333", marginBottom: "10px" }} />
+          <div style={{ fontSize: "14px", fontWeight: 500, color: "#222" }}>Signature of the Research Scholar</div>
+        </div>
+        <div style={{ width: "45%", textAlign: "center" }}>
+          <hr style={{ border: "none", borderTop: "1px solid #333", marginBottom: "10px" }} />
+          <div style={{ fontSize: "14px", fontWeight: 500, color: "#222" }}>Signature of the Research Supervisor</div>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginTop: "40px" }}>
+        <button type="button" className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back</button>
         <button
           type="button"
           className="submit-btn"
-          onClick={() => {
-            const selectedSupervisor = supervisors.find(
-              (supervisor) => supervisor.employeeId === formData.proposedSupervisor,
-            );
-
-            onSubmit({
-              ...formData,
-              proposedSupervisorEmployeeId: formData.proposedSupervisor,
-              proposedSupervisorName: selectedSupervisor?.name,
-            });
-          }}
-          disabled={isSubmitting || !formData.proposedSupervisor}
+          onClick={() => onSubmit(buildSubmitPayload())}
+          disabled={isSubmitting || !formData.proposedSupervisorEmployeeId}
           data-testid="button-submit-form"
         >
           {isSubmitting ? "Submitting..." : "Submit Application"}
         </button>
-        <button type="button" className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back to Options</button>
       </div>
     </div>
   );

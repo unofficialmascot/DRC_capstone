@@ -21,11 +21,32 @@ npm ci
 - `PORT` (optional, defaults to `5000`)
 - `NODE_ENV` (`development` for local work)
 
+For managed Postgres providers that require TLS (for example Aiven), prefer a trusted CA path:
+
+- `DB_SSL_CA_FILE` (absolute path to provider CA certificate PEM)
+- `NODE_EXTRA_CA_CERTS` (same PEM file path, used by Node-based CLI tools)
+
 3. Apply schema:
 
 ```bash
 npm run db:push
 ```
+
+By default this command uses a TLS bypass for local convenience in environments with self-signed or untrusted cert chains.
+
+If you want strict TLS verification instead:
+
+```bash
+npm run db:push:secure
+```
+
+If your environment has not been configured with provider CA trust yet, there is a temporary fallback:
+
+```bash
+npm run db:push:insecure
+```
+
+Use this only for local debugging and move to CA-based trust as soon as possible.
 
 4. Start the app:
 

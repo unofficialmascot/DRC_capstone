@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G-Scholar Hub | GITAM Hyderabad</title>
+    <style>
+        :root {
+            --gitam-green: #28a745;
+            --header-bg: #f8fdf9;
+            --border-color: #dee2e6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: #fff;
+            padding: 40px;
+            border-top: 8px solid var(--gitam-green);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+        }
+
+        header h1 { color: var(--gitam-green); font-size: 24px; margin: 0; }
+        header h2 { font-size: 18px; margin: 5px 0; font-weight: 500; }
+        .form-meta { font-weight: bold; color: #666; margin-top: 10px; }
+
+        /* Sections */
+        .section-header {
+            background-color: var(--gitam-green);
+            color: white;
+            padding: 10px 15px;
+            font-weight: bold;
+            margin: 25px 0 15px 0;
+            border-radius: 4px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 15px;
+        }
+
+        label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        input, textarea {
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #fafafa;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th { background-color: #f8f9fa; }
+
+        /* Narrative & Recommendation */
+        .narrative {
+            font-size: 14px;
+            line-height: 1.6;
+            background: #f9fdfa;
+            padding: 15px;
+            border-left: 4px solid var(--gitam-green);
+            margin: 15px 0;
+        }
+
+        .rec-box {
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            background: #fff;
+            border-radius: 4px;
+        }
+
+        .option {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .option input { margin-right: 15px; margin-top: 4px; }
+
+        /* Signature Grid */
+        .sig-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .sig-block {
+            border-top: 1px dashed #999;
+            padding-top: 10px;
+            text-align: center;
+            font-size: 12px;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .full-sig-line {
+            width: 100%;
+            border-top: 1px solid #333;
+            margin-top: 40px;
+            padding-top: 10px;
+            font-weight: bold;
+        }
+
+        .actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 50px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .btn-submit { background-color: var(--gitam-green); color: white; }
+        .btn-back { background-color: #6c757d; color: white; }
+
+        @media print {
+            .actions { display: none; }
+            body { background: white; padding: 0; }
+            .container { box-shadow: none; border: 1px solid #eee; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>GANDHI INSTITUTE OF TECHNOLOGY AND MANAGEMENT (GITAM)</h1>
+        <h2>(DEEMED TO BE UNIVERSITY)</h2>
+        <p>GITAM School of Technology - Hyderabad</p>
+        <div class="form-meta">Research Form - V: Ph.D. Pre-Submission Talk Report</div>
+    </header>
+
+    <form id="phdForm">
+        <div class="section-header">Part A: To be filled in by the Research Scholar</div>
+        
+        <div class="grid-2">
+            <div class="input-group">
+                <label>Department</label>
+                <input type="text" value="Computer Science" readonly>
+            </div>
+            <div class="input-group">
+                <label>Regd. No.</label>
+                <input type="text" value="1234567890" readonly>
+            </div>
+            <div class="input-group">
+                <label>Name of Research Scholar</label>
+                <input type="text" value="Thirupathi XYZ">
+            </div>
+            <div class="input-group">
+                <label>Month and Year of Joining</label>
+                <input type="text" value="August 2023">
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>Name of the Research Supervisor, Institute, Campus</label>
+            <input type="text" value="Dr. Supervisor Name, GITAM, Hyderabad">
+        </div>
+
+        <div class="input-group">
+            <label>Topic of Research Work</label>
+            <textarea rows="2">Advanced Machine Learning Algorithms for Predictive Analytics</textarea>
+        </div>
+
+        <div class="section-header">Details of Publications</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Publications</th>
+                    <th>National</th>
+                    <th>International</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Conferences</td><td><input type="text" style="width:40px"></td><td><input type="text" value="2" style="width:40px"></td></tr>
+                <tr><td>SCI Journals</td><td><input type="text" value="0" style="width:40px"></td><td><input type="text" style="width:40px"></td></tr>
+                <tr><td>Non SCI Journals with impact factor</td><td><input type="text" value="0" style="width:40px"></td><td><input type="text" value="10" style="width:40px"></td></tr>
+                <tr><td>Journals without impact factor</td><td><input type="text" value="0" style="width:40px"></td><td><input type="text" value="0" style="width:40px"></td></tr>
+            </tbody>
+        </table>
+
+        <div class="section-header">Part B: Report of DRC on Pre-Submission Talk</div>
+        
+        <div class="narrative">
+            The scholar submitted a draft report of the research work carried out by him/her and presented the same to the DRC. 
+            The committee makes the following observations and recommendations.
+        </div>
+
+        <label>1. Performance Evaluation</label>
+        <table>
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>Evaluation</th>
+                    <th>Suggestions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Problem Identification</td><td>Proper</td><td><input type="text" style="width:90%"></td></tr>
+                <tr><td>Literature survey</td><td>Sufficient</td><td><input type="text" value="Sufficiently covered" style="width:90%"></td></tr>
+                <tr><td>Contribution</td><td>Significant</td><td><input type="text" style="width:90%"></td></tr>
+                <tr><td>Results</td><td>Adequate</td><td><input type="text" style="width:90%"></td></tr>
+            </tbody>
+        </table>
+
+        <label style="margin-top:20px; display:block;">2. Thesis Submission Recommendation</label>
+        <div class="rec-box">
+            <div class="option">
+                <input type="radio" name="rec" id="rec1" checked>
+                <label for="rec1" style="text-transform:none; font-weight:normal;">
+                    Adequate for the submission of the Ph.D. Thesis, incorporating the suggestions (if any) made in item 3, in consultation with the Ph.D. Supervisor.
+                </label>
+            </div>
+            <div class="option">
+                <input type="radio" name="rec" id="rec2">
+                <label for="rec2" style="text-transform:none; font-weight:normal;">
+                    Inadequate for the submission of the Ph.D. Thesis in its present form and major modifications/ additions/changes are required. The student must incorporate the improvements/modifications/ changes suggested in item 3, and give the Pre-talk Seminar again.
+                </label>
+            </div>
+        </div>
+
+        <div class="input-group" style="margin-top:20px;">
+            <label>3. Comments/observations/recommendations of the panel</label>
+            <textarea rows="3" placeholder="Attach separate sheet if necessary..."></textarea>
+        </div>
+
+        <div class="section-header">Signatures & Approval</div>
+        
+        <div class="sig-container">
+            <div class="sig-block">Name & Signature of the Research Supervisor</div>
+            <div></div>
+            <div class="sig-block">Date</div>
+        </div>
+
+        <div style="margin-top:40px; font-weight:bold; font-size:14px; text-align:center; color: var(--gitam-green);">
+            DRC Panel Members (Names and Signatures)
+        </div>
+
+        <div class="sig-container">
+            <div class="sig-block">1. Panel Member</div>
+            <div class="sig-block">2. Panel Member</div>
+            <div class="sig-block">3. Panel Member</div>
+            <div class="sig-block">4. Panel Member</div>
+            <div class="sig-block">5. Panel Member</div>
+            <div class="sig-block">6. Panel Member</div>
+        </div>
+
+        <div class="sig-container" style="margin-top:50px;">
+            <div class="input-group" style="grid-column: span 2;">
+                <label>Remarks of Convener DRC:</label>
+                <input type="text" style="border:none; border-bottom: 1px solid #333; background:none;">
+            </div>
+            <div class="sig-block" style="border-top: 1px solid #333;">Signature of Convener - DRC</div>
+        </div>
+
+        <div class="actions">
+            <button type="button" class="btn btn-back">BACK TO OPTIONS</button>
+            <button type="submit" class="btn btn-submit">SUBMIT APPLICATION</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.getElementById('phdForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        alert('G-Scholar Hub: Ph.D. Pre-Submission Form for Thirupathi XYZ has been submitted.');
+    });
+</script>
+
+</body>
+</html>

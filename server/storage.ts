@@ -50,6 +50,7 @@ export interface IStorage {
   getApplicationsForSupervisor(employeeId: string): Promise<Application[]>;
   createApplication(app: InsertApplication): Promise<Application>;
   updateApplication(id: number, updates: Partial<InsertApplication>): Promise<Application>;
+  deleteApplication(id: number): Promise<void>;
 
   getReviewsForApplication(applicationId: number): Promise<ApplicationReview[]>;
   createReview(review: InsertApplicationReview): Promise<ApplicationReview>;
@@ -155,6 +156,10 @@ export class DatabaseStorage implements IStorage {
 
   async updateApplication(id: number, updates: Partial<InsertApplication>): Promise<Application> {
     return this.applications.updateApplication(id, updates);
+  }
+
+  async deleteApplication(id: number): Promise<void> {
+    return this.applications.deleteApplication(id);
   }
 
   async getReviewsForApplication(applicationId: number): Promise<ApplicationReview[]> {

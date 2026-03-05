@@ -5,6 +5,7 @@ import {
   type WorkflowStage,
 } from "../workflow";
 import { badRequest, forbidden, notFound } from "../routes/http";
+import { emitRoleNotification } from "./notification-service";
 
 export interface SubmitReviewInput {
   reviewerId: string;
@@ -73,7 +74,76 @@ export async function submitApplicationReview(
     finalOutcome: workflowResult.finalOutcome,
   });
 
+  await emitReviewNotifications({
+    application,
+    reviewerId: input.reviewerId,
+    decision: input.decision,
+    currentStage,
+    nextStage: workflowResult.nextStage,
+    finalOutcome: workflowResult.finalOutcome,
+  });
+
   return { review, application: updatedApp };
+}
+
+async function emitReviewNotifications(input: {
+  application: { id: number; scholarId: string; type: string };
+  reviewerId: string;
+  decision: "approved" | "rejected";
+  currentStage: WorkflowStage;
+  nextStage: string | null;
+  finalOutcome: string | null;
+}) {
+  const stageLabel = input.currentStage.toUpperCase();
+
+  await emitRoleNotification({
+    title: `${input.application.type} ${input.decision === "approved" ? "approved" : "rejected"}`,
+    content: `Application #${input.application.id} for scholar ${input.application.scholarId} was ${input.decision} at ${stageLabel} by ${input.reviewerId}.`,
+    targetRoles: ["scholar"],
+    notificationType: "review_decision",
+    relatedApplicationId: input.application.id,
+  });
+
+  if (input.finalOutcome) {
+    return;
+  }
+
+  const nextRoles = getReviewerRolesForStage(input.nextStage);
+  if (nextRoles.length === 0) {
+    return;
+  }
+
+  await emitRoleNotification({
+    title: `Review Pending: ${input.application.type}`,
+    content: `Application #${input.application.id} is awaiting ${input.nextStage?.toUpperCase()} review for scholar ${input.application.scholarId}.`,
+    targetRoles: nextRoles,
+    notificationType: "review_pending",
+    relatedApplicationId: input.application.id,
+  });
+}
+
+function getReviewerRolesForStage(stage: string | null): string[] {
+  if (!stage) {
+    return [];
+  }
+
+  if (stage === "supervisor") {
+    return ["supervisor"];
+  }
+
+  if (stage === "drc") {
+    return ["drc", "drc_convener", "drc_chairman"];
+  }
+
+  if (stage === "irc") {
+    return ["irc"];
+  }
+
+  if (stage === "doaa") {
+    return ["doaa"];
+  }
+
+  return [];
 }
 
 async function applyApprovedChanges(application: {
@@ -90,6 +160,22 @@ async function applyApprovedChanges(application: {
 
   if (application.type === "Extension") {
     await applyExtensionApproval(application, details);
+  }
+
+  if (application.type === "Re-Registration") {
+    await applyReRegistrationApproval(application);
+  }
+
+  if (application.type === "Deregistration") {
+    await applyDeregistrationApproval(application);
+  }
+
+  if (application.type === "Termination") {
+    await applyTerminationApproval(application);
+  }
+
+  if (application.type === "Thesis Submission") {
+    await applyThesisSubmissionApproval(application, details);
   }
 }
 
@@ -146,6 +232,62 @@ async function applyExtensionApproval(
   await storage.updateScholarProfile(application.scholarId, {
     extensionMonthsGranted: existingMonths + extensionMonths,
     lastExtensionApprovedAt: new Date(),
+  });
+}
+
+async function applyThesisSubmissionApproval(
+  application: { scholarId: string },
+  details: Record<string, unknown>,
+) {
+  const scholar = await storage.getUserByScholarId(application.scholarId);
+  if (!scholar) {
+    throw notFound("Scholar not found for approved thesis submission");
+  }
+
+  const thesisTitle = getStringValue(details.thesisTitle);
+  const currentResearchTitle = getStringValue(scholar.researchTitle);
+
+  await storage.updateScholarProfile(application.scholarId, {
+    phase: "Thesis Submission",
+    status: "Graduated",
+    lifecycleStatus: "Awarded",
+    ...(thesisTitle ? { researchTitle: thesisTitle } : currentResearchTitle ? { researchTitle: currentResearchTitle } : {}),
+  });
+}
+
+async function applyReRegistrationApproval(application: { scholarId: string }) {
+  const scholar = await storage.getUserByScholarId(application.scholarId);
+  if (!scholar) {
+    throw notFound("Scholar not found for approved re-registration");
+  }
+
+  await storage.updateScholarProfile(application.scholarId, {
+    status: "Active",
+    lifecycleStatus: "Re-registered",
+  });
+}
+
+async function applyDeregistrationApproval(application: { scholarId: string }) {
+  const scholar = await storage.getUserByScholarId(application.scholarId);
+  if (!scholar) {
+    throw notFound("Scholar not found for approved deregistration");
+  }
+
+  await storage.updateScholarProfile(application.scholarId, {
+    status: "Inactive",
+    lifecycleStatus: "Deregistered",
+  });
+}
+
+async function applyTerminationApproval(application: { scholarId: string }) {
+  const scholar = await storage.getUserByScholarId(application.scholarId);
+  if (!scholar) {
+    throw notFound("Scholar not found for approved termination");
+  }
+
+  await storage.updateScholarProfile(application.scholarId, {
+    status: "Inactive",
+    lifecycleStatus: "Terminated",
   });
 }
 

@@ -49,16 +49,3 @@
   }
 }
 
-@layer components {
-  .dashboard-card {
-    @apply bg-white rounded-xl border border-border/50 shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary/20;
-  }
-  
-  .nav-item {
-    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground;
-  }
-  
-  .nav-item-active {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground shadow-sm;
-  }
-}

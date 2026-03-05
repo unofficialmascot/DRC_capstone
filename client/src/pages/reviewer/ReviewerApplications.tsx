@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import {
+  useApplicationById,
   useApplicationsByStage,
   useCloseDrcMeeting,
   useOpenDrcMeeting,
@@ -9,25 +10,32 @@ import {
   useScheduleDrcMeeting,
   type DrcMeetingAgenda,
 } from "@/hooks/use-application-reviews";
-import { Calendar } from "@/components/ui/calendar";
+import ApplicationDetailFormView from "@/components/applications/ApplicationDetailFormView";
+import { useToast } from "@/hooks/use-toast";
 import type { Application } from "@shared/schema";
 import type { PublicUser } from "@/lib/types";
 
 export default function ReviewerApplications({ user }: { user: PublicUser }) {
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [remarks, setRemarks] = useState("");
-  const [meetingDate, setMeetingDate] = useState<Date | undefined>(undefined);
+  const [meetingDate, setMeetingDate] = useState("");
   const [meetingTime, setMeetingTime] = useState("10:00");
+  const [meetingLocation, setMeetingLocation] = useState("");
   const [agendaPointInput, setAgendaPointInput] = useState("");
   const [extraPoints, setExtraPoints] = useState<string[]>([]);
   const [latestAgenda, setLatestAgenda] = useState<DrcMeetingAgenda | null>(null);
+  const { toast } = useToast();
 
   const isDrcConvener = user.role === "drc_convener";
   const roleLabel = isDrcConvener ? "DRC Convener" : user.role.toUpperCase();
+  const reviewerKey = user.employeeId || user.scholarId || user.username || user.email;
 
   const { data: pendingApps = [], isLoading } = useApplicationsByStage(isDrcConvener ? "" : user.role) as {
     data: Application[] | undefined;
     isLoading: boolean;
+  };
+  const { data: drcPendingApps = [] } = useApplicationsByStage("drc") as {
+    data: Application[] | undefined;
   };
 
   const { data: allUsers = [] } = useQuery<PublicUser[]>({
@@ -40,10 +48,23 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
     return scholar?.name || scholarId;
   };
 
+  const getScholarLabel = (scholarId: string) => {
+    const scholar = allUsers.find((u) => u.scholarId === scholarId);
+    if (!scholar?.name) {
+      return scholarId;
+    }
+
+    return `${scholar.name} (${scholarId})`;
+  };
+
   const reviewMutation = useSubmitReview(selectedApp?.id ?? 0);
+  const { data: selectedApplicationDetail } = useApplicationById(selectedApp?.id ?? 0) as {
+    data: Application | undefined;
+  };
   const scheduleMeetingMutation = useScheduleDrcMeeting();
   const closeMeetingMutation = useCloseDrcMeeting();
   const { data: openMeetingAgenda, isLoading: isOpenMeetingLoading } = useOpenDrcMeeting(isDrcConvener);
+  const displayApplication = (selectedApplicationDetail ?? selectedApp) as Application | null;
 
   useEffect(() => {
     if (openMeetingAgenda) {
@@ -58,18 +79,36 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
   const handleReview = (decision: "approved" | "rejected") => {
     if (!selectedApp) return;
     if (!remarks.trim()) {
-      alert("Please provide remarks for your decision.");
+      toast({
+        title: "Action Required",
+        description: "Please provide remarks for your decision.",
+        variant: "destructive",
+      });
       return;
     }
-    if (!user.username) {
-      alert("Employee ID is missing. Please log in again.");
+    if (!reviewerKey) {
+      toast({
+        title: "Action Required",
+        description: "Employee ID is missing. Please log in again.",
+        variant: "destructive",
+      });
       return;
     }
-    reviewMutation.mutate({ reviewerId: user.username, decision, remarks }, {
+    reviewMutation.mutate({ reviewerId: reviewerKey, decision, remarks }, {
       onSuccess: () => {
-        alert(`Application ${decision === "approved" ? "approved" : "rejected"} successfully!`);
+        toast({
+          title: "Success",
+          description: `Application ${decision === "approved" ? "approved" : "rejected"} successfully!`,
+        });
         setSelectedApp(null);
         setRemarks("");
+      },
+      onError: (error: Error) => {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to submit review.",
+          variant: "destructive",
+        });
       },
     });
   };
@@ -90,32 +129,68 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
 
   const handleScheduleMeeting = () => {
     if (hasOpenMeeting) {
-      alert("An active meeting already exists. Please close it before scheduling a new meeting.");
+      toast({
+        title: "Action Required",
+        description: "An active meeting already exists. Please close it before scheduling a new meeting.",
+        variant: "destructive",
+      });
       return;
     }
 
     if (!meetingDate) {
-      alert("Please select a meeting date from the calendar.");
+      toast({
+        title: "Action Required",
+        description: "Please select a meeting date.",
+        variant: "destructive",
+      });
       return;
     }
 
-    const [hours, minutes] = meetingTime.split(":").map((value) => Number(value));
-    const dateTime = new Date(meetingDate);
-    dateTime.setHours(Number.isFinite(hours) ? hours : 10);
-    dateTime.setMinutes(Number.isFinite(minutes) ? minutes : 0);
-    dateTime.setSeconds(0, 0);
+    if (!meetingLocation.trim()) {
+      toast({
+        title: "Action Required",
+        description: "Please provide meeting location.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const dateTime = new Date(`${meetingDate}T${meetingTime}:00`);
+    if (Number.isNaN(dateTime.getTime())) {
+      toast({
+        title: "Action Required",
+        description: "Please enter valid meeting date and time.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const meetingMetaPoint = `Location: ${meetingLocation.trim()}`;
+    const agendaPoints = [meetingMetaPoint, ...extraPoints];
 
     scheduleMeetingMutation.mutate(
       {
         meetingDate: dateTime.toISOString(),
-        extraPoints,
+        extraPoints: agendaPoints,
       },
       {
         onSuccess: (agenda) => {
           setLatestAgenda(agenda);
           setExtraPoints([]);
           setAgendaPointInput("");
-          alert("Meeting scheduled and agenda created successfully.");
+          setMeetingLocation("");
+          setMeetingDate("");
+          toast({
+            title: "Success",
+            description: "Meeting scheduled and agenda created successfully.",
+          });
+        },
+        onError: (error: Error) => {
+          toast({
+            title: "Error",
+            description: error.message || "Failed to schedule meeting.",
+            variant: "destructive",
+          });
         },
       },
     );
@@ -128,7 +203,17 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
 
     closeMeetingMutation.mutate(latestAgenda.meeting.id, {
       onSuccess: () => {
-        alert("Meeting closed. You can schedule a new meeting now.");
+        toast({
+          title: "Success",
+          description: "Meeting closed. You can schedule a new meeting now.",
+        });
+      },
+      onError: (error: Error) => {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to close meeting.",
+          variant: "destructive",
+        });
       },
     });
   };
@@ -152,25 +237,59 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
               Active meeting #{latestAgenda?.meeting.id} is open. Close it before scheduling another meeting.
             </div>
           )}
-          <div className="form-group" style={{ marginBottom: "12px" }}>
-            <label style={{ fontWeight: "600", display: "block", marginBottom: "8px" }}>Meeting Date</label>
-            <div style={{ border: "1px solid #ddd", borderRadius: "8px", display: "inline-block" }}>
-              <Calendar
-                mode="single"
-                selected={meetingDate}
-                onSelect={setMeetingDate}
-                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                data-testid="calendar-meeting-date"
-              />
+
+          <div style={{ marginBottom: "12px" }}>
+            <div style={{ fontWeight: 600, marginBottom: "6px", color: "#0b6a55" }}>
+              Pending DRC Applications ({drcPendingApps.length})
             </div>
-            <label style={{ fontWeight: "600", display: "block", marginTop: "10px", marginBottom: "6px" }}>Meeting Time</label>
-            <input
-              type="time"
-              value={meetingTime}
-              onChange={(e) => setMeetingTime(e.target.value)}
-              style={{ width: "220px", padding: "10px", borderRadius: "6px", border: "1px solid #ddd" }}
-              data-testid="input-meeting-time"
-            />
+            {drcPendingApps.length === 0 ? (
+              <div style={{ fontSize: "13px", color: "#666" }}>No pending applications currently in DRC stage.</div>
+            ) : (
+              <ul style={{ margin: "0 0 0 18px", padding: 0, maxHeight: "150px", overflowY: "auto" }}>
+                {drcPendingApps.map((application) => (
+                  <li key={application.id} style={{ marginBottom: "6px", fontSize: "13px" }}>
+                    {application.type} — {getScholarLabel(application.scholarId)}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="form-group" style={{ marginBottom: "12px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1.5fr", gap: "10px" }}>
+              <div>
+                <label style={{ fontWeight: "600", display: "block", marginBottom: "6px" }}>Meeting Date</label>
+                <input
+                  type="date"
+                  value={meetingDate}
+                  onChange={(e) => setMeetingDate(e.target.value)}
+                  min={new Date().toISOString().split("T")[0]}
+                  style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #ddd" }}
+                  data-testid="input-meeting-date"
+                />
+              </div>
+              <div>
+                <label style={{ fontWeight: "600", display: "block", marginBottom: "6px" }}>Meeting Time</label>
+                <input
+                  type="time"
+                  value={meetingTime}
+                  onChange={(e) => setMeetingTime(e.target.value)}
+                  style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #ddd" }}
+                  data-testid="input-meeting-time"
+                />
+              </div>
+              <div>
+                <label style={{ fontWeight: "600", display: "block", marginBottom: "6px" }}>Location</label>
+                <input
+                  type="text"
+                  value={meetingLocation}
+                  onChange={(e) => setMeetingLocation(e.target.value)}
+                  placeholder="Seminar Hall / Meeting Room"
+                  style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #ddd" }}
+                  data-testid="input-meeting-location"
+                />
+              </div>
+            </div>
           </div>
           <div className="form-group" style={{ marginBottom: "12px" }}>
             <label style={{ fontWeight: "600" }}>Extra Agenda Points</label>
@@ -270,32 +389,70 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
             No applications pending at {roleLabel} stage.
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
-            {pendingApps.map((app) => (
-              <div key={app.id} style={{ background: "#fff", padding: "20px", borderRadius: "10px", border: "1px solid #e6e6e6" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
-                  <div>
-                    <div style={{ fontWeight: "600", fontSize: "16px" }}>{app.type}</div>
-                    <div style={{ fontSize: "13px", color: "#666" }}>Scholar: {getScholarName(app.scholarId)} | Submitted: {new Date(app.submissionDate as unknown as string).toLocaleDateString()}</div>
-                  </div>
-                  <div className="status-badge in-progress">Awaiting Review</div>
-                </div>
-                {Boolean(app.details) && (
-                  <div style={{ background: "#f8f9fa", padding: "15px", borderRadius: "6px", marginBottom: "15px" }}>
-                    <strong>Application Details:</strong>
-                    <pre style={{ fontSize: "13px", whiteSpace: "pre-wrap", marginTop: "10px" }}>{JSON.stringify(app.details as Record<string, unknown>, null, 2)}</pre>
-                  </div>
-                )}
-                <button type="button" className="submit-btn" onClick={() => setSelectedApp(app)} style={{ marginRight: "10px" }} data-testid={`button-review-${app.id}`}>Review Application</button>
-              </div>
-            ))}
+          <div style={{ background: "#fff", borderRadius: "10px", border: "1px solid #e6e6e6", overflow: "hidden" }}>
+            <table className="info-table">
+              <thead>
+                <tr>
+                  <th>Scholar</th>
+                  <th>Type</th>
+                  <th>Submitted</th>
+                  <th>Status</th>
+                  <th>Stage</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingApps.map((app) => (
+                  <tr key={app.id}>
+                    <td>{getScholarLabel(app.scholarId)}</td>
+                    <td>{app.type}</td>
+                    <td>{new Date(app.submissionDate as unknown as string).toLocaleDateString()}</td>
+                    <td>
+                      <span
+                        className="pill"
+                        style={{
+                          background: "#f39c12",
+                          color: "white",
+                          padding: "4px 10px",
+                          borderRadius: "15px",
+                          fontSize: "13px",
+                        }}
+                      >
+                        Awaiting Review
+                      </span>
+                    </td>
+                    <td style={{ textTransform: "capitalize" }}>{app.currentStage}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="submit-btn"
+                        onClick={() => setSelectedApp(app)}
+                        style={{ padding: "6px 12px", fontSize: "13px" }}
+                        data-testid={`button-review-${app.id}`}
+                      >
+                        Review Application
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )
       )}
 
       {!isDrcConvener && selectedApp && (
         <div className="modal-overlay active" onClick={() => setSelectedApp(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "600px" }}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: "980px",
+              width: "calc(100vw - 2rem)",
+              maxHeight: "90vh",
+              overflowY: "auto",
+            }}
+          >
             <div className="modal-header">
               <div className="modal-title">Review: {selectedApp.type}</div>
               <button type="button" className="close-btn" onClick={() => setSelectedApp(null)}>×</button>
@@ -306,12 +463,10 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
                 <strong>Type:</strong> {selectedApp.type}<br />
                 <strong>Submitted:</strong> {new Date(selectedApp.submissionDate as unknown as string).toLocaleDateString()}
               </div>
-              {Boolean(selectedApp.details) && (
-                <div style={{ background: "#f8f9fa", padding: "15px", borderRadius: "6px", marginBottom: "20px" }}>
-                  <strong>Details:</strong>
-                  <pre style={{ fontSize: "13px", whiteSpace: "pre-wrap", marginTop: "10px" }}>{JSON.stringify(selectedApp.details as Record<string, unknown>, null, 2)}</pre>
-                </div>
-              )}
+              <ApplicationDetailFormView
+                application={displayApplication ?? selectedApp}
+                scholarDisplayName={getScholarName((displayApplication ?? selectedApp).scholarId)}
+              />
               <div className="form-group">
                 <label style={{ fontWeight: "600" }}>Your Remarks (Required)</label>
                 <textarea
@@ -322,7 +477,18 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
                   data-testid="input-remarks"
                 />
               </div>
-              <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  marginTop: "20px",
+                  position: "sticky",
+                  bottom: 0,
+                  background: "#fff",
+                  paddingTop: "12px",
+                  borderTop: "1px solid #eee",
+                }}
+              >
                 <button type="button" className="submit-btn" style={{ background: "#27ae60", flex: 1 }} onClick={() => handleReview("approved")} disabled={reviewMutation.isPending} data-testid="button-approve">
                   {reviewMutation.isPending ? "Processing..." : "Approve"}
                 </button>

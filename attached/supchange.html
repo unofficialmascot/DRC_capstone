@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Change of Supervisor - GITAM</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background: #f5f7fa;
+      color: #222;
+      line-height: 1.6;
+      padding: 40px 20px;
+    }
+
+    .document-form {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      padding: 40px;
+      border: 1px solid #e1e5e9;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+
+    .gitam-header {
+      text-align: center;
+      margin-bottom: 25px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #0b6a55;
+    }
+
+    .gitam-title {
+      font-weight: bold;
+      font-size: 19px;
+      color: #0b6a55;
+      text-transform: uppercase;
+    }
+
+    .gitam-subtitle {
+      font-size: 15px;
+      margin: 4px 0;
+      color: #444;
+      font-weight: 600;
+    }
+
+    .document-title {
+      text-align: center;
+      font-size: 17px;
+      font-weight: bold;
+      margin: 25px 0;
+      color: #0b6a55;
+      text-decoration: underline;
+      text-transform: uppercase;
+    }
+
+    .form-section {
+      margin-bottom: 30px;
+      padding: 20px;
+      border: 1px solid #eee;
+      border-radius: 10px;
+    }
+
+    .form-section-title {
+      font-weight: bold;
+      margin-bottom: 15px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #eee;
+      color: #0b6a55;
+      font-size: 16px;
+    }
+
+    .table-form {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+
+    .table-form td {
+      border: 1px solid #ddd;
+      padding: 10px;
+    }
+
+    .label-cell {
+      background-color: #f8fafc;
+      font-weight: 600;
+      width: 25%;
+    }
+
+    input[type="text"], input[type="date"], textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .checkbox-group input {
+      margin-right: 12px;
+    }
+
+    /* SIGNATURE AREA MATCHING UPLOADED IMAGE */
+    .signature-container {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 60px;
+      padding: 0 10px;
+    }
+
+    .signature-box {
+      width: 45%;
+      text-align: center;
+    }
+
+    .signature-line-hr {
+      border: none;
+      border-top: 1px solid #333;
+      margin-bottom: 10px;
+    }
+
+    .signature-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: #222;
+    }
+
+    /* BUTTON MATCHING UPLOADED IMAGE */
+    .btn-container {
+      text-align: center;
+      margin-top: 40px;
+    }
+
+    .submit-btn {
+      background-color: #0b6a55;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 18px;
+      font-weight: 600;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      transition: background 0.3s;
+    }
+
+    .submit-btn:hover {
+      background-color: #0a5947;
+    }
+
+    @media print {
+      body { background: white; padding: 0; }
+      .submit-btn { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="document-form">
+    <div class="gitam-header">
+      <div class="gitam-title">Gandhi Institute of Technology and Management (GITAM)</div>
+      <div class="gitam-subtitle">(Deemed to be University)</div>
+      <div class="gitam-subtitle">School of Technology</div>
+      <div class="gitam-accreditation">Accredited by NAAC with A+ Grade</div>
+      <div class="gitam-address">Rudraram, Patancheru Mandal, Sangareddy (Dist) - 502 329, T.S., INDIA</div>
+    </div>
+
+    <div class="document-title">Request for Change / Addition of Supervisor(s)</div>
+
+    <div class="form-section">
+      <div class="form-section-title">Scholar Details</div>
+      <table class="table-form">
+        <tr>
+          <td class="label-cell">Name of Scholar</td>
+          <td><input type="text" value="Thirupathi XYZ"></td>
+          <td class="label-cell">Department</td>
+          <td><input type="text" value="Computer Science"></td>
+        </tr>
+        <tr>
+          <td class="label-cell">Regd. No.</td>
+          <td><input type="text" value="1234567890"></td>
+          <td class="label-cell">Date of Joining</td>
+          <td><input type="date" value="2023-08-15"></td>
+        </tr>
+        <tr>
+          <td class="label-cell">Basic Qualification</td>
+          <td><input type="text" value="M.Tech"></td>
+          <td class="label-cell">Research Area</td>
+          <td><input type="text" value="Machine Learning"></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Existing Supervisor Details</div>
+      <table class="table-form">
+        <tr>
+          <td class="label-cell">Supervisor Name</td>
+          <td><input type="text" value="Dr. Current Supervisor"></td>
+          <td class="label-cell">Designation</td>
+          <td><input type="text" value="Professor"></td>
+        </tr>
+        <tr>
+          <td class="label-cell">Co-Supervisor Name</td>
+          <td><input type="text" value="Dr. Co-Supervisor"></td>
+          <td class="label-cell">Designation</td>
+          <td><input type="text" value="Associate Professor"></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Proposed Supervisor Details</div>
+      <table class="table-form">
+        <tr>
+          <td class="label-cell">New Supervisor</td>
+          <td><input type="text" placeholder="Proposed Supervisor Name"></td>
+          <td class="label-cell">New Co-Supervisor</td>
+          <td><input type="text" placeholder="Proposed Co-Supervisor Name"></td>
+        </tr>
+        <tr>
+          <td class="label-cell">Effect From</td>
+          <td colspan="3"><input type="date"></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Reason / Justification</div>
+      <textarea placeholder="Please provide detailed reason and justification for the change/addition of supervisor(s)..."></textarea>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Enclosures</div>
+      <div class="checkbox-group"><input type="checkbox"> <label>Application Form</label></div>
+      <div class="checkbox-group"><input type="checkbox"> <label>Admission Letter</label></div>
+      <div class="checkbox-group"><input type="checkbox"> <label>Previous Fee Receipts</label></div>
+      <div class="checkbox-group"><input type="checkbox"> <label>Bio-data of New Supervisor / Co-Supervisor</label></div>
+    </div>
+
+    <div class="signature-container">
+      <div class="signature-box">
+        <hr class="signature-line-hr">
+        <div class="signature-label">Signature of the Research Scholar</div>
+      </div>
+      <div class="signature-box">
+        <hr class="signature-line-hr">
+        <div class="signature-label">Signature of the Research Supervisor</div>
+      </div>
+    </div>
+
+    <div class="btn-container">
+      <button class="submit-btn" onclick="window.print()">Print / Submit Application</button>
+    </div>
+  </div>
+
+</body>
+</html>

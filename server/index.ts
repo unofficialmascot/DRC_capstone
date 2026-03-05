@@ -5,9 +5,11 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { LOGGING_CONFIG } from "./logging-config";
+import { seedData } from "./bootstrap/seed-data";
 
 const app = express();
 const httpServer = createServer(app);
+const isProduction = process.env.NODE_ENV === "production";
 
 declare module "http" {
   interface IncomingMessage {
@@ -31,13 +33,30 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
+if (isProduction) {
+  app.set("trust proxy", 1);
+}
+
+function resolveSessionSecret(): string {
+  if (process.env.SESSION_SECRET) {
+    return process.env.SESSION_SECRET;
+  }
+
+  if (isProduction) {
+    throw new Error("SESSION_SECRET must be set in production");
+  }
+
+  return "gscholar-hub-secret-key-2024";
+}
+
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "gscholar-hub-secret-key-2024",
+    secret: resolveSessionSecret(),
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false,
+      secure: isProduction,
+      sameSite: "lax",
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000,
     },
@@ -79,7 +98,7 @@ const shouldCaptureResponsePreview = process.env.NODE_ENV !== "production";
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: unknown;
+  let capturedJsonResponse: unknown = undefined;
 
   if (shouldCaptureResponsePreview) {
     const originalResJson = res.json;
@@ -116,10 +135,12 @@ app.use((req, res, next) => {
 
 (async () => {
   await registerRoutes(httpServer, app);
+  await seedData();
 
-  app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+  app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
+    const typedError = err as { status?: number; statusCode?: number; message?: string };
+    const status = typedError.status || typedError.statusCode || 500;
+    const message = typedError.message || "Internal Server Error";
 
     console.error("Internal Server Error:", err);
 

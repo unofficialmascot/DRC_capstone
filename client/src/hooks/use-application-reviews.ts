@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@shared/routes";
+import { api, buildUrl } from "@shared/routes";
 import type {
   Application,
   DrcAgendaPoint,
@@ -43,6 +43,40 @@ export interface ChairmanMinutesDetails {
   items: ChairmanMinuteItem[];
 }
 
+export type ChairmanDashboardCategory =
+  | "total"
+  | "awarded"
+  | "thesis_submitted"
+  | "deregistered"
+  | "terminated"
+  | "re_registered"
+  | "pre_talk_pending"
+  | "extension_requests";
+
+export interface ChairmanDashboardRow {
+  scholarId: string;
+  scholarName: string;
+  department: string | null;
+  status: string;
+}
+
+export interface ChairmanDashboardMetrics {
+  total: number;
+  awarded: number;
+  thesisSubmitted: number;
+  deregistered: number;
+  terminated: number;
+  reRegistered: number;
+  preTalkPending: number;
+  extensionRequests: number;
+}
+
+export interface ChairmanDashboardResponse {
+  activeCategory: ChairmanDashboardCategory;
+  metrics: ChairmanDashboardMetrics;
+  rows: ChairmanDashboardRow[];
+}
+
 export function getReviewStageForRole(role: string): string {
   if (role === "drc_convener") {
     return "drc";
@@ -55,11 +89,12 @@ export function useApplicationReviews(applicationId: number) {
   return useQuery({
     queryKey: ["application-reviews", applicationId],
     queryFn: async () => {
-      const res = await fetch(`/api/applications/${applicationId}/reviews`, {
+      const path = buildUrl(api.applications.reviews.path, { id: applicationId });
+      const res = await fetch(path, {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to fetch reviews");
-      return res.json();
+      return api.applications.reviews.responses[200].parse(await res.json());
     },
   });
 }
@@ -69,10 +104,12 @@ export function useSubmitReview(applicationId: number) {
   
   return useMutation({
     mutationFn: async (input: ReviewInput) => {
-      const res = await fetch(`/api/applications/${applicationId}/review`, {
-        method: "POST",
+      const path = buildUrl(api.applications.review.path, { id: applicationId });
+      const validatedInput = api.applications.review.input.parse(input);
+      const res = await fetch(path, {
+        method: api.applications.review.method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
+        body: JSON.stringify(validatedInput),
         credentials: "include",
       });
 
@@ -81,7 +118,7 @@ export function useSubmitReview(applicationId: number) {
         throw new Error(error.message || "Failed to submit review");
       }
       
-      return res.json();
+      return api.applications.review.responses[200].parse(await res.json());
     },
     onSuccess: () => {
       // Invalidate and refetch
@@ -96,29 +133,31 @@ export function useApplicationById(applicationId: number) {
   return useQuery({
     queryKey: ["application", applicationId],
     queryFn: async () => {
-      const res = await fetch(`/api/applications/${applicationId}`, {
+      const path = buildUrl(api.applications.get.path, { id: applicationId });
+      const res = await fetch(path, {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to fetch application");
-      return res.json();
+      return api.applications.get.responses[200].parse(await res.json());
     },
     enabled: applicationId > 0,
   });
 }
 
-export function useApplicationsByStage(stage: string) {
+export function useApplicationsByStage(stage: string, enabled = true) {
   const normalizedStage = getReviewStageForRole(stage);
 
   return useQuery({
     queryKey: ["applications", "stage", normalizedStage],
     queryFn: async () => {
-      const res = await fetch(`/api/applications/stage/${normalizedStage}`, {
+      const path = buildUrl(api.applications.getByStage.path, { stage: normalizedStage });
+      const res = await fetch(path, {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to fetch applications");
-      return res.json();
+      return api.applications.getByStage.responses[200].parse(await res.json());
     },
-    enabled: !!normalizedStage, // Only fetch if stage is provided
+    enabled: !!normalizedStage && enabled, // Only fetch if stage is provided and query is enabled
   });
 }
 
@@ -226,6 +265,46 @@ export function useDrcMeetingNotifications(enabled = true) {
   });
 }
 
+export function useClearDrcMeetingNotifications() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (): Promise<{ cleared: number }> => {
+      const res = await fetch(api.drcMeetings.clearNotifications.path, {
+        method: api.drcMeetings.clearNotifications.method,
+        credentials: "include",
+      });
+
+      const contentType = res.headers.get("content-type") || "";
+
+      if (!contentType.includes("application/json")) {
+        throw new Error(
+          "Notification clear endpoint is unavailable. Restart the dev server and try again.",
+        );
+      }
+
+      if (!res.ok) {
+        let message = "Failed to clear meeting notifications";
+        try {
+          const body = await res.json();
+          if (body && typeof body.message === "string") {
+            message = body.message;
+          }
+        } catch {
+          // Keep default message when the error payload is not JSON.
+        }
+
+        throw new Error(message);
+      }
+
+      return api.drcMeetings.clearNotifications.responses[200].parse(await res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["drc-meetings", "notifications"] });
+    },
+  });
+}
+
 export function useChairmanMinutesMeetings(enabled = true) {
   return useQuery({
     queryKey: ["drc-chairman", "minutes"],
@@ -239,6 +318,29 @@ export function useChairmanMinutesMeetings(enabled = true) {
       }
 
       return res.json();
+    },
+    enabled,
+  });
+}
+
+export function useChairmanDashboard(
+  category: ChairmanDashboardCategory,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: ["drc-chairman", "dashboard", category],
+    queryFn: async (): Promise<ChairmanDashboardResponse> => {
+      const params = new URLSearchParams({ category });
+      const url = `${api.drcChairman.dashboard.path}?${params.toString()}`;
+      const res = await fetch(url, {
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to fetch chairman dashboard");
+      }
+
+      return api.drcChairman.dashboard.responses[200].parse(await res.json());
     },
     enabled,
   });

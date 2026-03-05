@@ -10,14 +10,11 @@ export interface SupervisorOption {
 }
 
 // GET /api/users/:id
-export function useUser(id?: number | string) {
+export function useUser(id: number | string) {
   return useQuery({
     queryKey: [api.users.get.path, id],
     queryFn: async () => {
-      // If no ID provided, we might want to fetch "me" or handle it in a real auth system
-      // For now, we'll assume ID 1 is the demo user if undefined, or fail gracefully
-      const targetId = id || 1; 
-      const url = buildUrl(api.users.get.path, { id: targetId });
+      const url = buildUrl(api.users.get.path, { id });
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) {
         if (res.status === 404) return null;
@@ -25,7 +22,7 @@ export function useUser(id?: number | string) {
       }
       return api.users.get.responses[200].parse(await res.json());
     },
-    enabled: !!id || id === undefined, // Allow fetching default if no ID
+    enabled: true,
   });
 }
 

@@ -130,6 +130,10 @@ export class ApplicationRepository {
     return updated;
   }
 
+  async deleteApplication(id: number): Promise<void> {
+    await db.delete(applications).where(eq(applications.id, id));
+  }
+
   async getReviewsForApplication(applicationId: number): Promise<ApplicationReview[]> {
     return db
       .select()

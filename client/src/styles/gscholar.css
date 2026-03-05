@@ -95,12 +95,6 @@ body {
   background: #f3f3f3; 
 }
 
-.profile-dropdown hr { 
-  border: none; 
-  border-top: 1px solid #eee; 
-  margin: 6px 0; 
-}
-
 /* LAYOUT */
 .layout {
   display: flex;
@@ -137,6 +131,22 @@ body {
   align-items: center;
   transition: all 0.3s ease;
   position: relative;
+}
+
+.sidebar li button {
+  all: unset;
+  width: 100%;
+  color: inherit;
+  cursor: pointer;
+  font-size: inherit;
+}
+
+.sidebar li button:focus-visible,
+.toggle-btn:focus-visible,
+.profile-icon:focus-visible,
+.profile-dropdown button:focus-visible {
+  outline: 2px solid #f4b400;
+  outline-offset: 2px;
 }
 
 .sidebar li:hover { 

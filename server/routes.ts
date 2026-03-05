@@ -7,7 +7,7 @@ import { registerReviewRoutes } from "./routes/reviews-routes";
 import { registerStatsRoutes } from "./routes/stats-routes";
 import { registerDocumentRoutes } from "./routes/documents-routes";
 import { registerDrcMeetingRoutes } from "./routes/drc-meetings-routes";
-import { seedData } from "./bootstrap/seed-data";
+import { registerNotificationRoutes } from "./routes/notifications-routes";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -18,10 +18,9 @@ export async function registerRoutes(
   registerApplicationRoutes(app);
   registerReviewRoutes(app);
   registerDrcMeetingRoutes(app);
+  registerNotificationRoutes(app);
   registerStatsRoutes(app);
   await registerDocumentRoutes(app);
-
-  await seedData();
 
   return httpServer;
 }

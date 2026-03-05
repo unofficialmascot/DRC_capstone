@@ -2,12 +2,101 @@ import { DrcMeetingRepository } from "../repositories/drc-meeting-repository";
 import { storage } from "../storage";
 import { evaluateWorkflowDecision, getWorkflowDefinition, type WorkflowStage } from "../workflow";
 import { badRequest, forbidden, notFound } from "../routes/http";
+import { db } from "../db";
+import { applications, scholars, users } from "@shared/schema";
+import { and, eq, ne } from "drizzle-orm";
+import { emitRoleNotification } from "./notification-service";
 
 const drcMeetingRepository = new DrcMeetingRepository();
+
+type ChairmanDashboardCategory =
+  | "total"
+  | "awarded"
+  | "thesis_submitted"
+  | "deregistered"
+  | "terminated"
+  | "re_registered"
+  | "pre_talk_pending"
+  | "extension_requests";
+
+interface ChairmanDashboardRow {
+  scholarId: string;
+  scholarName: string;
+  department: string | null;
+  status: string;
+}
 
 export interface ScheduleDrcMeetingInput {
   meetingDate: string | Date;
   extraPoints?: string[];
+}
+
+export async function getChairmanDashboardData(
+  sessionUserId: number,
+  category: ChairmanDashboardCategory = "total",
+) {
+  await assertDrcChairman(sessionUserId);
+
+  const allScholars = await db
+    .select({
+      scholarId: scholars.scholarId,
+      scholarName: users.name,
+      department: scholars.department,
+      status: scholars.lifecycleStatus,
+    })
+    .from(scholars)
+    .innerJoin(users, eq(users.id, scholars.userId));
+
+  const awardedRows = allScholars.filter((row) => row.status === "Awarded");
+  const deregisteredRows = allScholars.filter((row) => row.status === "Deregistered");
+  const terminatedRows = allScholars.filter((row) => row.status === "Terminated");
+  const reRegisteredRows = allScholars.filter((row) => row.status === "Re-registered");
+
+  const thesisSubmittedRows = await getDistinctScholarRowsByApplication({
+    applicationType: "Thesis Submission",
+    excludeRejected: true,
+    displayStatus: "Thesis Submitted",
+  });
+
+  const preTalkPendingRows = await getDistinctScholarRowsByApplication({
+    applicationType: "Pre-Talk",
+    status: "Pending",
+    displayStatus: "Pre-Talk Pending",
+  });
+
+  const extensionRequestRows = await getDistinctScholarRowsByApplication({
+    applicationType: "Extension",
+    status: "Pending",
+    displayStatus: "Extension Request",
+  });
+
+  const metrics = {
+    total: allScholars.length,
+    awarded: awardedRows.length,
+    thesisSubmitted: thesisSubmittedRows.length,
+    deregistered: deregisteredRows.length,
+    terminated: terminatedRows.length,
+    reRegistered: reRegisteredRows.length,
+    preTalkPending: preTalkPendingRows.length,
+    extensionRequests: extensionRequestRows.length,
+  };
+
+  const rowsByCategory: Record<ChairmanDashboardCategory, ChairmanDashboardRow[]> = {
+    total: allScholars,
+    awarded: awardedRows,
+    thesis_submitted: thesisSubmittedRows,
+    deregistered: deregisteredRows,
+    terminated: terminatedRows,
+    re_registered: reRegisteredRows,
+    pre_talk_pending: preTalkPendingRows,
+    extension_requests: extensionRequestRows,
+  };
+
+  return {
+    activeCategory: category,
+    metrics,
+    rows: rowsByCategory[category],
+  };
 }
 
 export async function scheduleDrcMeeting(
@@ -51,10 +140,12 @@ export async function scheduleDrcMeeting(
     normalizedPoints,
   );
 
-  await drcMeetingRepository.createRoleNotice({
+  await emitRoleNotification({
     title: `DRC Meeting Scheduled (ID: ${meeting.id})`,
     content: `A DRC meeting is scheduled for ${meetingDate.toLocaleString("en-IN")}. Open the Meetings tab to download the agenda PDF.`,
-    targetRole: "drc",
+    targetRoles: ["drc", "drc_convener", "drc_chairman"],
+    notificationType: "drc_meeting_scheduled",
+    relatedMeetingId: meeting.id,
   });
 
   return {
@@ -91,7 +182,13 @@ export async function listDrcMeetings(sessionUserId: number) {
 
 export async function listDrcMeetingNotifications(sessionUserId: number) {
   await assertDrcMeetingViewer(sessionUserId);
-  return drcMeetingRepository.listRoleNotices("drc");
+  return drcMeetingRepository.listRoleNotices("drc", sessionUserId);
+}
+
+export async function clearDrcMeetingNotifications(sessionUserId: number) {
+  await assertDrcMeetingViewer(sessionUserId);
+  const cleared = await drcMeetingRepository.clearRoleNotices("drc", sessionUserId);
+  return { cleared };
 }
 
 export async function closeDrcMeeting(
@@ -226,6 +323,15 @@ export async function submitChairmanApplicationDecision(
     remarks: input.remarks,
   });
 
+  await emitRoleNotification({
+    title: `Chairman ${input.decision === "approved" ? "approved" : "rejected"} application #${input.applicationId}`,
+    content: `Application #${input.applicationId} received a chairman ${input.decision} decision in meeting #${input.meetingId}.`,
+    targetRoles: ["scholar", "supervisor"],
+    notificationType: "chairman_decision",
+    relatedApplicationId: input.applicationId,
+    relatedMeetingId: input.meetingId,
+  });
+
   return {
     application: updatedApplication,
     chairmanDecision,
@@ -332,4 +438,54 @@ async function generateMinutesForMeeting(meetingId: number, generatedBy: string)
     generatedBy,
   });
   await drcMeetingRepository.replaceMinuteItems(meetingId, minuteItems);
+
+  await emitRoleNotification({
+    title: `Minutes Ready for Meeting #${meetingId}`,
+    content: `Minutes were generated for meeting #${meetingId}. Chairman can now review and submit final decisions.`,
+    targetRoles: ["drc_chairman"],
+    notificationType: "minutes_generated",
+    relatedMeetingId: meetingId,
+  });
+}
+
+async function getDistinctScholarRowsByApplication(input: {
+  applicationType: string;
+  status?: string;
+  excludeRejected?: boolean;
+  displayStatus: string;
+}): Promise<ChairmanDashboardRow[]> {
+  const conditions = [eq(applications.type, input.applicationType)];
+
+  if (input.status) {
+    conditions.push(eq(applications.status, input.status));
+  }
+
+  if (input.excludeRejected) {
+    conditions.push(ne(applications.status, "Rejected"));
+  }
+
+  const result = await db
+    .select({
+      scholarId: scholars.scholarId,
+      scholarName: users.name,
+      department: scholars.department,
+    })
+    .from(applications)
+    .innerJoin(scholars, eq(scholars.scholarId, applications.scholarId))
+    .innerJoin(users, eq(users.id, scholars.userId))
+    .where(and(...conditions));
+
+  const dedupe = new Map<string, ChairmanDashboardRow>();
+  for (const row of result) {
+    if (!dedupe.has(row.scholarId)) {
+      dedupe.set(row.scholarId, {
+        scholarId: row.scholarId,
+        scholarName: row.scholarName,
+        department: row.department,
+        status: input.displayStatus,
+      });
+    }
+  }
+
+  return Array.from(dedupe.values());
 }

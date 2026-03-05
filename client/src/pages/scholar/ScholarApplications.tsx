@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useApplications, useCreateApplication } from "@/hooks/use-applications";
 import { useApplicationReviews } from "@/hooks/use-application-reviews";
+import { useToast } from "@/hooks/use-toast";
 import { APP_SETTINGS } from "@shared/app-settings";
 import type { Application, ApplicationReview } from "@shared/schema";
 import type { PublicUser } from "@/lib/types";
@@ -8,6 +9,7 @@ import ExtensionForm from "@/pages/scholar/forms/ExtensionForm";
 import PreTalkForm from "@/pages/scholar/forms/PreTalkForm";
 import ReRegistrationForm from "@/pages/scholar/forms/ReRegistrationForm";
 import SupervisorChangeForm from "@/pages/scholar/forms/SupervisorChangeForm";
+import ThesisSubmissionForm from "@/pages/scholar/forms/ThesisSubmissionForm";
 
 const TRACKING_STEPS = [
   { key: "supervisor", label: "Supervisor" },
@@ -74,7 +76,14 @@ function ApplicationTrackingCard({ app }: { app: Application }) {
             const stepState = getStepState(index);
             const review = reviews.find((item) => item.stage === step.key);
             const showMeta = stepState === "completed" || stepState === "rejected";
-            const showPendingLabel = stepState === "current" && app.status === "Pending";
+            const stepStatusText =
+              stepState === "completed"
+                ? "Approved"
+                : stepState === "current" && app.status === "Pending"
+                  ? "Pending"
+                  : stepState === "rejected"
+                    ? "Rejected"
+                    : "\u00A0";
             const endCapState: StepState = app.status === "Approved" ? "completed" : "future";
 
             return (
@@ -84,7 +93,7 @@ function ApplicationTrackingCard({ app }: { app: Application }) {
                   <div className={`stepper-line ${getStepState(index - 1) === "completed" ? "completed" : "upcoming"}`}></div>
                 )}
                 {index === TRACKING_STEPS.length - 1 && <div className={`stepper-cap end ${endCapState}`}></div>}
-                <div className="stepper-step-status">{showPendingLabel ? "Pending" : "\u00A0"}</div>
+                <div className="stepper-step-status">{stepStatusText}</div>
                 <div className={`stepper-node ${stepState}`}></div>
                 <div className="stepper-label">{step.label}</div>
                 {showMeta && review && (
@@ -110,6 +119,7 @@ function ApplicationTrackingCard({ app }: { app: Application }) {
 export default function ScholarApplications({ user }: { user: PublicUser }) {
   const [view, setView] = useState<"options" | "apply" | "track">("options");
   const [formType, setFormType] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const { data: applications = [], isLoading } = useApplications(user.scholarId || undefined) as {
     data: Application[] | undefined;
@@ -140,18 +150,24 @@ export default function ScholarApplications({ user }: { user: PublicUser }) {
 
   const handleFormTypeSelection = (formTypeKey: string, typeName: string) => {
     if (submissionsDisabled) {
-      alert("Application submissions are currently disabled by settings.");
+      toast({
+        title: "Action Required",
+        description: "Application submissions are currently disabled by settings.",
+        variant: "destructive",
+      });
       return;
     }
 
     if (hasActiveApplication(typeName)) {
       const activeApp = getActiveApplication(typeName);
-      alert(
-        `You already have an active ${typeName} application.\n\n` +
-        `Status: ${activeApp?.status}\n` +
-        `Current Stage: ${activeApp?.currentStage.toUpperCase()}\n\n` +
-        `Please wait for it to be processed (Approved or Rejected) before submitting a new one.`
-      );
+      toast({
+        title: "Action Required",
+        description:
+          `You already have an active ${typeName} application. ` +
+          `Status: ${activeApp?.status}. Current Stage: ${activeApp?.currentStage.toUpperCase()}. ` +
+          "Please wait until it is Approved or Rejected before submitting a new one.",
+        variant: "destructive",
+      });
       return;
     }
     setFormType(formTypeKey);
@@ -159,18 +175,30 @@ export default function ScholarApplications({ user }: { user: PublicUser }) {
 
   const submitApplication = (type: string, details: Record<string, unknown>) => {
     if (submissionsDisabled) {
-      alert("Application submissions are currently disabled by settings.");
+      toast({
+        title: "Action Required",
+        description: "Application submissions are currently disabled by settings.",
+        variant: "destructive",
+      });
       return;
     }
 
     if (!user.scholarId) {
-      alert("Scholar ID is missing. Please log in again.");
+      toast({
+        title: "Action Required",
+        description: "Scholar ID is missing. Please log in again.",
+        variant: "destructive",
+      });
       return;
     }
     
     // Double-check before submission
     if (enforceSingleActivePerType && hasActiveApplication(type)) {
-      alert(`You already have an active ${type} application. Please wait for it to be processed.`);
+      toast({
+        title: "Action Required",
+        description: `You already have an active ${type} application. Please wait for it to be processed.`,
+        variant: "destructive",
+      });
       return;
     }
     
@@ -178,13 +206,20 @@ export default function ScholarApplications({ user }: { user: PublicUser }) {
       { scholarId: user.scholarId, type, details },
       {
         onSuccess: () => {
-          alert("Application submitted successfully! It will be reviewed by the Supervisor.");
+          toast({
+            title: "Success",
+            description: "Application submitted successfully! It will be reviewed by the Supervisor.",
+          });
           setView("options");
           setFormType(null);
         },
         onError: (error: Error) => {
           console.error("Application submission error:", error);
-          alert(`Failed to submit application: ${error.message || "Unknown error"}. Please try again.`);
+          toast({
+            title: "Error",
+            description: `Failed to submit application: ${error.message || "Unknown error"}. Please try again.`,
+            variant: "destructive",
+          });
         },
       },
     );
@@ -291,6 +326,24 @@ export default function ScholarApplications({ user }: { user: PublicUser }) {
                 </span>
               )}
             </button>
+            <button 
+              type="button" 
+              onClick={() => handleFormTypeSelection("thesis-submission", "Thesis Submission")} 
+              data-testid="button-thesis-submission"
+              disabled={hasActiveApplication("Thesis Submission")}
+              style={{ 
+                opacity: hasActiveApplication("Thesis Submission") ? 0.6 : 1,
+                cursor: hasActiveApplication("Thesis Submission") ? "not-allowed" : "pointer",
+                position: "relative"
+              }}
+            >
+              Thesis Submission
+              {hasActiveApplication("Thesis Submission") && (
+                <span style={{ fontSize: "11px", color: "#e74c3c", display: "block", marginTop: "3px" }}>
+                  ⚠ Active application exists
+                </span>
+              )}
+            </button>
           </div>
           <button type="button" className="submit-btn" onClick={() => setView("options")} style={{ marginTop: "20px", background: "#6c757d" }} data-testid="button-back-options">Back to Options</button>
         </div>
@@ -310,6 +363,10 @@ export default function ScholarApplications({ user }: { user: PublicUser }) {
 
       {view === "apply" && formType === "reregistration" && (
         <ReRegistrationForm user={user} onSubmit={(details) => submitApplication("Re-Registration", details)} onBack={() => { setView("options"); setFormType(null); }} isSubmitting={createApplication.isPending} />
+      )}
+
+      {view === "apply" && formType === "thesis-submission" && (
+        <ThesisSubmissionForm user={user} onSubmit={(details) => submitApplication("Thesis Submission", details)} onBack={() => { setView("options"); setFormType(null); }} isSubmitting={createApplication.isPending} />
       )}
 
       {view === "track" && (

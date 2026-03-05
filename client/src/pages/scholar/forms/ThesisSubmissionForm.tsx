@@ -1,0 +1,255 @@
+import { useState } from "react";
+import type { CSSProperties } from "react";
+import type { PublicUser } from "@/lib/types";
+
+export default function ThesisSubmissionForm({
+  user,
+  onSubmit,
+  onBack,
+  isSubmitting,
+}: {
+  user: PublicUser;
+  onSubmit: (details: Record<string, unknown>) => void;
+  onBack: () => void;
+  isSubmitting: boolean;
+}) {
+  const [formData, setFormData] = useState({
+    scholarName: user.name || "",
+    regNo: user.scholarId || "",
+    category: user.programme || "Full-Time",
+    department: user.department || "",
+    thesisTitle: user.researchTitle || "",
+    registrationYearDate: user.joiningDate || "",
+    supervisorNameAddress: user.supervisorId || "",
+    coSupervisorNameAddress: user.coSupervisorId || "",
+    noDuesPrincipal: "",
+    noDuesHod: "",
+    noDuesLibrary: "",
+    noDuesHostel: "",
+    adjudicationFeeAmount: "",
+    correspondenceAddress: user.address || "",
+    signatureDate: "",
+  });
+
+  const wrapperStyle: CSSProperties = {
+    maxWidth: "1000px",
+    margin: "0 auto",
+    background: "white",
+    padding: "30px",
+    borderRadius: "16px",
+    border: "1px solid #e1e5e9",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+  };
+
+  const sectionStyle: CSSProperties = {
+    background: "#ffffff",
+    padding: "24px",
+    borderRadius: "12px",
+    border: "1px solid #eee",
+    marginBottom: "20px",
+  };
+
+  const sectionTitleStyle: CSSProperties = {
+    fontWeight: "bold",
+    marginBottom: "15px",
+    color: "#0b6a55",
+    fontSize: "16px",
+    display: "block",
+  };
+
+  const tableStyle: CSSProperties = {
+    width: "100%",
+    borderCollapse: "collapse",
+    fontSize: "14px",
+  };
+
+  const cellStyle: CSSProperties = {
+    border: "1px solid #ddd",
+    padding: "10px",
+    textAlign: "left",
+  };
+
+  const labelCellStyle: CSSProperties = {
+    ...cellStyle,
+    backgroundColor: "#f8fafc",
+    fontWeight: 600,
+    width: "35%",
+  };
+
+  const inputStyle: CSSProperties = {
+    width: "100%",
+    padding: "8px",
+    border: "1px solid #ccc",
+    borderRadius: "4px",
+    fontSize: "14px",
+    outline: "none",
+  };
+
+  const noteStyle: CSSProperties = {
+    fontSize: "12px",
+    color: "#666",
+    fontStyle: "italic",
+    marginTop: "5px",
+    display: "block",
+  };
+
+  const submitPayload = {
+    scholarName: formData.scholarName,
+    regNo: formData.regNo,
+    category: formData.category,
+    department: formData.department,
+    thesisTitle: formData.thesisTitle,
+    registrationYearDate: formData.registrationYearDate,
+    supervisorNameAddress: formData.supervisorNameAddress,
+    coSupervisorNameAddress: formData.coSupervisorNameAddress,
+    noDuesPrincipal: formData.noDuesPrincipal,
+    noDuesHod: formData.noDuesHod,
+    noDuesLibrary: formData.noDuesLibrary,
+    noDuesHostel: formData.noDuesHostel,
+    adjudicationFeeAmount: formData.adjudicationFeeAmount,
+    correspondenceAddress: formData.correspondenceAddress,
+    signatureDate: formData.signatureDate,
+  };
+
+  return (
+    <div style={wrapperStyle}>
+      <div style={sectionStyle}>
+        <div style={{ textAlign: "center", marginBottom: "25px", paddingBottom: "20px", borderBottom: "2px solid #0b6a55" }}>
+          <div style={{ fontWeight: "bold", fontSize: "20px", color: "#0b6a55", textTransform: "uppercase" }}>GITAM Deemed to be University</div>
+          <div style={{ fontSize: "15px", margin: "4px 0", color: "#444", fontWeight: 600 }}>School of Technology</div>
+          <div style={{ fontSize: "15px", margin: "4px 0", color: "#444", fontWeight: 600 }}>Hyderabad Campus</div>
+        </div>
+        <div style={{ textAlign: "center", fontSize: "18px", fontWeight: "bold", margin: "20px 0", color: "#0b6a55", textDecoration: "underline" }}>
+          APPLICATION FORM FOR SUBMISSION OF Ph.D. THESIS
+        </div>
+
+        <table style={tableStyle}>
+          <tbody>
+            <tr>
+              <td style={labelCellStyle}>1) Name of the Scholar (Full Name)</td>
+              <td style={cellStyle}><input style={inputStyle} type="text" value={formData.scholarName} onChange={(e) => setFormData({ ...formData, scholarName: e.target.value })} /></td>
+            </tr>
+            <tr>
+              <td style={labelCellStyle}>2) Reg. No.</td>
+              <td style={cellStyle}><input style={inputStyle} type="text" value={formData.regNo} onChange={(e) => setFormData({ ...formData, regNo: e.target.value })} /></td>
+            </tr>
+            <tr>
+              <td style={labelCellStyle}>3) Category (Full-Time / Part-Time)</td>
+              <td style={cellStyle}><input style={inputStyle} type="text" value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} /></td>
+            </tr>
+            <tr>
+              <td style={labelCellStyle}>4) Name of the Department</td>
+              <td style={cellStyle}><input style={inputStyle} type="text" value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })} /></td>
+            </tr>
+            <tr>
+              <td style={labelCellStyle}>5) Title of the Thesis</td>
+              <td style={cellStyle}><textarea style={{ ...inputStyle, minHeight: "80px", resize: "vertical" }} value={formData.thesisTitle} onChange={(e) => setFormData({ ...formData, thesisTitle: e.target.value })} /></td>
+            </tr>
+            <tr>
+              <td style={labelCellStyle}>6) Year of Registration & Date</td>
+              <td style={cellStyle}>
+                <input style={inputStyle} type="text" value={formData.registrationYearDate} onChange={(e) => setFormData({ ...formData, registrationYearDate: e.target.value })} placeholder="Year - DD/MM/YYYY" />
+                <span style={noteStyle}>(Copy of provisional allotment should be enclosed)</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style={sectionStyle}>
+        <span style={sectionTitleStyle}>Supervisor Information</span>
+        <table style={tableStyle}>
+          <tbody>
+            <tr>
+              <td style={labelCellStyle}>7) Name of Research Supervisor & Address</td>
+              <td style={cellStyle}><textarea style={{ ...inputStyle, minHeight: "70px", resize: "vertical" }} value={formData.supervisorNameAddress} onChange={(e) => setFormData({ ...formData, supervisorNameAddress: e.target.value })} /></td>
+            </tr>
+            <tr>
+              <td style={labelCellStyle}>8) Name of Co-Research Supervisor & Address</td>
+              <td style={cellStyle}><textarea style={{ ...inputStyle, minHeight: "70px", resize: "vertical" }} value={formData.coSupervisorNameAddress} onChange={(e) => setFormData({ ...formData, coSupervisorNameAddress: e.target.value })} /></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style={sectionStyle}>
+        <span style={sectionTitleStyle}>9) Whether No-Dues Certificates are Enclosed</span>
+        <table style={tableStyle}>
+          <tbody>
+            <tr>
+              <td style={labelCellStyle}>a) Principal's Office</td>
+              <td style={cellStyle}><input style={inputStyle} type="text" value={formData.noDuesPrincipal} onChange={(e) => setFormData({ ...formData, noDuesPrincipal: e.target.value })} placeholder="Yes / No" /></td>
+              <td style={labelCellStyle}>b) Head of the Department</td>
+              <td style={cellStyle}><input style={inputStyle} type="text" value={formData.noDuesHod} onChange={(e) => setFormData({ ...formData, noDuesHod: e.target.value })} placeholder="Yes / No" /></td>
+            </tr>
+            <tr>
+              <td style={labelCellStyle}>c) University Library (KRC)</td>
+              <td style={cellStyle}><input style={inputStyle} type="text" value={formData.noDuesLibrary} onChange={(e) => setFormData({ ...formData, noDuesLibrary: e.target.value })} placeholder="Yes / No" /></td>
+              <td style={labelCellStyle}>d) Hostel</td>
+              <td style={cellStyle}><input style={inputStyle} type="text" value={formData.noDuesHostel} onChange={(e) => setFormData({ ...formData, noDuesHostel: e.target.value })} placeholder="Yes / No" /></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style={sectionStyle}>
+        <table style={tableStyle}>
+          <tbody>
+            <tr>
+              <td style={labelCellStyle}>10) Details of Adjudication fee paid</td>
+              <td style={cellStyle}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>Amount:</span>
+                  <input style={{ ...inputStyle, maxWidth: "220px" }} type="text" value={formData.adjudicationFeeAmount} onChange={(e) => setFormData({ ...formData, adjudicationFeeAmount: e.target.value })} />
+                </div>
+                <span style={noteStyle}>(Receipt duly signed by accounts department should be enclosed)</span>
+              </td>
+            </tr>
+            <tr>
+              <td style={labelCellStyle}>11) Address for further correspondence</td>
+              <td style={cellStyle}><textarea style={{ ...inputStyle, minHeight: "80px", resize: "vertical" }} value={formData.correspondenceAddress} onChange={(e) => setFormData({ ...formData, correspondenceAddress: e.target.value })} /></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: "40px", padding: "0 20px" }}>
+        <div style={{ width: "45%", textAlign: "center" }}>
+          <hr style={{ border: "none", borderTop: "1px solid #333", marginBottom: "10px" }} />
+          <div style={{ fontSize: "13px", fontWeight: 600, color: "#222" }}>Signature of the Scholar</div>
+          <div style={{ textAlign: "left", fontSize: "12px", marginTop: "5px" }}>
+            Date:
+            <input style={{ ...inputStyle, marginTop: "5px" }} type="date" value={formData.signatureDate} onChange={(e) => setFormData({ ...formData, signatureDate: e.target.value })} />
+          </div>
+        </div>
+        <div style={{ width: "45%", textAlign: "center" }}>
+          <hr style={{ border: "none", borderTop: "1px solid #333", marginBottom: "10px" }} />
+          <div style={{ fontSize: "13px", fontWeight: 600, color: "#222" }}>Signature of the Research Supervisor</div>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: "30px", padding: "0 20px" }}>
+        <div style={{ width: "45%", textAlign: "center" }}>
+          <hr style={{ border: "none", borderTop: "1px solid #333", marginBottom: "10px" }} />
+          <div style={{ fontSize: "13px", fontWeight: 600, color: "#222" }}>Signature of Co-Research Supervisor</div>
+        </div>
+        <div style={{ width: "45%", textAlign: "center" }}>
+          <hr style={{ border: "none", borderTop: "1px solid #333", marginBottom: "10px" }} />
+          <div style={{ fontSize: "13px", fontWeight: 600, color: "#222" }}>Signature of the Head of the Department</div>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "center", marginTop: "30px", marginBottom: "20px" }}>
+        <div style={{ width: "50%", textAlign: "center" }}>
+          <hr style={{ border: "none", borderTop: "1px solid #333", marginBottom: "10px" }} />
+          <div style={{ fontSize: "13px", fontWeight: 600, color: "#222" }}>Signature of the Head of the Institute</div>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginTop: "30px" }}>
+        <button type="button" className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back</button>
+        <button type="button" className="submit-btn" onClick={() => onSubmit(submitPayload)} disabled={isSubmitting}>{isSubmitting ? "Submitting..." : "Submit Application"}</button>
+      </div>
+    </div>
+  );
+}

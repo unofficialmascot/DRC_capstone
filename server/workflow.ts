@@ -33,8 +33,25 @@ const baseWorkflow: WorkflowDefinition = {
   terminalStage: "completed",
 };
 
-export function getWorkflowDefinition(_applicationType: string): WorkflowDefinition {
-  return baseWorkflow;
+const thesisSubmissionWorkflow: WorkflowDefinition = {
+  id: "thesis-submission",
+  stages: ["supervisor", "drc", "irc", "doaa", "completed"],
+  stageRoles: {
+    supervisor: ["supervisor"],
+    drc: ["drc"],
+    irc: ["irc"],
+    doaa: ["doaa"],
+    completed: [],
+  },
+  terminalStage: "completed",
+};
+
+const workflowByApplicationType: Record<string, WorkflowDefinition> = {
+  "Thesis Submission": thesisSubmissionWorkflow,
+};
+
+export function getWorkflowDefinition(applicationType: string): WorkflowDefinition {
+  return workflowByApplicationType[applicationType] ?? baseWorkflow;
 }
 
 export function isRoleAuthorized(

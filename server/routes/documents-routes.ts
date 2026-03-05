@@ -1,7 +1,8 @@
-import type { Express } from "express";
+zimport type { Express } from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
+import { api } from "../../shared/routes.js";
 import { storage } from "../storage";
 import { badRequest, handleRouteError, notFound, parsePositiveIntParam } from "./http";
 
@@ -32,7 +33,7 @@ export async function registerDocumentRoutes(app: Express): Promise<void> {
     },
   });
 
-  app.post("/api/documents/upload", upload.single("file"), async (req, res) => {
+  app.post(api.documents.upload.path, upload.single("file"), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -55,7 +56,7 @@ export async function registerDocumentRoutes(app: Express): Promise<void> {
       });
 
       res.status(201).json(document);
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (req.file) {
         await fs.unlink(req.file.path).catch(() => {});
       }
@@ -63,7 +64,7 @@ export async function registerDocumentRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.get("/api/documents", async (req, res) => {
+  app.get(api.documents.list.path, async (req, res) => {
     try {
       const scholarId = req.query.scholarId as string;
       if (!scholarId) {
@@ -71,14 +72,19 @@ export async function registerDocumentRoutes(app: Express): Promise<void> {
       }
       const docs = await storage.getDocuments(scholarId);
       res.json(docs);
-    } catch (error: any) {
+    } catch (error: unknown) {
       return handleRouteError(res, error, "Failed to fetch documents");
     }
   });
 
-  app.get("/api/documents/:id/view", async (req, res) => {
+  app.get(api.documents.view.path, async (req, res) => {
     try {
+<<<<<<< HEAD
       const documentId = parsePositiveIntParam(req.params.id, "document id");
+=======
+      const rawDocumentId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const documentId = parseIdParam(rawDocumentId, "document id");
+>>>>>>> bde5261 (Notifications for drc meetings and generalized notification system for other events. Refactor of the application review workflow to support multiple stages and more complex logic. Various UI improvements and bug fixes.)
       const doc = await storage.getDocumentById(documentId);
       if (!doc) {
         throw notFound("Document not found");
@@ -91,28 +97,38 @@ export async function registerDocumentRoutes(app: Express): Promise<void> {
       res.setHeader("Content-Type", doc.mimeType);
       res.setHeader("Content-Disposition", `inline; filename="${doc.fileName}"`);
       res.sendFile(absolutePath);
-    } catch (error: any) {
+    } catch (error: unknown) {
       return handleRouteError(res, error, "Failed to view document");
     }
   });
 
-  app.get("/api/documents/:id/download", async (req, res) => {
+  app.get(api.documents.download.path, async (req, res) => {
     try {
+<<<<<<< HEAD
       const documentId = parsePositiveIntParam(req.params.id, "document id");
+=======
+      const rawDocumentId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const documentId = parseIdParam(rawDocumentId, "document id");
+>>>>>>> bde5261 (Notifications for drc meetings and generalized notification system for other events. Refactor of the application review workflow to support multiple stages and more complex logic. Various UI improvements and bug fixes.)
       const doc = await storage.getDocumentById(documentId);
       if (!doc) {
         throw notFound("Document not found");
       }
 
       res.download(doc.filePath, doc.fileName);
-    } catch (error: any) {
+    } catch (error: unknown) {
       return handleRouteError(res, error, "Failed to download document");
     }
   });
 
-  app.delete("/api/documents/:id", async (req, res) => {
+  app.delete(api.documents.delete.path, async (req, res) => {
     try {
+<<<<<<< HEAD
       const documentId = parsePositiveIntParam(req.params.id, "document id");
+=======
+      const rawDocumentId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const documentId = parseIdParam(rawDocumentId, "document id");
+>>>>>>> bde5261 (Notifications for drc meetings and generalized notification system for other events. Refactor of the application review workflow to support multiple stages and more complex logic. Various UI improvements and bug fixes.)
       const doc = await storage.getDocumentById(documentId);
       if (!doc) {
         throw notFound("Document not found");
@@ -122,19 +138,24 @@ export async function registerDocumentRoutes(app: Express): Promise<void> {
       await storage.deleteDocument(documentId);
 
       res.json({ message: "Document deleted successfully" });
-    } catch (error: any) {
+    } catch (error: unknown) {
       return handleRouteError(res, error, "Failed to delete document");
     }
   });
 
-  app.patch("/api/documents/:id/verify", async (req, res) => {
+  app.patch(api.documents.verify.path, async (req, res) => {
     try {
       const { verifiedBy } = req.body;
       if (!verifiedBy) {
         throw badRequest("verifiedBy is required");
       }
 
+<<<<<<< HEAD
       const documentId = parsePositiveIntParam(req.params.id, "document id");
+=======
+      const rawDocumentId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const documentId = parseIdParam(rawDocumentId, "document id");
+>>>>>>> bde5261 (Notifications for drc meetings and generalized notification system for other events. Refactor of the application review workflow to support multiple stages and more complex logic. Various UI improvements and bug fixes.)
 
       const updated = await storage.updateDocument(documentId, {
         isVerified: true,
@@ -143,7 +164,7 @@ export async function registerDocumentRoutes(app: Express): Promise<void> {
       });
 
       res.json(updated);
-    } catch (error: any) {
+    } catch (error: unknown) {
       return handleRouteError(res, error, "Failed to verify document");
     }
   });

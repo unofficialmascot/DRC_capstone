@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -34,6 +34,7 @@ export const scholars = pgTable("scholars", {
   userId: integer("user_id").notNull().unique(),
   batch: text("batch"),
   status: text("status").default("Active"), // Active, Inactive, Graduated
+  lifecycleStatus: text("lifecycle_status").notNull().default("Active"), // Active, Awarded, Deregistered, Terminated, Re-registered
   department: text("department"),
   researchArea: text("research_area"),
   researchTitle: text("research_title"),
@@ -176,9 +177,28 @@ export const notices = pgTable("notices", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   content: text("content").notNull(),
+  notificationType: text("notification_type").notNull().default("general"),
+  relatedApplicationId: integer("related_application_id"),
+  relatedMeetingId: integer("related_meeting_id"),
   date: timestamp("date").defaultNow(),
   targetRole: text("target_role"),
 });
+
+export const noticeDismissals = pgTable(
+  "notice_dismissals",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").notNull(),
+    noticeId: integer("notice_id").notNull(),
+    dismissedAt: timestamp("dismissed_at").defaultNow(),
+  },
+  (table) => ({
+    uniqueUserNotice: uniqueIndex("notice_dismissals_user_notice_idx").on(
+      table.userId,
+      table.noticeId,
+    ),
+  }),
+);
 
 // === DOCUMENTS ===
 export const documents = pgTable("documents", {
@@ -210,6 +230,7 @@ export const insertDrcMeetingMinutesSchema = createInsertSchema(drcMeetingMinute
 export const insertDrcMinuteItemSchema = createInsertSchema(drcMinuteItems);
 export const insertDrcChairmanDecisionSchema = createInsertSchema(drcChairmanDecisions);
 export const insertNoticeSchema = createInsertSchema(notices);
+export const insertNoticeDismissalSchema = createInsertSchema(noticeDismissals);
 export const insertDocumentSchema = createInsertSchema(documents);
 export const insertSupervisorChangeHistorySchema = createInsertSchema(supervisorChangeHistory);
 
@@ -235,6 +256,15 @@ export type DrcChairmanDecision = typeof drcChairmanDecisions.$inferSelect;
 export type InsertDrcChairmanDecision = z.infer<typeof insertDrcChairmanDecisionSchema>;
 export type Notice = typeof notices.$inferSelect;
 export type InsertNotice = z.infer<typeof insertNoticeSchema>;
+export type NotificationType =
+  | "general"
+  | "drc_meeting_scheduled"
+  | "review_decision"
+  | "review_pending"
+  | "minutes_generated"
+  | "chairman_decision";
+export type NoticeDismissal = typeof noticeDismissals.$inferSelect;
+export type InsertNoticeDismissal = z.infer<typeof insertNoticeDismissalSchema>;
 export type ResearchProgress = typeof researchProgress.$inferSelect;
 export type Document = typeof documents.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;

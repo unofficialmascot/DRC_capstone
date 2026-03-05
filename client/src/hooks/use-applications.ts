@@ -33,3 +33,27 @@ export function useCreateApplication() {
     },
   });
 }
+
+export function useDeleteApplication() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (applicationId: number) => {
+      const url = buildUrl(api.applications.delete.path, { id: applicationId });
+      const res = await fetch(url, {
+        method: api.applications.delete.method,
+        credentials: "include",
+      });
+
+      const responseBody = await res.json().catch(() => ({ message: "Failed to delete application" }));
+      if (!res.ok) {
+        throw new Error(responseBody.message || "Failed to delete application");
+      }
+
+      return api.applications.delete.responses[200].parse(responseBody);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.applications.list.path] });
+    },
+  });
+}
