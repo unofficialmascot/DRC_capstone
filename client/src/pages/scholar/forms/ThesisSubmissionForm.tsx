@@ -85,6 +85,13 @@ export default function ThesisSubmissionForm({
     outline: "none",
   };
 
+  const readOnlyInputStyle: CSSProperties = {
+    ...inputStyle,
+    backgroundColor: "#fafafa",
+    color: "#333",
+    border: "1px solid #dee2e6",
+  };
+
   const noteStyle: CSSProperties = {
     fontSize: "12px",
     color: "#666",
@@ -127,28 +134,28 @@ export default function ThesisSubmissionForm({
           <tbody>
             <tr>
               <td style={labelCellStyle}>1) Name of the Scholar (Full Name)</td>
-              <td style={cellStyle}><input style={inputStyle} type="text" value={formData.scholarName} onChange={(e) => setFormData({ ...formData, scholarName: e.target.value })} /></td>
+              <td style={cellStyle}><input style={readOnlyInputStyle} type="text" value={formData.scholarName} readOnly /></td>
             </tr>
             <tr>
               <td style={labelCellStyle}>2) Reg. No.</td>
-              <td style={cellStyle}><input style={inputStyle} type="text" value={formData.regNo} onChange={(e) => setFormData({ ...formData, regNo: e.target.value })} /></td>
+              <td style={cellStyle}><input style={readOnlyInputStyle} type="text" value={formData.regNo} readOnly /></td>
             </tr>
             <tr>
               <td style={labelCellStyle}>3) Category (Full-Time / Part-Time)</td>
-              <td style={cellStyle}><input style={inputStyle} type="text" value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} /></td>
+              <td style={cellStyle}><input style={readOnlyInputStyle} type="text" value={formData.category} readOnly /></td>
             </tr>
             <tr>
               <td style={labelCellStyle}>4) Name of the Department</td>
-              <td style={cellStyle}><input style={inputStyle} type="text" value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })} /></td>
+              <td style={cellStyle}><input style={readOnlyInputStyle} type="text" value={formData.department} readOnly /></td>
             </tr>
             <tr>
               <td style={labelCellStyle}>5) Title of the Thesis</td>
-              <td style={cellStyle}><textarea style={{ ...inputStyle, minHeight: "80px", resize: "vertical" }} value={formData.thesisTitle} onChange={(e) => setFormData({ ...formData, thesisTitle: e.target.value })} /></td>
+              <td style={cellStyle}><textarea style={{ ...readOnlyInputStyle, minHeight: "80px", resize: "vertical" }} value={formData.thesisTitle} readOnly /></td>
             </tr>
             <tr>
               <td style={labelCellStyle}>6) Year of Registration & Date</td>
               <td style={cellStyle}>
-                <input style={inputStyle} type="text" value={formData.registrationYearDate} onChange={(e) => setFormData({ ...formData, registrationYearDate: e.target.value })} placeholder="Year - DD/MM/YYYY" />
+                <input style={readOnlyInputStyle} type="text" value={formData.registrationYearDate} readOnly placeholder="Year - DD/MM/YYYY" />
                 <span style={noteStyle}>(Copy of provisional allotment should be enclosed)</span>
               </td>
             </tr>
@@ -162,11 +169,11 @@ export default function ThesisSubmissionForm({
           <tbody>
             <tr>
               <td style={labelCellStyle}>7) Name of Research Supervisor & Address</td>
-              <td style={cellStyle}><textarea style={{ ...inputStyle, minHeight: "70px", resize: "vertical" }} value={formData.supervisorNameAddress} onChange={(e) => setFormData({ ...formData, supervisorNameAddress: e.target.value })} /></td>
+              <td style={cellStyle}><textarea style={{ ...readOnlyInputStyle, minHeight: "70px", resize: "vertical" }} value={formData.supervisorNameAddress} readOnly /></td>
             </tr>
             <tr>
               <td style={labelCellStyle}>8) Name of Co-Research Supervisor & Address</td>
-              <td style={cellStyle}><textarea style={{ ...inputStyle, minHeight: "70px", resize: "vertical" }} value={formData.coSupervisorNameAddress} onChange={(e) => setFormData({ ...formData, coSupervisorNameAddress: e.target.value })} /></td>
+              <td style={cellStyle}><textarea style={{ ...readOnlyInputStyle, minHeight: "70px", resize: "vertical" }} value={formData.coSupervisorNameAddress} readOnly /></td>
             </tr>
           </tbody>
         </table>
@@ -207,7 +214,7 @@ export default function ThesisSubmissionForm({
             </tr>
             <tr>
               <td style={labelCellStyle}>11) Address for further correspondence</td>
-              <td style={cellStyle}><textarea style={{ ...inputStyle, minHeight: "80px", resize: "vertical" }} value={formData.correspondenceAddress} onChange={(e) => setFormData({ ...formData, correspondenceAddress: e.target.value })} /></td>
+              <td style={cellStyle}><textarea style={{ ...readOnlyInputStyle, minHeight: "80px", resize: "vertical" }} value={formData.correspondenceAddress} readOnly /></td>
             </tr>
           </tbody>
         </table>

@@ -3,6 +3,10 @@ import { api } from "../../shared/routes.js";
 import { APP_SETTINGS } from "../../shared/app-settings.js";
 import { storage } from "../storage";
 import { buildApplicationEnclosureSnapshot } from "../services/application-enclosure-service";
+import {
+  evaluateScholarApplicationEligibility,
+  getEligibilityForApplicationType,
+} from "../services/application-eligibility-service";
 import { badRequest, forbidden, handleRouteError, notFound, parseIdParam, unauthorized } from "./http";
 
 export function registerApplicationRoutes(app: Express): void {
@@ -42,6 +46,35 @@ export function registerApplicationRoutes(app: Express): void {
     }
   });
 
+  app.get(api.applications.eligibility.path, async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        throw unauthorized("Not authenticated");
+      }
+
+      const sessionUser = await storage.getUserWithScholar(req.session.userId);
+      if (!sessionUser) {
+        throw notFound("User not found");
+      }
+
+      if (sessionUser.role !== "scholar") {
+        throw forbidden("Only scholars can view application eligibility");
+      }
+
+      if (!sessionUser.scholarId) {
+        throw badRequest("Scholar profile not found for current user");
+      }
+
+      const eligibility = evaluateScholarApplicationEligibility({
+        scholarId: sessionUser.scholarId,
+      });
+
+      return res.json(eligibility);
+    } catch (error) {
+      return handleRouteError(res, error);
+    }
+  });
+
   app.get(api.applications.get.path, async (req, res) => {
     try {
       const applicationId = parseIdParam(req.params.id, "application id");
@@ -58,6 +91,18 @@ export function registerApplicationRoutes(app: Express): void {
   app.post(api.applications.create.path, async (req, res) => {
     try {
       const input = api.applications.create.input.parse(req.body);
+
+      const eligibility = evaluateScholarApplicationEligibility({
+        scholarId: input.scholarId,
+      });
+      const selectedEligibility = getEligibilityForApplicationType(eligibility, input.type);
+
+      if (selectedEligibility && !selectedEligibility.eligible && eligibility.mode === "enforced") {
+        throw badRequest(
+          `You are not eligible to submit ${input.type} at this time`,
+          selectedEligibility.reasons,
+        );
+      }
 
       if (APP_SETTINGS.applicationSubmissionMode === "none") {
         throw badRequest("Application submissions are currently disabled by settings");

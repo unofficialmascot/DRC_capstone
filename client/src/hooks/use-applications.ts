@@ -34,6 +34,23 @@ export function useCreateApplication() {
   });
 }
 
+export function useApplicationEligibility() {
+  return useQuery({
+    queryKey: [api.applications.eligibility.path],
+    queryFn: async () => {
+      const res = await fetch(api.applications.eligibility.path, {
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to fetch application eligibility");
+      }
+
+      return api.applications.eligibility.responses[200].parse(await res.json());
+    },
+  });
+}
+
 export function useDeleteApplication() {
   const queryClient = useQueryClient();
 

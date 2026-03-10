@@ -110,6 +110,13 @@ export default function SupervisorChangeForm({
     fontSize: "14px",
   };
 
+  const readOnlyInputStyle: CSSProperties = {
+    ...inputStyle,
+    backgroundColor: "#fafafa",
+    color: "#333",
+    border: "1px solid #dee2e6",
+  };
+
   const buildSubmitPayload = () => ({
     scholarName: formData.scholarName,
     department: formData.department,
@@ -149,21 +156,21 @@ export default function SupervisorChangeForm({
           <tbody>
             <tr>
               <td style={labelCellStyle}>Name of Scholar</td>
-              <td style={tableCellStyle}><input style={inputStyle} type="text" value={formData.scholarName} onChange={(e) => setFormData({ ...formData, scholarName: e.target.value })} /></td>
+              <td style={tableCellStyle}><input style={readOnlyInputStyle} type="text" value={formData.scholarName} readOnly /></td>
               <td style={labelCellStyle}>Department</td>
-              <td style={tableCellStyle}><input style={inputStyle} type="text" value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })} /></td>
+              <td style={tableCellStyle}><input style={readOnlyInputStyle} type="text" value={formData.department} readOnly /></td>
             </tr>
             <tr>
               <td style={labelCellStyle}>Regd. No.</td>
-              <td style={tableCellStyle}><input style={inputStyle} type="text" value={formData.regdNo} onChange={(e) => setFormData({ ...formData, regdNo: e.target.value })} /></td>
+              <td style={tableCellStyle}><input style={readOnlyInputStyle} type="text" value={formData.regdNo} readOnly /></td>
               <td style={labelCellStyle}>Date of Joining</td>
-              <td style={tableCellStyle}><input style={inputStyle} type="date" value={formData.joiningDate} onChange={(e) => setFormData({ ...formData, joiningDate: e.target.value })} /></td>
+              <td style={tableCellStyle}><input style={readOnlyInputStyle} type="date" value={formData.joiningDate} readOnly /></td>
             </tr>
             <tr>
               <td style={labelCellStyle}>Basic Qualification</td>
               <td style={tableCellStyle}><input style={inputStyle} type="text" value={formData.basicQualification} onChange={(e) => setFormData({ ...formData, basicQualification: e.target.value })} /></td>
               <td style={labelCellStyle}>Research Area</td>
-              <td style={tableCellStyle}><input style={inputStyle} type="text" value={formData.researchArea} onChange={(e) => setFormData({ ...formData, researchArea: e.target.value })} /></td>
+              <td style={tableCellStyle}><input style={readOnlyInputStyle} type="text" value={formData.researchArea} readOnly /></td>
             </tr>
           </tbody>
         </table>
@@ -175,15 +182,15 @@ export default function SupervisorChangeForm({
           <tbody>
             <tr>
               <td style={labelCellStyle}>Supervisor Name</td>
-              <td style={tableCellStyle}><input style={inputStyle} type="text" value={formData.currentSupervisorName} onChange={(e) => setFormData({ ...formData, currentSupervisorName: e.target.value })} /></td>
+              <td style={tableCellStyle}><input style={readOnlyInputStyle} type="text" value={formData.currentSupervisorName} readOnly /></td>
               <td style={labelCellStyle}>Designation</td>
-              <td style={tableCellStyle}><input style={inputStyle} type="text" value={formData.currentSupervisorDesignation} onChange={(e) => setFormData({ ...formData, currentSupervisorDesignation: e.target.value })} /></td>
+              <td style={tableCellStyle}><input style={readOnlyInputStyle} type="text" value={formData.currentSupervisorDesignation} readOnly /></td>
             </tr>
             <tr>
               <td style={labelCellStyle}>Co-Supervisor Name</td>
-              <td style={tableCellStyle}><input style={inputStyle} type="text" value={formData.existingCoSupervisorName} onChange={(e) => setFormData({ ...formData, existingCoSupervisorName: e.target.value })} /></td>
+              <td style={tableCellStyle}><input style={readOnlyInputStyle} type="text" value={formData.existingCoSupervisorName} readOnly /></td>
               <td style={labelCellStyle}>Designation</td>
-              <td style={tableCellStyle}><input style={inputStyle} type="text" value={formData.existingCoSupervisorDesignation} onChange={(e) => setFormData({ ...formData, existingCoSupervisorDesignation: e.target.value })} /></td>
+              <td style={tableCellStyle}><input style={readOnlyInputStyle} type="text" value={formData.existingCoSupervisorDesignation} readOnly /></td>
             </tr>
           </tbody>
         </table>

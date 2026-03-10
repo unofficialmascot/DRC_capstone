@@ -66,6 +66,13 @@ export default function ExtensionForm({
     fontSize: "14px",
   };
 
+  const readOnlyInputStyle: CSSProperties = {
+    ...inputStyle,
+    backgroundColor: "#fafafa",
+    color: "#333",
+    border: "1px solid #dee2e6",
+  };
+
   const tableStyle: CSSProperties = {
     width: "100%",
     borderCollapse: "collapse",
@@ -117,31 +124,31 @@ export default function ExtensionForm({
           <tbody>
             <tr>
               <td style={{ ...thTdStyle, width: "35%" }}>Name of the Candidate</td>
-              <td style={thTdStyle}><input style={inputStyle} type="text" value={formData.candidateName} onChange={(e) => setFormData({ ...formData, candidateName: e.target.value })} /></td>
+              <td style={thTdStyle}><input style={readOnlyInputStyle} type="text" value={formData.candidateName} readOnly /></td>
             </tr>
             <tr>
               <td style={thTdStyle}>Date of Registration & Department</td>
-              <td style={thTdStyle}><input style={inputStyle} type="text" value={formData.registrationDateDepartment} onChange={(e) => setFormData({ ...formData, registrationDateDepartment: e.target.value })} /></td>
+              <td style={thTdStyle}><input style={readOnlyInputStyle} type="text" value={formData.registrationDateDepartment} readOnly /></td>
             </tr>
             <tr>
               <td style={thTdStyle}>Program Registration Category</td>
-              <td style={thTdStyle}><input style={inputStyle} type="text" value={formData.programRegistrationCategory} onChange={(e) => setFormData({ ...formData, programRegistrationCategory: e.target.value })} /></td>
+              <td style={thTdStyle}><input style={readOnlyInputStyle} type="text" value={formData.programRegistrationCategory} readOnly /></td>
             </tr>
             <tr>
               <td style={thTdStyle}>Phone No. & Email Id</td>
-              <td style={thTdStyle}><input style={inputStyle} type="text" value={formData.phoneEmail} onChange={(e) => setFormData({ ...formData, phoneEmail: e.target.value })} /></td>
+              <td style={thTdStyle}><input style={readOnlyInputStyle} type="text" value={formData.phoneEmail} readOnly /></td>
             </tr>
             <tr>
               <td style={thTdStyle}>Name of the Research Supervisor</td>
-              <td style={thTdStyle}><input style={inputStyle} type="text" value={formData.supervisorName} onChange={(e) => setFormData({ ...formData, supervisorName: e.target.value })} /></td>
+              <td style={thTdStyle}><input style={readOnlyInputStyle} type="text" value={formData.supervisorName} readOnly /></td>
             </tr>
             <tr>
               <td style={thTdStyle}>Area of Research</td>
-              <td style={thTdStyle}><input style={inputStyle} type="text" value={formData.researchArea} onChange={(e) => setFormData({ ...formData, researchArea: e.target.value })} /></td>
+              <td style={thTdStyle}><input style={readOnlyInputStyle} type="text" value={formData.researchArea} readOnly /></td>
             </tr>
             <tr>
               <td style={thTdStyle}>Title of the Research Work</td>
-              <td style={thTdStyle}><input style={inputStyle} type="text" value={formData.researchTitle} onChange={(e) => setFormData({ ...formData, researchTitle: e.target.value })} /></td>
+              <td style={thTdStyle}><input style={readOnlyInputStyle} type="text" value={formData.researchTitle} readOnly /></td>
             </tr>
           </tbody>
         </table>
@@ -160,7 +167,7 @@ export default function ExtensionForm({
           </thead>
           <tbody>
             <tr>
-              <td style={thTdStyle}><input style={inputStyle} type="date" value={formData.registrationDate} onChange={(e) => setFormData({ ...formData, registrationDate: e.target.value })} /></td>
+              <td style={thTdStyle}><input style={readOnlyInputStyle} type="date" value={formData.registrationDate} readOnly /></td>
               <td style={thTdStyle}><input style={inputStyle} type="text" value={formData.durationEligible} onChange={(e) => setFormData({ ...formData, durationEligible: e.target.value })} /></td>
               <td style={thTdStyle}><input style={inputStyle} type="date" value={formData.requiredExtensionTillDate} onChange={(e) => setFormData({ ...formData, requiredExtensionTillDate: e.target.value })} /></td>
               <td style={thTdStyle}><input style={inputStyle} type="text" value={formData.extensionDuration} onChange={(e) => setFormData({ ...formData, extensionDuration: e.target.value })} placeholder="e.g. 6 Months" /></td>

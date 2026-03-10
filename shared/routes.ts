@@ -64,6 +64,26 @@ const chairmanDashboardMetricsSchema = z.object({
   extensionRequests: z.number(),
 });
 
+const applicationEligibilityModeSchema = z.enum(["advisory", "enforced"]);
+
+const applicationEligibilityReasonSchema = z.object({
+  code: z.string(),
+  message: z.string(),
+});
+
+const applicationEligibilityItemSchema = z.object({
+  applicationType: z.string(),
+  eligible: z.boolean(),
+  mode: applicationEligibilityModeSchema,
+  reasons: z.array(applicationEligibilityReasonSchema),
+});
+
+const applicationEligibilityResponseSchema = z.object({
+  mode: applicationEligibilityModeSchema,
+  items: z.array(applicationEligibilityItemSchema),
+  generatedAt: z.string(),
+});
+
 export const api = {
   auth: {
     login: {
@@ -132,6 +152,13 @@ export const api = {
       input: insertApplicationSchema.omit({ id: true, submissionDate: true, currentStage: true, status: true, finalOutcome: true }),
       responses: {
         201: insertApplicationSchema,
+      },
+    },
+    eligibility: {
+      method: 'GET' as const,
+      path: '/api/applications/eligibility',
+      responses: {
+        200: applicationEligibilityResponseSchema,
       },
     },
     get: {

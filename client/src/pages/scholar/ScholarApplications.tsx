@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useApplications, useCreateApplication } from "@/hooks/use-applications";
+import { useApplicationEligibility, useApplications, useCreateApplication } from "@/hooks/use-applications";
 import { useApplicationReviews } from "@/hooks/use-application-reviews";
 import { useToast } from "@/hooks/use-toast";
 import { APP_SETTINGS } from "@shared/app-settings";
@@ -125,8 +125,21 @@ export default function ScholarApplications({ user }: { user: PublicUser }) {
     data: Application[] | undefined;
     isLoading: boolean;
   };
+  const { data: eligibilityData, isLoading: isEligibilityLoading } = useApplicationEligibility();
 
   const createApplication = useCreateApplication();
+
+  const eligibilityByType = new Map(
+    (eligibilityData?.items ?? []).map((item) => [item.applicationType, item]),
+  );
+
+  const getEligibilityMeta = (type: string) =>
+    eligibilityByType.get(type) ?? {
+      applicationType: type,
+      eligible: true,
+      mode: "advisory" as const,
+      reasons: [],
+    };
 
   const submissionsDisabled = APP_SETTINGS.applicationSubmissionMode === "none";
   const enforceSingleActivePerType =
@@ -247,6 +260,19 @@ export default function ScholarApplications({ user }: { user: PublicUser }) {
 
       {view === "apply" && !formType && (
         <div className="dropdown-container" style={{ display: "block" }}>
+          <div
+            style={{
+              marginBottom: "12px",
+              padding: "10px 12px",
+              borderRadius: "6px",
+              backgroundColor: "#eef7ff",
+              color: "#0b4f82",
+              border: "1px solid #cfe6fb",
+              fontSize: "12px",
+            }}
+          >
+            Eligibility checks are currently in advisory mode. Status badges are visible now, and blocking rules can be enabled later.
+          </div>
           {submissionsDisabled && (
             <div style={{ marginBottom: "12px", color: "#c0392b", fontWeight: 600 }}>
               Application submissions are disabled by settings.
@@ -266,9 +292,34 @@ export default function ScholarApplications({ user }: { user: PublicUser }) {
               }}
             >
               Change of Supervisor
+              {isEligibilityLoading ? (
+                <span style={{ fontSize: "11px", color: "#6b7280", display: "block", marginTop: "3px" }}>
+                  Checking eligibility...
+                </span>
+              ) : (
+                <span
+                  style={{
+                    fontSize: "11px",
+                    display: "inline-block",
+                    marginTop: "4px",
+                    padding: "2px 8px",
+                    borderRadius: "999px",
+                    background: getEligibilityMeta("Supervisor Change").eligible ? "#e8f8ef" : "#fff4e5",
+                    color: getEligibilityMeta("Supervisor Change").eligible ? "#0b6a55" : "#b45309",
+                    border: `1px solid ${getEligibilityMeta("Supervisor Change").eligible ? "#b7e4cf" : "#f6d8ae"}`,
+                  }}
+                >
+                  {getEligibilityMeta("Supervisor Change").eligible ? "Eligible" : "Not eligible"}
+                </span>
+              )}
               {hasActiveApplication("Supervisor Change") && (
                 <span style={{ fontSize: "11px", color: "#e74c3c", display: "block", marginTop: "3px" }}>
                   ⚠ Active application exists
+                </span>
+              )}
+              {getEligibilityMeta("Supervisor Change").reasons.length > 0 && (
+                <span style={{ fontSize: "11px", color: "#6b7280", display: "block", marginTop: "3px" }}>
+                  {getEligibilityMeta("Supervisor Change").reasons[0]?.message}
                 </span>
               )}
             </button>
@@ -284,9 +335,30 @@ export default function ScholarApplications({ user }: { user: PublicUser }) {
               }}
             >
               Apply for Pre-talk
+              {!isEligibilityLoading && (
+                <span
+                  style={{
+                    fontSize: "11px",
+                    display: "inline-block",
+                    marginTop: "4px",
+                    padding: "2px 8px",
+                    borderRadius: "999px",
+                    background: getEligibilityMeta("Pre-Talk").eligible ? "#e8f8ef" : "#fff4e5",
+                    color: getEligibilityMeta("Pre-Talk").eligible ? "#0b6a55" : "#b45309",
+                    border: `1px solid ${getEligibilityMeta("Pre-Talk").eligible ? "#b7e4cf" : "#f6d8ae"}`,
+                  }}
+                >
+                  {getEligibilityMeta("Pre-Talk").eligible ? "Eligible" : "Not eligible"}
+                </span>
+              )}
               {hasActiveApplication("Pre-Talk") && (
                 <span style={{ fontSize: "11px", color: "#e74c3c", display: "block", marginTop: "3px" }}>
                   ⚠ Active application exists
+                </span>
+              )}
+              {getEligibilityMeta("Pre-Talk").reasons.length > 0 && (
+                <span style={{ fontSize: "11px", color: "#6b7280", display: "block", marginTop: "3px" }}>
+                  {getEligibilityMeta("Pre-Talk").reasons[0]?.message}
                 </span>
               )}
             </button>
@@ -302,9 +374,30 @@ export default function ScholarApplications({ user }: { user: PublicUser }) {
               }}
             >
               Extension of Ph.D Duration
+              {!isEligibilityLoading && (
+                <span
+                  style={{
+                    fontSize: "11px",
+                    display: "inline-block",
+                    marginTop: "4px",
+                    padding: "2px 8px",
+                    borderRadius: "999px",
+                    background: getEligibilityMeta("Extension").eligible ? "#e8f8ef" : "#fff4e5",
+                    color: getEligibilityMeta("Extension").eligible ? "#0b6a55" : "#b45309",
+                    border: `1px solid ${getEligibilityMeta("Extension").eligible ? "#b7e4cf" : "#f6d8ae"}`,
+                  }}
+                >
+                  {getEligibilityMeta("Extension").eligible ? "Eligible" : "Not eligible"}
+                </span>
+              )}
               {hasActiveApplication("Extension") && (
                 <span style={{ fontSize: "11px", color: "#e74c3c", display: "block", marginTop: "3px" }}>
                   ⚠ Active application exists
+                </span>
+              )}
+              {getEligibilityMeta("Extension").reasons.length > 0 && (
+                <span style={{ fontSize: "11px", color: "#6b7280", display: "block", marginTop: "3px" }}>
+                  {getEligibilityMeta("Extension").reasons[0]?.message}
                 </span>
               )}
             </button>
@@ -320,9 +413,30 @@ export default function ScholarApplications({ user }: { user: PublicUser }) {
               }}
             >
               Ph.D Re-Registration
+              {!isEligibilityLoading && (
+                <span
+                  style={{
+                    fontSize: "11px",
+                    display: "inline-block",
+                    marginTop: "4px",
+                    padding: "2px 8px",
+                    borderRadius: "999px",
+                    background: getEligibilityMeta("Re-Registration").eligible ? "#e8f8ef" : "#fff4e5",
+                    color: getEligibilityMeta("Re-Registration").eligible ? "#0b6a55" : "#b45309",
+                    border: `1px solid ${getEligibilityMeta("Re-Registration").eligible ? "#b7e4cf" : "#f6d8ae"}`,
+                  }}
+                >
+                  {getEligibilityMeta("Re-Registration").eligible ? "Eligible" : "Not eligible"}
+                </span>
+              )}
               {hasActiveApplication("Re-Registration") && (
                 <span style={{ fontSize: "11px", color: "#e74c3c", display: "block", marginTop: "3px" }}>
                   ⚠ Active application exists
+                </span>
+              )}
+              {getEligibilityMeta("Re-Registration").reasons.length > 0 && (
+                <span style={{ fontSize: "11px", color: "#6b7280", display: "block", marginTop: "3px" }}>
+                  {getEligibilityMeta("Re-Registration").reasons[0]?.message}
                 </span>
               )}
             </button>
@@ -338,9 +452,30 @@ export default function ScholarApplications({ user }: { user: PublicUser }) {
               }}
             >
               Thesis Submission
+              {!isEligibilityLoading && (
+                <span
+                  style={{
+                    fontSize: "11px",
+                    display: "inline-block",
+                    marginTop: "4px",
+                    padding: "2px 8px",
+                    borderRadius: "999px",
+                    background: getEligibilityMeta("Thesis Submission").eligible ? "#e8f8ef" : "#fff4e5",
+                    color: getEligibilityMeta("Thesis Submission").eligible ? "#0b6a55" : "#b45309",
+                    border: `1px solid ${getEligibilityMeta("Thesis Submission").eligible ? "#b7e4cf" : "#f6d8ae"}`,
+                  }}
+                >
+                  {getEligibilityMeta("Thesis Submission").eligible ? "Eligible" : "Not eligible"}
+                </span>
+              )}
               {hasActiveApplication("Thesis Submission") && (
                 <span style={{ fontSize: "11px", color: "#e74c3c", display: "block", marginTop: "3px" }}>
                   ⚠ Active application exists
+                </span>
+              )}
+              {getEligibilityMeta("Thesis Submission").reasons.length > 0 && (
+                <span style={{ fontSize: "11px", color: "#6b7280", display: "block", marginTop: "3px" }}>
+                  {getEligibilityMeta("Thesis Submission").reasons[0]?.message}
                 </span>
               )}
             </button>

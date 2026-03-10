@@ -81,6 +81,13 @@ export default function ReRegistrationForm({
     outline: "none",
   };
 
+  const readOnlyInputStyle: CSSProperties = {
+    ...inputStyle,
+    backgroundColor: "#fafafa",
+    color: "#333",
+    border: "1px solid #dee2e6",
+  };
+
   const sectionStyle: CSSProperties = {
     background: "#ffffff",
     padding: "24px",
@@ -166,31 +173,31 @@ export default function ReRegistrationForm({
           <tbody>
             <tr>
               <td style={labelCellStyle}>1. Name of the Scholar</td>
-              <td style={cellStyle} colSpan={3}><input style={inputStyle} type="text" value={formData.scholarName} onChange={(e) => setFormData({ ...formData, scholarName: e.target.value })} /></td>
+              <td style={cellStyle} colSpan={3}><input style={readOnlyInputStyle} type="text" value={formData.scholarName} readOnly /></td>
             </tr>
             <tr>
               <td style={labelCellStyle}>2. Reg. No.</td>
-              <td style={cellStyle}><input style={inputStyle} type="text" value={formData.regNo} onChange={(e) => setFormData({ ...formData, regNo: e.target.value })} /></td>
+              <td style={cellStyle}><input style={readOnlyInputStyle} type="text" value={formData.regNo} readOnly /></td>
               <td style={labelCellStyle}>Date of Joining</td>
-              <td style={cellStyle}><input style={inputStyle} type="date" value={formData.joiningDate} onChange={(e) => setFormData({ ...formData, joiningDate: e.target.value })} /></td>
+              <td style={cellStyle}><input style={readOnlyInputStyle} type="date" value={formData.joiningDate} readOnly /></td>
             </tr>
             <tr>
               <td style={labelCellStyle}>3. Dept. & School</td>
-              <td style={cellStyle} colSpan={3}><input style={inputStyle} type="text" value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })} /></td>
+              <td style={cellStyle} colSpan={3}><input style={readOnlyInputStyle} type="text" value={formData.department} readOnly /></td>
             </tr>
             <tr>
               <td style={labelCellStyle}>4. Mobile No.</td>
-              <td style={cellStyle}><input style={inputStyle} type="text" value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} /></td>
+              <td style={cellStyle}><input style={readOnlyInputStyle} type="text" value={formData.mobile} readOnly /></td>
               <td style={labelCellStyle}>E-mail</td>
-              <td style={cellStyle}><input style={inputStyle} type="text" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} /></td>
+              <td style={cellStyle}><input style={readOnlyInputStyle} type="text" value={formData.email} readOnly /></td>
             </tr>
             <tr>
               <td style={labelCellStyle}>5. Programme Category</td>
-              <td style={cellStyle} colSpan={3}><input style={inputStyle} type="text" value={formData.programmeCategory} onChange={(e) => setFormData({ ...formData, programmeCategory: e.target.value })} /></td>
+              <td style={cellStyle} colSpan={3}><input style={readOnlyInputStyle} type="text" value={formData.programmeCategory} readOnly /></td>
             </tr>
             <tr>
               <td style={labelCellStyle}>6. Area of research work</td>
-              <td style={cellStyle} colSpan={3}><input style={inputStyle} type="text" value={formData.researchArea} onChange={(e) => setFormData({ ...formData, researchArea: e.target.value })} /></td>
+              <td style={cellStyle} colSpan={3}><input style={readOnlyInputStyle} type="text" value={formData.researchArea} readOnly /></td>
             </tr>
           </tbody>
         </table>
@@ -224,13 +231,13 @@ export default function ReRegistrationForm({
           <tbody>
             <tr>
               <td style={labelCellStyle}>Name</td>
-              <td style={cellStyle}><input style={inputStyle} type="text" value={formData.supervisorName} onChange={(e) => setFormData({ ...formData, supervisorName: e.target.value })} /></td>
+              <td style={cellStyle}><input style={readOnlyInputStyle} type="text" value={formData.supervisorName} readOnly /></td>
               <td style={labelCellStyle}>Designation</td>
               <td style={cellStyle}><input style={inputStyle} type="text" value={formData.supervisorDesignation} onChange={(e) => setFormData({ ...formData, supervisorDesignation: e.target.value })} /></td>
             </tr>
             <tr>
               <td style={labelCellStyle}>Department</td>
-              <td style={cellStyle} colSpan={3}><input style={inputStyle} type="text" value={formData.supervisorDepartment} onChange={(e) => setFormData({ ...formData, supervisorDepartment: e.target.value })} /></td>
+              <td style={cellStyle} colSpan={3}><input style={readOnlyInputStyle} type="text" value={formData.supervisorDepartment} readOnly /></td>
             </tr>
           </tbody>
         </table>
@@ -242,7 +249,7 @@ export default function ReRegistrationForm({
           <tbody>
             <tr>
               <td style={labelCellStyle}>Name</td>
-              <td style={cellStyle}><input style={inputStyle} type="text" value={formData.coSupervisorName} onChange={(e) => setFormData({ ...formData, coSupervisorName: e.target.value })} /></td>
+              <td style={cellStyle}><input style={readOnlyInputStyle} type="text" value={formData.coSupervisorName} readOnly /></td>
               <td style={labelCellStyle}>Designation</td>
               <td style={cellStyle}><input style={inputStyle} type="text" value={formData.coSupervisorDesignation} onChange={(e) => setFormData({ ...formData, coSupervisorDesignation: e.target.value })} /></td>
             </tr>
