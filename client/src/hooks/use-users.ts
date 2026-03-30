@@ -9,6 +9,15 @@ export interface SupervisorOption {
   designation?: string | null;
 }
 
+export interface AssignedScholarSummary {
+  scholarId: string;
+  name: string;
+  department?: string | null;
+  researchArea?: string | null;
+  phase?: string | null;
+  status?: string | null;
+}
+
 // GET /api/users/:id
 export function useUser(id: number | string) {
   return useQuery({
@@ -61,5 +70,38 @@ export function useSupervisors() {
       }
       return res.json();
     },
+  });
+}
+
+export function useSupervisorScholarCount(employeeId?: string | null) {
+  return useQuery({
+    queryKey: ["users", "supervisors", employeeId, "scholars-count"],
+    queryFn: async (): Promise<number> => {
+      const res = await fetch(`/api/users/supervisors/${employeeId}/scholars-count`, {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        throw new Error("Failed to fetch assigned scholar count");
+      }
+      const data = (await res.json()) as { count: number };
+      return Number(data.count || 0);
+    },
+    enabled: Boolean(employeeId),
+  });
+}
+
+export function useAssignedScholars(employeeId?: string | null) {
+  return useQuery({
+    queryKey: ["users", "supervisors", employeeId, "scholars"],
+    queryFn: async (): Promise<AssignedScholarSummary[]> => {
+      const res = await fetch(`/api/users/supervisors/${employeeId}/scholars`, {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        throw new Error("Failed to fetch assigned scholars");
+      }
+      return res.json();
+    },
+    enabled: Boolean(employeeId),
   });
 }

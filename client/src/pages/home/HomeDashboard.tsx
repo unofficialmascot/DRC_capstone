@@ -21,6 +21,7 @@ import SupervisorDashboard from "@/pages/supervisor/SupervisorDashboard";
 type ScholarPage = "profile" | "applications" | "research" | "fees" | "dochub" | "noticeboard";
 type ReviewerPage = "dashboard" | "reviews" | "meetings";
 type ChairmanSidebarSection = ChairmanSection | "minutes";
+type SupervisorSection = "dashboard" | "profile" | "rac-reviews" | "application-requests" | "biometric" | "help-support";
 
 const scholarPageBySegment: Record<string, ScholarPage> = {
   profile: "profile",
@@ -43,6 +44,15 @@ const chairmanSectionBySegment: Record<string, ChairmanSidebarSection> = {
   profile: "profile",
   minutes: "minutes",
   extensions: "extensions",
+};
+
+const supervisorSectionBySegment: Record<string, SupervisorSection> = {
+  dashboard: "dashboard",
+  profile: "profile",
+  "rac-reviews": "rac-reviews",
+  "application-requests": "application-requests",
+  biometric: "biometric",
+  "help-support": "help-support",
 };
 
 function getDefaultPathForRole(role: string): string {
@@ -155,7 +165,7 @@ function isValidPathForRole(role: string, path: string): boolean {
   }
 
   if (role === "supervisor") {
-    return scope === "supervisor" && section === "dashboard";
+    return scope === "supervisor" && Boolean(supervisorSectionBySegment[section]);
   }
 
   if (role === "drc_chairman") {
@@ -203,6 +213,7 @@ export default function HomeDashboard({ user, onLogout }: { user: PublicUser; on
   const scholarPage = scholarPageBySegment[segment] || "profile";
   const reviewerPage = reviewerPageBySegment[segment] || "dashboard";
   const chairmanSection = chairmanSectionBySegment[segment] || "dashboard";
+  const supervisorSection = supervisorSectionBySegment[segment] || "dashboard";
   const notificationsLandingPath = getNotificationsLandingPath(user.role);
 
   const goScholarPage = (page: ScholarPage) => {
@@ -211,6 +222,10 @@ export default function HomeDashboard({ user, onLogout }: { user: PublicUser; on
 
   const goReviewerPage = (page: ReviewerPage) => {
     navigate(`/reviewer/${page}`);
+  };
+
+  const goSupervisorSection = (sectionName: SupervisorSection) => {
+    navigate(`/supervisor/${sectionName}`);
   };
 
   const goChairmanSection = (sectionName: ChairmanSidebarSection) => {
@@ -387,7 +402,7 @@ export default function HomeDashboard({ user, onLogout }: { user: PublicUser; on
         default: return <ScholarProfile user={user} />;
       }
     } else if (user.role === "supervisor") {
-      return <SupervisorDashboard user={user} />;
+      return <SupervisorDashboard user={user} activeSection={supervisorSection} />;
     } else if (user.role === "drc_chairman") {
       switch (chairmanSection) {
         case "minutes": return <ChairmanMinutes />;
@@ -668,8 +683,23 @@ export default function HomeDashboard({ user, onLogout }: { user: PublicUser; on
           {user.role === "scholar" && renderScholarSidebar()}
           {user.role === "supervisor" && (
             <ul>
-              <li className="active">
-                <button type="button" onClick={() => navigate("/supervisor/dashboard")} aria-current="page">Supervisor Dashboard</button>
+              <li className={supervisorSection === "dashboard" ? "active" : ""}>
+                <button type="button" onClick={() => goSupervisorSection("dashboard")} aria-current={supervisorSection === "dashboard" ? "page" : undefined} data-testid="nav-supervisor-dashboard">Dashboard</button>
+              </li>
+              <li className={supervisorSection === "profile" ? "active" : ""}>
+                <button type="button" onClick={() => goSupervisorSection("profile")} aria-current={supervisorSection === "profile" ? "page" : undefined} data-testid="nav-supervisor-profile">Profile</button>
+              </li>
+              <li className={supervisorSection === "rac-reviews" ? "active" : ""}>
+                <button type="button" onClick={() => goSupervisorSection("rac-reviews")} aria-current={supervisorSection === "rac-reviews" ? "page" : undefined} data-testid="nav-supervisor-rac-reviews">RAC Reviews</button>
+              </li>
+              <li className={`red-button ${supervisorSection === "application-requests" ? "active" : ""}`}>
+                <button type="button" onClick={() => goSupervisorSection("application-requests")} aria-current={supervisorSection === "application-requests" ? "page" : undefined} data-testid="nav-supervisor-application-requests">Application Requests</button>
+              </li>
+              <li className={supervisorSection === "biometric" ? "active" : ""}>
+                <button type="button" onClick={() => goSupervisorSection("biometric")} aria-current={supervisorSection === "biometric" ? "page" : undefined} data-testid="nav-supervisor-biometric">Biometric</button>
+              </li>
+              <li className={supervisorSection === "help-support" ? "active" : ""}>
+                <button type="button" onClick={() => goSupervisorSection("help-support")} aria-current={supervisorSection === "help-support" ? "page" : undefined} data-testid="nav-supervisor-help-support">Help and Support</button>
               </li>
             </ul>
           )}

@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { and, eq } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import { db } from "../db";
 import {
   users,
@@ -16,6 +16,15 @@ export interface SupervisorOption {
   name: string;
   department: string | null;
   designation: string | null;
+}
+
+export interface AssignedScholarSummary {
+  scholarId: string;
+  name: string;
+  department: string | null;
+  researchArea: string | null;
+  phase: string | null;
+  status: string | null;
 }
 
 export class UserRepository {
@@ -63,6 +72,11 @@ export class UserRepository {
     }
 
     return { ...record.scholars, ...record.users };
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
   }
 
   async getUserByEmployeeId(
@@ -166,6 +180,44 @@ export class UserRepository {
       .from(employees)
       .innerJoin(users, eq(users.id, employees.userId))
       .where(and(eq(users.role, "supervisor")));
+
+    return rows;
+  }
+
+  async countAssignedScholars(employeeId: string): Promise<number> {
+    const [row] = await db
+      .select({
+        count: sql<number>`count(*)`,
+      })
+      .from(scholars)
+      .where(
+        or(
+          eq(scholars.supervisorId, employeeId),
+          eq(scholars.coSupervisorId, employeeId),
+        ),
+      );
+
+    return Number(row?.count ?? 0);
+  }
+
+  async listAssignedScholars(employeeId: string): Promise<AssignedScholarSummary[]> {
+    const rows = await db
+      .select({
+        scholarId: scholars.scholarId,
+        name: users.name,
+        department: scholars.department,
+        researchArea: scholars.researchArea,
+        phase: scholars.phase,
+        status: scholars.status,
+      })
+      .from(scholars)
+      .innerJoin(users, eq(users.id, scholars.userId))
+      .where(
+        or(
+          eq(scholars.supervisorId, employeeId),
+          eq(scholars.coSupervisorId, employeeId),
+        ),
+      );
 
     return rows;
   }

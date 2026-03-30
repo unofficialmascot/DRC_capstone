@@ -102,6 +102,22 @@ export const api = {
         200: publicUserSchema,
       },
     },
+    google: {
+      start: {
+        method: 'GET' as const,
+        path: '/api/auth/google/start',
+        responses: {
+          302: z.object({}),
+        },
+      },
+      callback: {
+        method: 'GET' as const,
+        path: '/api/auth/google/callback',
+        responses: {
+          302: z.object({}),
+        },
+      },
+    },
     logout: {
       method: 'POST' as const,
       path: '/api/auth/logout',

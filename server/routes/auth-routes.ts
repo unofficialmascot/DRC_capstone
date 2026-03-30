@@ -1,7 +1,8 @@
 import type { Express } from "express";
 import { api } from "../../shared/routes.js";
 import { storage, verifyPassword } from "../storage";
-import { handleRouteError, notFound, unauthorized } from "./http";
+import { handleRouteError, notFound, unauthorized, badRequest } from "./http";
+import { buildGoogleAuthState, buildGoogleAuthUrl, exchangeGoogleCodeForToken, verifyGoogleUserInfo } from "../auth/google-oauth.js";
 
 interface AuthIdentity {
   id: number;
@@ -33,6 +34,46 @@ async function verifyAndMigrateLegacyPassword(
 }
 
 export function registerAuthRoutes(app: Express): void {
+  app.get(api.auth.google.start.path, (req, res) => {
+    try {
+      const state = buildGoogleAuthState();
+      req.session.oauthState = state;
+      const authUrl = buildGoogleAuthUrl(state);
+      return res.redirect(authUrl);
+    } catch (error) {
+      return handleRouteError(res, error);
+    }
+  });
+
+  app.get(api.auth.google.callback.path, async (req, res) => {
+    try {
+      const state = String(req.query.state ?? "");
+      const code = String(req.query.code ?? "");
+
+      if (!state || !code) {
+        throw badRequest("Missing Google OAuth state or authorization code.");
+      }
+
+      if (state !== req.session.oauthState) {
+        throw unauthorized("Invalid OAuth state.");
+      }
+
+      req.session.oauthState = undefined;
+      const tokenData = await exchangeGoogleCodeForToken(code);
+      const googleUser = await verifyGoogleUserInfo(tokenData.access_token);
+      const user = await storage.getUserByEmail(googleUser.email);
+
+      if (!user) {
+        throw unauthorized("No application account is associated with this Google account.");
+      }
+
+      req.session.userId = user.id;
+      return res.redirect("/");
+    } catch (error) {
+      return handleRouteError(res, error);
+    }
+  });
+
   app.post(api.auth.login.path, async (req, res) => {
     try {
       const input = api.auth.login.input.parse(req.body);

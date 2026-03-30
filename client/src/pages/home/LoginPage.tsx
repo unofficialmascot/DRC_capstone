@@ -85,6 +85,16 @@ export default function LoginPage({ onLogin }: { onLogin: (user: PublicUser) => 
               {isSubmitting ? "Logging in..." : "Login"}
             </button>
           </form>
+          <div style={{ marginTop: "20px", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px" }}>
+            <a
+              href="/api/auth/google/start"
+              className="submit-btn"
+              style={{ width: "100%", background: "#4285F4", color: "white", textAlign: "center", textDecoration: "none", padding: "10px 16px", borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+              data-testid="button-google-login"
+            >
+              Sign in with Google
+            </a>
+          </div>
           <div style={{ marginTop: "30px", padding: "20px", background: "#f8f9fa", borderRadius: "8px" }}>
             <h4 style={{ color: "#0b6a55", marginBottom: "10px" }}>Demo Accounts</h4>
             <div style={{ fontSize: "13px", color: "#666" }}>

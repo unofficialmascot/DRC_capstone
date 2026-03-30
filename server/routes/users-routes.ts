@@ -4,6 +4,34 @@ import { storage } from "../storage";
 import { handleRouteError, notFound, parsePositiveIntParam } from "./http";
 
 export function registerUserRoutes(app: Express): void {
+  app.get("/api/users/supervisors/:employeeId/scholars", async (req, res) => {
+    try {
+      const employeeId = String(req.params.employeeId || "").trim();
+      if (!employeeId) {
+        return res.status(400).json({ message: "Employee ID is required" });
+      }
+
+      const scholars = await storage.listAssignedScholars(employeeId);
+      res.json(scholars);
+    } catch (error) {
+      return handleRouteError(res, error);
+    }
+  });
+
+  app.get("/api/users/supervisors/:employeeId/scholars-count", async (req, res) => {
+    try {
+      const employeeId = String(req.params.employeeId || "").trim();
+      if (!employeeId) {
+        return res.status(400).json({ message: "Employee ID is required" });
+      }
+
+      const count = await storage.countAssignedScholars(employeeId);
+      res.json({ count });
+    } catch (error) {
+      return handleRouteError(res, error);
+    }
+  });
+
   app.get("/api/users/supervisors", async (_req, res) => {
     try {
       const supervisors = await storage.listSupervisors();

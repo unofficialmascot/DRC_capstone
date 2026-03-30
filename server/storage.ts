@@ -14,6 +14,7 @@ import {
   type InsertDocument,
 } from "@shared/schema";
 import { UserRepository } from "./repositories/user-repository";
+import type { AssignedScholarSummary } from "./repositories/user-repository";
 import { ApplicationRepository } from "./repositories/application-repository";
 import { DocumentRepository } from "./repositories/document-repository";
 import { ResearchRepository } from "./repositories/research-repository";
@@ -30,6 +31,7 @@ export interface IStorage {
   getUserWithScholar(id: number): Promise<(User & Partial<Scholar> & Partial<typeof employees.$inferSelect>) | undefined>;
   getUserByScholarId(scholarId: string): Promise<(User & Partial<Scholar>) | undefined>;
   getUserByEmployeeId(employeeId: string): Promise<(User & Partial<typeof employees.$inferSelect>) | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: Partial<InsertUser>): Promise<User>;
@@ -37,6 +39,8 @@ export interface IStorage {
   getEmployee(employeeId: string): Promise<typeof employees.$inferSelect | undefined>;
   createEmployee(emp: typeof employees.$inferInsert): Promise<typeof employees.$inferSelect>;
   listSupervisors(): Promise<SupervisorOption[]>;
+  countAssignedScholars(employeeId: string): Promise<number>;
+  listAssignedScholars(employeeId: string): Promise<AssignedScholarSummary[]>;
   createSupervisorChangeHistory(entry: {
     scholarId: string;
     applicationId: number;
@@ -95,6 +99,10 @@ export class DatabaseStorage implements IStorage {
     return this.users.getUserByScholarId(scholarId);
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return this.users.getUserByEmail(email);
+  }
+
   async getUserByEmployeeId(
     employeeId: string,
   ): Promise<(User & Partial<typeof employees.$inferSelect>) | undefined> {
@@ -123,6 +131,14 @@ export class DatabaseStorage implements IStorage {
 
   async listSupervisors(): Promise<SupervisorOption[]> {
     return this.users.listSupervisors();
+  }
+
+  async countAssignedScholars(employeeId: string): Promise<number> {
+    return this.users.countAssignedScholars(employeeId);
+  }
+
+  async listAssignedScholars(employeeId: string): Promise<AssignedScholarSummary[]> {
+    return this.users.listAssignedScholars(employeeId);
   }
 
   async createSupervisorChangeHistory(entry: {
