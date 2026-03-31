@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@shared/routes";
+import { api, buildUrl } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
 import type { InsertApplication } from "@shared/schema";
 

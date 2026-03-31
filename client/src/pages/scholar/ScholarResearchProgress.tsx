@@ -1,7 +1,18 @@
 import { useStats } from "@/hooks/use-stats";
+import { FormCard } from "@/components/ui/form-card";
+import { FormTable } from "@/components/ui/form-table";
 
 export default function ScholarResearchProgress({ userId }: { userId: number }) {
   const { data: stats } = useStats(userId);
+
+  const headers = ["Milestone", "Status", "Date"];
+  const rows = [
+    ["Course Work Completion", <span key="completed1" className="inline-block bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">Completed</span>, "Dec 2023"],
+    ["Research Proposal Approval", <span key="completed2" className="inline-block bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">Completed</span>, "Mar 2024"],
+    ["Literature Review", <span key="completed3" className="inline-block bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">Completed</span>, "Jun 2024"],
+    ["Pre-talk Seminar", <span key="progress" className="inline-block bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">In Progress</span>, "Expected: Dec 2025"],
+    ["Thesis Submission", <span key="pending" className="inline-block bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs font-medium">Pending</span>, "Expected: Jun 2026"],
+  ];
 
   return (
     <div className="research-container">
@@ -12,19 +23,9 @@ export default function ScholarResearchProgress({ userId }: { userId: number }) 
         <div className="stat-card"><div className="stat-info"><div className="stat-label">Conferences</div><div className="stat-value">2</div></div><div className="stat-icon" style={{ color: "#27ae60" }}>🎤</div></div>
         <div className="stat-card"><div className="stat-info"><div className="stat-label">Research Reviews</div><div className="stat-value">{stats?.completedReviews || 0}</div></div><div className="stat-icon" style={{ color: "#3498db" }}>✓</div></div>
       </div>
-      <div style={{ background: "#fff", padding: "20px", borderRadius: "10px", border: "1px solid #e6e6e6" }}>
-        <h3 style={{ marginBottom: "15px", color: "#0b6a55" }}>Research Milestones</h3>
-        <table className="info-table">
-          <thead><tr><th>Milestone</th><th>Status</th><th>Date</th></tr></thead>
-          <tbody>
-            <tr><td>Course Work Completion</td><td><span className="pill">Completed</span></td><td>Dec 2023</td></tr>
-            <tr><td>Research Proposal Approval</td><td><span className="pill">Completed</span></td><td>Mar 2024</td></tr>
-            <tr><td>Literature Review</td><td><span className="pill">Completed</span></td><td>Jun 2024</td></tr>
-            <tr><td>Pre-talk Seminar</td><td><span style={{ background: "#f39c12", color: "white", padding: "4px 10px", borderRadius: "15px", fontSize: "13px" }}>In Progress</span></td><td>Expected: Dec 2025</td></tr>
-            <tr><td>Thesis Submission</td><td><span style={{ background: "#e0e0e0", color: "#666", padding: "4px 10px", borderRadius: "15px", fontSize: "13px" }}>Pending</span></td><td>Expected: Jun 2026</td></tr>
-          </tbody>
-        </table>
-      </div>
+      <FormCard title="Research Milestones">
+        <FormTable headers={headers} rows={rows} />
+      </FormCard>
     </div>
   );
 }

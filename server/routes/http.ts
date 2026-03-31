@@ -39,6 +39,15 @@ export function parsePositiveIntParam(value: string, fieldName = "id"): number {
   return parsed;
 }
 
+/**
+ * Parses a route param that can be string or string[] as a positive integer.
+ * Handles cases where Express may return an array for certain param types.
+ */
+export function parseIdParam(value: string | string[], fieldName = "id"): number {
+  const stringValue = Array.isArray(value) ? value[0] : value;
+  return parsePositiveIntParam(stringValue, fieldName);
+}
+
 export function handleRouteError(
   res: Response,
   error: unknown,

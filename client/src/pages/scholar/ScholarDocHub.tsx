@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useDocuments } from "@/hooks/use-documents";
 import { DOC_HUB_DOCUMENT_TYPES } from "@shared/enclosures";
+import FormCard from "@/components/ui/FormCard";
+import ActionButton from "@/components/ui/ActionButton";
 
 export default function ScholarDocHub({ scholarId }: { scholarId: string }) {
   const { documents, viewDocument, downloadDocument, uploadDocument, isUploading } = useDocuments(scholarId);
@@ -41,7 +43,7 @@ export default function ScholarDocHub({ scholarId }: { scholarId: string }) {
     const doc = documents.find((d) => d.documentType === type);
 
     return (
-      <div key={type} style={{ background: "#fff", borderRadius: "10px", padding: "20px", border: "1px solid #e6e6e6", marginBottom: "15px" }}>
+      <FormCard key={type} style={{ marginBottom: "15px" }}>
         <div style={{ marginBottom: "15px" }}>
           <h4 style={{ color: "#0b6a55", marginBottom: "8px" }}>{info.label}</h4>
           <p style={{ color: "#666", fontSize: "14px" }}>{info.description}</p>
@@ -55,37 +57,34 @@ export default function ScholarDocHub({ scholarId }: { scholarId: string }) {
           </div>
         )}
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-          <button 
-            type="button"
-            className="submit-btn" 
-            style={{ padding: "8px 16px", fontSize: "14px" }}
+          <ActionButton
+            variant="primary"
+            size="sm"
             onClick={() => doc && viewDocument(doc.id)}
             disabled={!doc}
           >
-            {doc ? "👁 View" : "No file"}
-          </button>
-          <button 
-            type="button"
-            className="submit-btn" 
-            style={{ padding: "8px 16px", fontSize: "14px", background: "#27ae60" }}
+            👁 View
+          </ActionButton>
+          <ActionButton
+            variant="success"
+            size="sm"
             onClick={() => doc && downloadDocument(doc.id)}
             disabled={!doc}
           >
             ⬇ Download
-          </button>
-          <button 
-            type="button"
-            className="submit-btn" 
-            style={{ padding: "8px 16px", fontSize: "14px", background: "#f39c12" }}
+          </ActionButton>
+          <ActionButton
+            variant="warning"
+            size="sm"
             onClick={() => {
               setUploadForm({ file: null, documentType: type, category: category });
               setUploadOpen(true);
             }}
           >
             ⬆ Upload
-          </button>
+          </ActionButton>
         </div>
-      </div>
+      </FormCard>
     );
   };
 

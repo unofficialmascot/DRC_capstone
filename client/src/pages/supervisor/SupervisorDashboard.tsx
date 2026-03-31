@@ -6,6 +6,9 @@ import { useAssignedScholars, useSupervisorScholarCount } from "@/hooks/use-user
 import { useDrcMeetingsList } from "@/hooks/use-application-reviews";
 import ApplicationDetailFormView from "@/components/applications/ApplicationDetailFormView";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormCard } from "@/components/ui/form-card";
+import { FormTable } from "@/components/ui/form-table";
+import { ActionButton } from "@/components/ui/action-button";
 import type { Application } from "@shared/schema";
 import type { PublicUser } from "@/lib/types";
 
@@ -126,140 +129,126 @@ export default function SupervisorDashboard({ user, activeSection = "dashboard" 
               : "Dashboard";
 
   if (activeSection === "profile") {
+    const profileData = [
+      ["User ID", user.id],
+      ["Name", user.name || "Not available"],
+      ["Email", user.email || "Not available"],
+      ["Phone", user.phone || "Not available"],
+      ["Employee ID", user.employeeId || "Not available"],
+      ["Department", (user as Record<string, unknown>).department as string || "Not available"],
+      ["Designation", (user as Record<string, unknown>).designation as string || "Not available"],
+      ["Role", user.role || "supervisor"],
+      ["Username", user.username || "Not available"],
+      ["Assigned Scholars", assignedScholarCount],
+      ["Created At", user.createdAt ? new Date(String(user.createdAt)).toLocaleString() : "Not available"],
+      ["Updated At", user.updatedAt ? new Date(String(user.updatedAt)).toLocaleString() : "Not available"],
+    ];
+
+    const scholarHeaders = ["Scholar ID", "Name", "Department", "Research Area", "Phase", "Status"];
+    const scholarRows = assignedScholars.map((scholar) => [
+      scholar.scholarId,
+      scholar.name || "-",
+      scholar.department || "-",
+      scholar.researchArea || "-",
+      scholar.phase || "-",
+      scholar.status || "-",
+    ]);
+
     return (
       <div style={{ padding: "20px" }}>
         <h2 style={{ color: "#0b6a55", marginBottom: "20px" }}>{sectionTitle}</h2>
-        <div style={{ background: "#fff", border: "1px solid #e6e6e6", borderRadius: "10px", padding: "20px", maxWidth: "700px", marginBottom: "14px" }}>
-          <div style={{ marginBottom: "8px" }}><strong>User ID:</strong> {user.id}</div>
-          <div style={{ marginBottom: "8px" }}><strong>Name:</strong> {user.name || "Not available"}</div>
-          <div style={{ marginBottom: "8px" }}><strong>Email:</strong> {user.email || "Not available"}</div>
-          <div style={{ marginBottom: "8px" }}><strong>Phone:</strong> {user.phone || "Not available"}</div>
-          <div style={{ marginBottom: "8px" }}><strong>Employee ID:</strong> {user.employeeId || "Not available"}</div>
-          <div style={{ marginBottom: "8px" }}><strong>Department:</strong> {(user as Record<string, unknown>).department as string || "Not available"}</div>
-          <div style={{ marginBottom: "8px" }}><strong>Designation:</strong> {(user as Record<string, unknown>).designation as string || "Not available"}</div>
-          <div style={{ marginBottom: "8px" }}><strong>Role:</strong> {user.role || "supervisor"}</div>
-          <div style={{ marginBottom: "8px" }}><strong>Username:</strong> {user.username || "Not available"}</div>
-          <div style={{ marginBottom: "8px" }}><strong>Assigned Scholars:</strong> {assignedScholarCount}</div>
-          <div style={{ marginBottom: "8px" }}><strong>Created At:</strong> {user.createdAt ? new Date(String(user.createdAt)).toLocaleString() : "Not available"}</div>
-          <div style={{ marginBottom: "0" }}><strong>Updated At:</strong> {user.updatedAt ? new Date(String(user.updatedAt)).toLocaleString() : "Not available"}</div>
-        </div>
+        <FormCard title="Profile Information">
+          <FormTable headers={["Field", "Value"]} rows={profileData} />
+        </FormCard>
 
-        <div style={{ background: "#fff", border: "1px solid #e6e6e6", borderRadius: "10px", overflow: "hidden" }}>
-          <div style={{ padding: "14px 16px", borderBottom: "1px solid #eee", color: "#0b6a55", fontWeight: 700 }}>
-            Assigned Scholars
-          </div>
-
+        <FormCard title="Assigned Scholars">
           {isAssignedScholarsLoading ? (
             <div style={{ padding: "16px", color: "#666" }}>Loading assigned scholars...</div>
           ) : assignedScholars.length === 0 ? (
             <div style={{ padding: "16px", color: "#666" }}>No scholars are currently assigned to this supervisor.</div>
           ) : (
-            <table className="info-table">
-              <thead>
-                <tr>
-                  <th>Scholar ID</th>
-                  <th>Name</th>
-                  <th>Department</th>
-                  <th>Research Area</th>
-                  <th>Phase</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {assignedScholars.map((scholar) => (
-                  <tr key={scholar.scholarId}>
-                    <td>{scholar.scholarId}</td>
-                    <td>{scholar.name || "-"}</td>
-                    <td>{scholar.department || "-"}</td>
-                    <td>{scholar.researchArea || "-"}</td>
-                    <td>{scholar.phase || "-"}</td>
-                    <td>{scholar.status || "-"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <FormTable headers={scholarHeaders} rows={scholarRows} />
           )}
-        </div>
+        </FormCard>
       </div>
     );
   }
 
   if (activeSection === "biometric") {
+    const biometricData = [
+      ["Last Sync", "Not configured"],
+      ["Device Status", "Not connected"],
+      ["Verification Records", "0"],
+      ["Attendance Rate", "N/A"],
+      ["Active Sessions", "0"],
+    ];
+
     return (
       <div style={{ padding: "20px" }}>
         <h2 style={{ color: "#0b6a55", marginBottom: "20px" }}>{sectionTitle}</h2>
-        <div style={{ background: "#fff", border: "1px solid #e6e6e6", borderRadius: "10px", padding: "20px" }}>
-          <h4 style={{ color: "#0b6a55", marginBottom: "8px" }}>Attendance Integration</h4>
-          <p style={{ color: "#555", marginBottom: "10px" }}>This section is ready for biometric attendance sync and verification logs.</p>
-          <ul style={{ margin: 0, paddingLeft: "20px", color: "#555" }}>
-            <li>Last Sync: Not configured</li>
-            <li>Device Status: Not connected</li>
-            <li>Verification Records: 0</li>
-          </ul>
-        </div>
+        <FormCard title="Attendance Integration">
+          <FormTable headers={["Metric", "Status"]} rows={biometricData} />
+          <div style={{ marginTop: "16px", padding: "12px", background: "#f8f9fa", borderRadius: "6px", border: "1px solid #e9ecef" }}>
+            <p style={{ margin: 0, color: "#495057", fontSize: "14px" }}>
+              <strong>Note:</strong> Biometric attendance system integration is planned for future implementation.
+              This will include real-time attendance tracking, automated reporting, and integration with scholar progress monitoring.
+            </p>
+          </div>
+        </FormCard>
       </div>
     );
   }
 
   if (activeSection === "help-support") {
+    const supportData = [
+      ["Email", "drc-support@gitam.edu"],
+      ["Phone", "+91-00000-00000"],
+      ["Hours", "Mon-Fri, 9:00 AM - 5:00 PM"],
+      ["Response Time", "Within 24 hours"],
+    ];
+
     return (
       <div style={{ padding: "20px" }}>
         <h2 style={{ color: "#0b6a55", marginBottom: "20px" }}>{sectionTitle}</h2>
-        <div style={{ background: "#fff", border: "1px solid #e6e6e6", borderRadius: "10px", padding: "20px", marginBottom: "12px" }}>
-          <h4 style={{ color: "#0b6a55", marginBottom: "8px" }}>Support Channels</h4>
-          <p style={{ color: "#555", marginBottom: "6px" }}><strong>Email:</strong> drc-support@gitam.edu</p>
-          <p style={{ color: "#555", marginBottom: "6px" }}><strong>Phone:</strong> +91-00000-00000</p>
-          <p style={{ color: "#555", marginBottom: "0" }}><strong>Hours:</strong> Mon-Fri, 9:00 AM - 5:00 PM</p>
-        </div>
-        <div style={{ background: "#fff", border: "1px solid #e6e6e6", borderRadius: "10px", padding: "20px" }}>
-          <h4 style={{ color: "#0b6a55", marginBottom: "8px" }}>Need Help Reviewing Applications?</h4>
-          <p style={{ color: "#555", margin: 0 }}>Use the Dashboard or Separate Application Requests tab to view details and submit approvals or rejections with remarks.</p>
-        </div>
+        <FormCard title="Support Channels">
+          <FormTable headers={["Contact Method", "Details"]} rows={supportData} />
+        </FormCard>
+        <FormCard title="Application Review Guidance">
+          <p style={{ color: "#555", margin: 0 }}>
+            Use the Dashboard or Application Requests tab to view scholar applications and submit approvals or rejections with detailed remarks.
+            All reviews are tracked and contribute to the scholar's research progress evaluation.
+          </p>
+        </FormCard>
       </div>
     );
   }
 
   if (activeSection === "rac-reviews") {
+    const meetingHeaders = ["Meeting ID", "Date", "Status"];
+    const meetingRows = drcMeetings.map((meeting) => [
+      meeting.id,
+      new Date(meeting.meetingDate as unknown as string).toLocaleString(),
+      meeting.closedAt ? "Closed" : "Open",
+    ]);
+
     return (
       <div style={{ padding: "20px" }}>
         <h2 style={{ color: "#0b6a55", marginBottom: "20px" }}>{sectionTitle}</h2>
-        <div style={{ background: "#fff", border: "1px solid #e6e6e6", borderRadius: "10px", padding: "20px", marginBottom: "12px" }}>
-          <h4 style={{ color: "#0b6a55", marginBottom: "8px" }}>RAC Reviews Are Meeting-Based</h4>
+        <FormCard title="RAC Review Process">
           <p style={{ color: "#555", margin: 0 }}>
-            RAC reviews are conducted by RAC members with the scholar in scheduled meetings. They are not part of supervisor application requests.
+            RAC reviews are conducted by RAC members with scholars in scheduled meetings. They are not part of supervisor application requests.
           </p>
-        </div>
+        </FormCard>
 
-        <div style={{ background: "#fff", border: "1px solid #e6e6e6", borderRadius: "10px", overflow: "hidden" }}>
-          <div style={{ padding: "14px 16px", borderBottom: "1px solid #eee", color: "#0b6a55", fontWeight: 700 }}>
-            RAC / DRC Meetings
-          </div>
-
+        <FormCard title="DRC / RAC Meetings">
           {isRacMeetingsLoading ? (
             <div style={{ padding: "16px", color: "#666" }}>Loading meetings...</div>
           ) : drcMeetings.length === 0 ? (
             <div style={{ padding: "16px", color: "#666" }}>No meeting records available.</div>
           ) : (
-            <table className="info-table">
-              <thead>
-                <tr>
-                  <th>Meeting ID</th>
-                  <th>Date</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {drcMeetings.map((meeting) => (
-                  <tr key={meeting.id}>
-                    <td>{meeting.id}</td>
-                    <td>{new Date(meeting.meetingDate as unknown as string).toLocaleString()}</td>
-                    <td>{meeting.closedAt ? "Closed" : "Open"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <FormTable headers={meetingHeaders} rows={meetingRows} />
           )}
-        </div>
+        </FormCard>
       </div>
     );
   }
@@ -445,9 +434,7 @@ export default function SupervisorDashboard({ user, activeSection = "dashboard" 
               <option value="type">Sort: Application Type</option>
             </select>
 
-            <button
-              type="button"
-              className="submit-btn"
+            <ActionButton
               onClick={() => {
                 setSearchTerm("");
                 setStatusFilter("all");
@@ -458,7 +445,7 @@ export default function SupervisorDashboard({ user, activeSection = "dashboard" 
               style={{ background: "#555" }}
             >
               Reset Filters
-            </button>
+            </ActionButton>
           </div>
 
           <div style={{ color: "#666", fontSize: "13px", marginBottom: "8px" }}>
@@ -466,90 +453,69 @@ export default function SupervisorDashboard({ user, activeSection = "dashboard" 
             -{Math.min(page * PAGE_SIZE, filteredAndSortedApplications.length)} of {filteredAndSortedApplications.length} matching applications
           </div>
 
-          <div style={{ background: "#fff", borderRadius: "10px", border: "1px solid #e6e6e6", overflow: "hidden" }}>
+          <FormCard title={activeSection === "application-requests" ? "Pending Supervisor Application Requests" : "Scholar Applications"}>
             {filteredAndSortedApplications.length === 0 ? (
               <div style={{ padding: "28px", textAlign: "center", color: "#666" }}>
                 No applications matched your search/filter criteria.
               </div>
             ) : (
-              <table className="info-table">
-                <thead>
-                  <tr>
-                    <th>Scholar ID</th>
-                    <th>Type</th>
-                    <th>Submitted</th>
-                    <th>Status</th>
-                    <th>Stage</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedApplications.map((app) => (
-                    <tr key={app.id}>
-                      <td>{app.scholarId}</td>
-                      <td>{app.type}</td>
-                      <td>{new Date(app.submissionDate as unknown as string).toLocaleDateString()}</td>
-                      <td>
-                        <span
-                          className="pill"
-                          style={{
-                            background: getDisplayStatus(app) === "Submitted"
-                              ? "#27ae60"
-                              : app.status === "Approved"
-                                ? "#27ae60"
-                                : app.status === "Rejected"
-                                  ? "#e74c3c"
-                                  : "#f39c12",
-                            color: "white",
-                            padding: "4px 10px",
-                            borderRadius: "15px",
-                            fontSize: "13px",
-                          }}
-                        >
-                          {getDisplayStatus(app)}
-                        </span>
-                      </td>
-                      <td style={{ textTransform: "capitalize" }}>{app.currentStage}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="submit-btn"
-                          onClick={() => handleOpenDetails(app)}
-                          style={{ padding: "6px 12px", fontSize: "13px" }}
-                        >
-                          View Details
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <FormTable
+                headers={["Scholar ID", "Type", "Submitted", "Status", "Stage", "Actions"]}
+                rows={paginatedApplications.map((app) => [
+                  app.scholarId,
+                  app.type,
+                  new Date(app.submissionDate as unknown as string).toLocaleDateString(),
+                  <span
+                    key={`status-${app.id}`}
+                    className="pill"
+                    style={{
+                      background: getDisplayStatus(app) === "Submitted"
+                        ? "#27ae60"
+                        : app.status === "Approved"
+                          ? "#27ae60"
+                          : app.status === "Rejected"
+                            ? "#e74c3c"
+                            : "#f39c12",
+                      color: "white",
+                      padding: "4px 10px",
+                      borderRadius: "15px",
+                      fontSize: "13px",
+                    }}
+                  >
+                    {getDisplayStatus(app)}
+                  </span>,
+                  <span key={`stage-${app.id}`} style={{ textTransform: "capitalize" }}>{app.currentStage}</span>,
+                  <ActionButton
+                    key={`action-${app.id}`}
+                    onClick={() => handleOpenDetails(app)}
+                    style={{ padding: "6px 12px", fontSize: "13px" }}
+                  >
+                    View Details
+                  </ActionButton>,
+                ])}
+              />
             )}
-          </div>
+          </FormCard>
 
           {filteredAndSortedApplications.length > PAGE_SIZE && (
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "10px" }}>
-              <button
-                type="button"
-                className="submit-btn"
+              <ActionButton
                 onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                 disabled={page === 1}
                 style={{ background: page === 1 ? "#b3b3b3" : "#0b6a55" }}
               >
                 Previous
-              </button>
+              </ActionButton>
 
               <div style={{ color: "#444", fontWeight: 600 }}>Page {page} of {totalPages}</div>
 
-              <button
-                type="button"
-                className="submit-btn"
+              <ActionButton
                 onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
                 disabled={page === totalPages}
                 style={{ background: page === totalPages ? "#b3b3b3" : "#0b6a55" }}
               >
                 Next
-              </button>
+              </ActionButton>
             </div>
           )}
         </div>
@@ -581,9 +547,7 @@ export default function SupervisorDashboard({ user, activeSection = "dashboard" 
 
                   {!showReviewForm ? (
                     <div style={{ display: "flex", gap: "10px" }}>
-                      <button
-                        type="button"
-                        className="submit-btn"
+                      <ActionButton
                         onClick={() => {
                           setDecision("approved");
                           setShowReviewForm(true);
@@ -591,10 +555,8 @@ export default function SupervisorDashboard({ user, activeSection = "dashboard" 
                         style={{ background: "#27ae60" }}
                       >
                         ✓ Approve
-                      </button>
-                      <button
-                        type="button"
-                        className="submit-btn"
+                      </ActionButton>
+                      <ActionButton
                         onClick={() => {
                           setDecision("rejected");
                           setShowReviewForm(true);
@@ -602,7 +564,7 @@ export default function SupervisorDashboard({ user, activeSection = "dashboard" 
                         style={{ background: "#e74c3c" }}
                       >
                         ✗ Reject
-                      </button>
+                      </ActionButton>
                     </div>
                   ) : (
                     <div>
@@ -630,18 +592,14 @@ export default function SupervisorDashboard({ user, activeSection = "dashboard" 
                           borderTop: "1px solid #eee",
                         }}
                       >
-                        <button
-                          type="button"
-                          className="submit-btn"
+                        <ActionButton
                           onClick={handleSubmitReview}
                           disabled={reviewMutation.isPending}
                           style={{ background: decision === "approved" ? "#27ae60" : "#e74c3c" }}
                         >
                           {reviewMutation.isPending ? "Submitting..." : "Submit Review"}
-                        </button>
-                        <button
-                          type="button"
-                          className="submit-btn"
+                        </ActionButton>
+                        <ActionButton
                           onClick={() => {
                             setShowReviewForm(false);
                             setRemarks("");
@@ -650,7 +608,7 @@ export default function SupervisorDashboard({ user, activeSection = "dashboard" 
                           disabled={reviewMutation.isPending}
                         >
                           Cancel
-                        </button>
+                        </ActionButton>
                       </div>
                     </div>
                   )}

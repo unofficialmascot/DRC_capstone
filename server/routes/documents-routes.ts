@@ -1,10 +1,10 @@
-zimport type { Express } from "express";
+import type { Express } from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
 import { api } from "../../shared/routes.js";
 import { storage } from "../storage";
-import { badRequest, handleRouteError, notFound, parsePositiveIntParam } from "./http";
+import { badRequest, handleRouteError, notFound, parseIdParam } from "./http";
 
 export async function registerDocumentRoutes(app: Express): Promise<void> {
   const uploadsDir = path.join(process.cwd(), "uploads");
@@ -79,12 +79,7 @@ export async function registerDocumentRoutes(app: Express): Promise<void> {
 
   app.get(api.documents.view.path, async (req, res) => {
     try {
-<<<<<<< HEAD
-      const documentId = parsePositiveIntParam(req.params.id, "document id");
-=======
-      const rawDocumentId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-      const documentId = parseIdParam(rawDocumentId, "document id");
->>>>>>> bde5261 (Notifications for drc meetings and generalized notification system for other events. Refactor of the application review workflow to support multiple stages and more complex logic. Various UI improvements and bug fixes.)
+      const documentId = parseIdParam(req.params.id, "document id");
       const doc = await storage.getDocumentById(documentId);
       if (!doc) {
         throw notFound("Document not found");
@@ -104,12 +99,7 @@ export async function registerDocumentRoutes(app: Express): Promise<void> {
 
   app.get(api.documents.download.path, async (req, res) => {
     try {
-<<<<<<< HEAD
-      const documentId = parsePositiveIntParam(req.params.id, "document id");
-=======
-      const rawDocumentId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-      const documentId = parseIdParam(rawDocumentId, "document id");
->>>>>>> bde5261 (Notifications for drc meetings and generalized notification system for other events. Refactor of the application review workflow to support multiple stages and more complex logic. Various UI improvements and bug fixes.)
+      const documentId = parseIdParam(req.params.id, "document id");
       const doc = await storage.getDocumentById(documentId);
       if (!doc) {
         throw notFound("Document not found");
@@ -123,12 +113,7 @@ export async function registerDocumentRoutes(app: Express): Promise<void> {
 
   app.delete(api.documents.delete.path, async (req, res) => {
     try {
-<<<<<<< HEAD
-      const documentId = parsePositiveIntParam(req.params.id, "document id");
-=======
-      const rawDocumentId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-      const documentId = parseIdParam(rawDocumentId, "document id");
->>>>>>> bde5261 (Notifications for drc meetings and generalized notification system for other events. Refactor of the application review workflow to support multiple stages and more complex logic. Various UI improvements and bug fixes.)
+      const documentId = parseIdParam(req.params.id, "document id");
       const doc = await storage.getDocumentById(documentId);
       if (!doc) {
         throw notFound("Document not found");
@@ -150,12 +135,7 @@ export async function registerDocumentRoutes(app: Express): Promise<void> {
         throw badRequest("verifiedBy is required");
       }
 
-<<<<<<< HEAD
-      const documentId = parsePositiveIntParam(req.params.id, "document id");
-=======
-      const rawDocumentId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-      const documentId = parseIdParam(rawDocumentId, "document id");
->>>>>>> bde5261 (Notifications for drc meetings and generalized notification system for other events. Refactor of the application review workflow to support multiple stages and more complex logic. Various UI improvements and bug fixes.)
+      const documentId = parseIdParam(req.params.id, "document id");
 
       const updated = await storage.updateDocument(documentId, {
         isVerified: true,
