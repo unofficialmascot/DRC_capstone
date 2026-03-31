@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { useSupervisors } from "@/hooks/use-users";
 import type { PublicUser } from "@/lib/types";
+import { SignatureBlock } from "@/components/forms/SignatureBlock";
 
 export default function SupervisorChangeForm({
   user,
@@ -252,16 +253,10 @@ export default function SupervisorChangeForm({
         />
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: "60px", padding: "0 10px" }}>
-        <div style={{ width: "45%", textAlign: "center" }}>
-          <hr style={{ border: "none", borderTop: "1px solid #333", marginBottom: "10px" }} />
-          <div style={{ fontSize: "14px", fontWeight: 500, color: "#222" }}>Signature of the Research Scholar</div>
-        </div>
-        <div style={{ width: "45%", textAlign: "center" }}>
-          <hr style={{ border: "none", borderTop: "1px solid #333", marginBottom: "10px" }} />
-          <div style={{ fontSize: "14px", fontWeight: 500, color: "#222" }}>Signature of the Research Supervisor</div>
-        </div>
-      </div>
+      <SignatureBlock signatures={[
+        { label: "Research Scholar", signerName: "Pending signature", signerRole: "Scholar", isPending: true },
+        { label: "Research Supervisor", signerName: "Pending signature", signerRole: "Supervisor", isPending: true },
+      ]} />
 
       <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginTop: "40px" }}>
         <button type="button" className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back</button>
