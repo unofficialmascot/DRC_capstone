@@ -12,12 +12,15 @@ import {
   type InsertApplicationReview,
   type Document,
   type InsertDocument,
+  type DocumentSignature,
+  type InsertDocumentSignature,
 } from "@shared/schema";
 import { UserRepository } from "./repositories/user-repository";
 import type { AssignedScholarSummary } from "./repositories/user-repository";
 import { ApplicationRepository } from "./repositories/application-repository";
 import { DocumentRepository } from "./repositories/document-repository";
 import { ResearchRepository } from "./repositories/research-repository";
+import { SignatureRepository } from "./repositories/signature-repository";
 
 export interface SupervisorOption {
   employeeId: string;
@@ -75,6 +78,9 @@ export interface IStorage {
 
   getResearchProgress(scholarId: string): Promise<typeof researchProgress.$inferSelect | undefined>;
   createResearchProgress(stats: typeof researchProgress.$inferInsert): Promise<typeof researchProgress.$inferSelect>;
+  getSignaturesByEntity(entityType: string, entityId: number): Promise<DocumentSignature[]>;
+  upsertSignatures(entries: InsertDocumentSignature[]): Promise<DocumentSignature[]>;
+
 }
 
 export class DatabaseStorage implements IStorage {
@@ -82,6 +88,7 @@ export class DatabaseStorage implements IStorage {
   private readonly applications = new ApplicationRepository();
   private readonly documents = new DocumentRepository();
   private readonly research = new ResearchRepository();
+  private readonly signatures = new SignatureRepository();
 
   async getUser(id: number): Promise<User | undefined> {
     return this.users.getUser(id);
@@ -234,6 +241,14 @@ export class DatabaseStorage implements IStorage {
   ): Promise<typeof researchProgress.$inferSelect> {
     return this.research.createResearchProgress(stats);
   }
+  async getSignaturesByEntity(entityType: string, entityId: number): Promise<DocumentSignature[]> {
+    return this.signatures.getByEntity(entityType, entityId);
+  }
+
+  async upsertSignatures(entries: InsertDocumentSignature[]): Promise<DocumentSignature[]> {
+    return this.signatures.upsertByEntity(entries);
+  }
+
 }
 
 export const storage = new DatabaseStorage();

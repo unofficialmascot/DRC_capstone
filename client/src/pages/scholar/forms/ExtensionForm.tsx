@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { CSSProperties } from "react";
 import type { PublicUser } from "@/lib/types";
+import { SignatureBlock } from "@/components/forms/SignatureBlock";
 
 export default function ExtensionForm({
   user,
@@ -211,16 +212,10 @@ export default function ExtensionForm({
         </table>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: "40px" }}>
-        <div style={{ width: "45%", textAlign: "center", fontSize: "14px", fontWeight: 600 }}>
-          <div style={{ height: "60px", borderBottom: "1px solid #333", marginBottom: "10px" }}></div>
-          Signature of the Research Scholar
-        </div>
-        <div style={{ width: "45%", textAlign: "center", fontSize: "14px", fontWeight: 600 }}>
-          <div style={{ height: "60px", borderBottom: "1px solid #333", marginBottom: "10px" }}></div>
-          Signature of the Research Supervisor
-        </div>
-      </div>
+      <SignatureBlock signatures={[
+        { label: "Research Scholar", signerName: "Pending signature", signerRole: "Scholar", isPending: true },
+        { label: "Research Supervisor", signerName: "Pending signature", signerRole: "Supervisor", isPending: true },
+      ]} />
 
       <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginTop: "30px" }}>
         <button type="button" className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back</button>
