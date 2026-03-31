@@ -8,6 +8,7 @@ import {
   getEligibilityForApplicationType,
 } from "../services/application-eligibility-service";
 import { badRequest, forbidden, handleRouteError, notFound, parseIdParam, unauthorized } from "./http";
+import { signatureResolverService } from "../services/signature-resolver-service";
 
 export function registerApplicationRoutes(app: Express): void {
   app.get(api.applications.list.path, async (req, res) => {
@@ -82,7 +83,8 @@ export function registerApplicationRoutes(app: Express): void {
       if (!appById) {
         throw notFound("Application not found");
       }
-      res.json(appById);
+      const signatures = await signatureResolverService.getSignaturesForApplication(applicationId);
+      res.json({ ...appById, signatures });
     } catch (error) {
       return handleRouteError(res, error);
     }

@@ -6,6 +6,7 @@ import { db } from "../db";
 import { applications, scholars, users } from "@shared/schema";
 import { and, eq, ne } from "drizzle-orm";
 import { emitRoleNotification } from "./notification-service";
+import { signatureResolverService } from "./signature-resolver-service";
 
 const drcMeetingRepository = new DrcMeetingRepository();
 
@@ -152,6 +153,7 @@ export async function scheduleDrcMeeting(
     meeting,
     applications: pendingApplications,
     extraPoints: createdPoints,
+    signatures: await signatureResolverService.getSignaturesForMeetingAgenda(meeting.id),
   };
 }
 
@@ -344,15 +346,17 @@ async function getAgendaByMeetingId(meetingId: number) {
     throw notFound("Meeting not found");
   }
 
-  const [applications, extraPoints] = await Promise.all([
+  const [applications, extraPoints, signatures] = await Promise.all([
     drcMeetingRepository.getMeetingApplications(meetingId),
     drcMeetingRepository.getAgendaPoints(meetingId),
+    signatureResolverService.getSignaturesForMeetingAgenda(meetingId),
   ]);
 
   return {
     meeting,
     applications,
     extraPoints,
+    signatures,
   };
 }
 

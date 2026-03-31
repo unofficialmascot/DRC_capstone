@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { CSSProperties } from "react";
 import type { PublicUser } from "@/lib/types";
+import { SignatureBlock } from "@/components/forms/SignatureBlock";
 
 export default function ThesisSubmissionForm({
   user,
@@ -220,38 +221,13 @@ export default function ThesisSubmissionForm({
         </table>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: "40px", padding: "0 20px" }}>
-        <div style={{ width: "45%", textAlign: "center" }}>
-          <hr style={{ border: "none", borderTop: "1px solid #333", marginBottom: "10px" }} />
-          <div style={{ fontSize: "13px", fontWeight: 600, color: "#222" }}>Signature of the Scholar</div>
-          <div style={{ textAlign: "left", fontSize: "12px", marginTop: "5px" }}>
-            Date:
-            <input style={{ ...inputStyle, marginTop: "5px" }} type="date" value={formData.signatureDate} onChange={(e) => setFormData({ ...formData, signatureDate: e.target.value })} />
-          </div>
-        </div>
-        <div style={{ width: "45%", textAlign: "center" }}>
-          <hr style={{ border: "none", borderTop: "1px solid #333", marginBottom: "10px" }} />
-          <div style={{ fontSize: "13px", fontWeight: 600, color: "#222" }}>Signature of the Research Supervisor</div>
-        </div>
-      </div>
-
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: "30px", padding: "0 20px" }}>
-        <div style={{ width: "45%", textAlign: "center" }}>
-          <hr style={{ border: "none", borderTop: "1px solid #333", marginBottom: "10px" }} />
-          <div style={{ fontSize: "13px", fontWeight: 600, color: "#222" }}>Signature of Co-Research Supervisor</div>
-        </div>
-        <div style={{ width: "45%", textAlign: "center" }}>
-          <hr style={{ border: "none", borderTop: "1px solid #333", marginBottom: "10px" }} />
-          <div style={{ fontSize: "13px", fontWeight: 600, color: "#222" }}>Signature of the Head of the Department</div>
-        </div>
-      </div>
-
-      <div style={{ display: "flex", justifyContent: "center", marginTop: "30px", marginBottom: "20px" }}>
-        <div style={{ width: "50%", textAlign: "center" }}>
-          <hr style={{ border: "none", borderTop: "1px solid #333", marginBottom: "10px" }} />
-          <div style={{ fontSize: "13px", fontWeight: 600, color: "#222" }}>Signature of the Head of the Institute</div>
-        </div>
-      </div>
+      <SignatureBlock signatures={[
+        { label: "Scholar", signerName: user.name || "Pending signature", signerRole: "Scholar", signedAt: formData.signatureDate || null, isPending: !formData.signatureDate },
+        { label: "Research Supervisor", signerName: "Pending signature", signerRole: "Supervisor", isPending: true },
+        { label: "Co-Research Supervisor", signerName: "Pending signature", signerRole: "Co-Supervisor", isPending: true },
+        { label: "Head of Department", signerName: "Pending signature", signerRole: "HoD", isPending: true },
+        { label: "Head of Institute", signerName: "Pending signature", signerRole: "Institute Head", isPending: true },
+      ]} />
 
       <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginTop: "30px" }}>
         <button type="button" className="submit-btn" onClick={onBack} style={{ background: "#6c757d" }}>Back</button>
