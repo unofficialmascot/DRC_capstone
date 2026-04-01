@@ -14,7 +14,7 @@ function formatDateTime(value: unknown): string {
   return new Date(String(value)).toLocaleString();
 }
 
-export default function ChairmanMinutes() {
+export default function ChairmanMinutes({ committee = "DRC" }: { committee?: "DRC" | "IRC" }) {
   const [selectedMeetingId, setSelectedMeetingId] = useState<number | null>(null);
   const [remarksByApp, setRemarksByApp] = useState<Record<number, string>>({});
   const { toast } = useToast();
@@ -64,7 +64,7 @@ export default function ChairmanMinutes() {
 
   return (
     <div style={{ padding: "20px" }}>
-      <h2 style={{ color: "#0b6a55", marginBottom: "20px" }}>DRC Chairman Minutes</h2>
+      <h2 style={{ color: "#0b6a55", marginBottom: "20px" }}>{committee} Chairman Minutes</h2>
 
       <div style={{ background: "#fff", padding: "20px", borderRadius: "10px", border: "1px solid #e6e6e6", marginBottom: "20px" }}>
         <h3 style={{ marginTop: 0, marginBottom: "12px", color: "#0b6a55" }}>Meetings With Minutes</h3>
@@ -123,7 +123,7 @@ export default function ChairmanMinutes() {
                       );
                     })()}
                     <div style={{ fontSize: "13px", color: "#555", marginBottom: "6px" }}>
-                      DRC member decisions: {item.approvalCount} approved / {item.rejectionCount} rejected
+                      {committee} member decisions: {item.approvalCount} approved / {item.rejectionCount} rejected
                     </div>
 
                     {item.chairmanDecision ? (

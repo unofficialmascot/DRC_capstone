@@ -26,15 +26,16 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
   const [latestAgenda, setLatestAgenda] = useState<DrcMeetingAgenda | null>(null);
   const { toast } = useToast();
 
-  const isDrcConvener = user.role === "drc_convener";
-  const roleLabel = isDrcConvener ? "DRC Convener" : user.role.toUpperCase();
+  const isConvener = user.role === "drc_convener" || user.role === "irc_convener";
+  const committee = user.role === "irc_convener" ? "IRC" : "DRC";
+  const roleLabel = isConvener ? `${committee} Convener` : user.role.toUpperCase();
   const reviewerKey = user.employeeId || user.scholarId || user.username || user.email;
 
-  const { data: pendingApps = [], isLoading } = useApplicationsByStage(isDrcConvener ? "" : user.role) as {
+  const { data: pendingApps = [], isLoading } = useApplicationsByStage(isConvener ? "" : user.role) as {
     data: Application[] | undefined;
     isLoading: boolean;
   };
-  const { data: drcPendingApps = [] } = useApplicationsByStage("drc") as {
+  const { data: committeePendingApps = [] } = useApplicationsByStage(committee.toLowerCase()) as {
     data: Application[] | undefined;
   };
 
@@ -63,7 +64,7 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
   };
   const scheduleMeetingMutation = useScheduleDrcMeeting();
   const closeMeetingMutation = useCloseDrcMeeting();
-  const { data: openMeetingAgenda, isLoading: isOpenMeetingLoading } = useOpenDrcMeeting(isDrcConvener);
+  const { data: openMeetingAgenda, isLoading: isOpenMeetingLoading } = useOpenDrcMeeting(user.role === "drc_convener");
   const displayApplication = (selectedApplicationDetail ?? selectedApp) as Application | null;
 
   useEffect(() => {
@@ -225,13 +226,18 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
 
   return (
     <div style={{ padding: "20px" }}>
-      <h2 style={{ color: "#0b6a55", marginBottom: "20px" }}>{isDrcConvener ? `Meeting Agenda - ${roleLabel}` : `Pending Reviews - ${roleLabel}`}</h2>
-      {isDrcConvener && (
+      <h2 style={{ color: "#0b6a55", marginBottom: "20px" }}>{isConvener ? `Meeting Agenda - ${roleLabel}` : `Pending Reviews - ${roleLabel}`}</h2>
+      {isConvener && (
         <div style={{ background: "#fff", padding: "20px", borderRadius: "10px", border: "1px solid #e6e6e6", marginBottom: "20px" }}>
-          <h3 style={{ marginTop: 0, marginBottom: "12px", color: "#0b6a55" }}>Schedule DRC Meeting</h3>
+          <h3 style={{ marginTop: 0, marginBottom: "12px", color: "#0b6a55" }}>Schedule {committee} Meeting</h3>
           <div style={{ fontSize: "13px", color: "#666", marginBottom: "12px" }}>
-            Agenda snapshot includes all currently pending DRC-stage applications at scheduling time.
+            Agenda snapshot includes all currently pending {committee}-stage applications at scheduling time.
           </div>
+          {user.role === "irc_convener" && (
+            <div style={{ background: "#fff6e5", border: "1px solid #f4d28a", color: "#8a5a00", borderRadius: "6px", padding: "10px", marginBottom: "12px" }}>
+              IRC meeting scheduling backend endpoints are pending; this page mirrors the DRC convener layout.
+            </div>
+          )}
           {hasOpenMeeting && (
             <div style={{ background: "#fff6e5", border: "1px solid #f4d28a", color: "#8a5a00", borderRadius: "6px", padding: "10px", marginBottom: "12px" }}>
               Active meeting #{latestAgenda?.meeting.id} is open. Close it before scheduling another meeting.
@@ -240,13 +246,13 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
 
           <div style={{ marginBottom: "12px" }}>
             <div style={{ fontWeight: 600, marginBottom: "6px", color: "#0b6a55" }}>
-              Pending DRC Applications ({drcPendingApps.length})
+              Pending {committee} Applications ({committeePendingApps.length})
             </div>
-            {drcPendingApps.length === 0 ? (
-              <div style={{ fontSize: "13px", color: "#666" }}>No pending applications currently in DRC stage.</div>
+            {committeePendingApps.length === 0 ? (
+              <div style={{ fontSize: "13px", color: "#666" }}>No pending applications currently in {committee} stage.</div>
             ) : (
               <ul style={{ margin: "0 0 0 18px", padding: 0, maxHeight: "150px", overflowY: "auto" }}>
-                {drcPendingApps.map((application) => (
+                {committeePendingApps.map((application) => (
                   <li key={application.id} style={{ marginBottom: "6px", fontSize: "13px" }}>
                     {application.type} — {getScholarLabel(application.scholarId)}
                   </li>
@@ -319,15 +325,15 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
             type="button"
             className="submit-btn"
             onClick={handleScheduleMeeting}
-            disabled={scheduleMeetingMutation.isPending || hasOpenMeeting || isOpenMeetingLoading}
+            disabled={user.role !== "drc_convener" || scheduleMeetingMutation.isPending || hasOpenMeeting || isOpenMeetingLoading}
             data-testid="button-schedule-meeting"
           >
-            {scheduleMeetingMutation.isPending ? "Scheduling..." : "Schedule Meeting"}
+            {user.role === "irc_convener" ? "Schedule Meeting (Coming Soon)" : scheduleMeetingMutation.isPending ? "Scheduling..." : "Schedule Meeting"}
           </button>
         </div>
       )}
 
-      {isDrcConvener && latestAgenda && (
+      {user.role === "drc_convener" && latestAgenda && (
         <div style={{ background: "#fff", padding: "20px", borderRadius: "10px", border: "1px solid #e6e6e6", marginBottom: "20px" }}>
           <h3 style={{ marginTop: 0, marginBottom: "10px", color: "#0b6a55" }}>Latest Scheduled Agenda</h3>
           <div style={{ fontSize: "13px", color: "#666", marginBottom: "12px" }}>
@@ -381,7 +387,7 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
         </div>
       )}
 
-      {!isDrcConvener && (
+      {!isConvener && (
         isLoading ? (
           <div style={{ textAlign: "center", padding: "40px" }}>Loading...</div>
         ) : pendingApps.length === 0 ? (
@@ -441,7 +447,7 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
         )
       )}
 
-      {!isDrcConvener && selectedApp && (
+      {!isConvener && selectedApp && (
         <div className="modal-overlay active" onClick={() => setSelectedApp(null)}>
           <div
             className="modal-content"

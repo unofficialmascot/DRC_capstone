@@ -7,7 +7,7 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   password: text("password").notNull(), // HASHED password using bcryptjs
-  role: text("role").notNull(), // 'scholar', 'supervisor', 'drc', 'drc_convener', 'drc_chairman', 'irc', 'doaa', 'admin'
+  role: text("role").notNull(), // 'scholar', 'supervisor', 'drc', 'drc_convener', 'drc_chairman', 'irc', 'irc_convener', 'irc_chairman', 'doaa', 'admin'
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   phone: text("phone"),

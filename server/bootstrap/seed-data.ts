@@ -60,11 +60,38 @@ async function ensureDrcLeadershipAccounts(): Promise<void> {
   }
 }
 
+async function ensureIrcLeadershipAccounts(): Promise<void> {
+  const createdConvener = await ensureEmployeeUser({
+    employeeId: "EMP-IRC-CONVENER-001",
+    role: "irc_convener",
+    name: "Dr. IRC Convener",
+    email: "convener.irc@gitam.edu",
+    phone: "9876543251",
+    designation: "Professor",
+    department: "Biotechnology",
+  });
+
+  const createdChairman = await ensureEmployeeUser({
+    employeeId: "EMP-IRC-CHAIRMAN-001",
+    role: "irc_chairman",
+    name: "Dr. IRC Chairman",
+    email: "chairman.irc@gitam.edu",
+    phone: "9876543252",
+    designation: "Professor",
+    department: "Biotechnology",
+  });
+
+  if (createdConvener || createdChairman) {
+    console.log("Ensured IRC leadership accounts (convener/chairman)");
+  }
+}
+
 export async function seedData(): Promise<void> {
   try {
     await ensureDrcLeadershipAccounts();
+    await ensureIrcLeadershipAccounts();
   } catch (_error) {
-    console.log("Note: Could not ensure DRC leadership accounts during startup.");
+    console.log("Note: Could not ensure DRC/IRC leadership accounts during startup.");
   }
 
   try {
@@ -180,6 +207,7 @@ export async function seedData(): Promise<void> {
     });
 
     await ensureDrcLeadershipAccounts();
+    await ensureIrcLeadershipAccounts();
 
     const ircUser = await storage.createUser({
       password: "password123",
@@ -249,6 +277,8 @@ export async function seedData(): Promise<void> {
     console.log("  - EMP-DRC-CONVENER-001 / password123 (DRC Convener)");
     console.log("  - EMP-DRC-CHAIRMAN-001 / password123 (DRC Chairman)");
     console.log("  - EMP-IRC-001 / password123 (IRC Member)");
+    console.log("  - EMP-IRC-CONVENER-001 / password123 (IRC Convener)");
+    console.log("  - EMP-IRC-CHAIRMAN-001 / password123 (IRC Chairman)");
     console.log("  - EMP-DOAA-001 / password123 (DoAA Officer)");
   } catch (seedError: any) {
     console.error("Error during seed:", seedError.message);

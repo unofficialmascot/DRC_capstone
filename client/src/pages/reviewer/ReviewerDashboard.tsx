@@ -7,10 +7,14 @@ export default function ReviewerDashboard({ role }: { role: string }) {
       ? "DRC Convener"
       : role === "drc_chairman"
         ? "DRC Chairman"
+        : role === "irc_convener"
+          ? "IRC Convener"
+          : role === "irc_chairman"
+            ? "IRC Chairman"
         : role.toUpperCase();
 
   const { data: pendingApps = [] } = useApplicationsByStage(
-    role === "drc_chairman" ? "" : role,
+    role === "drc_chairman" || role === "irc_chairman" ? "" : role,
   ) as { data: Application[] | undefined };
 
   return (
@@ -20,7 +24,7 @@ export default function ReviewerDashboard({ role }: { role: string }) {
         <div className="stat-card">
           <div className="stat-info">
             <div className="stat-label">Pending Reviews</div>
-            <div className="stat-value">{role === "drc_chairman" ? "-" : pendingApps.length}</div>
+            <div className="stat-value">{role === "drc_chairman" || role === "irc_chairman" ? "-" : pendingApps.length}</div>
           </div>
           <div className="stat-icon" style={{ color: "#f39c12" }}>📋</div>
         </div>
