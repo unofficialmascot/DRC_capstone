@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAssignedScholars, useSupervisorScholarCount } from "@/hooks/use-users";
 import { useDrcMeetingsList } from "@/hooks/use-application-reviews";
 import ApplicationDetailFormView from "@/components/applications/ApplicationDetailFormView";
+import ScholarProfile from "@/pages/scholar/ScholarProfile";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FormCard } from "@/components/ui/form-card";
 import { FormTable } from "@/components/ui/form-table";
@@ -129,49 +130,7 @@ export default function SupervisorDashboard({ user, activeSection = "dashboard" 
               : "Dashboard";
 
   if (activeSection === "profile") {
-    const profileData = [
-      ["User ID", user.id],
-      ["Name", user.name || "Not available"],
-      ["Email", user.email || "Not available"],
-      ["Phone", user.phone || "Not available"],
-      ["Employee ID", user.employeeId || "Not available"],
-      ["Department", (user as Record<string, unknown>).department as string || "Not available"],
-      ["Designation", (user as Record<string, unknown>).designation as string || "Not available"],
-      ["Role", user.role || "supervisor"],
-      ["Username", user.username || "Not available"],
-      ["Assigned Scholars", assignedScholarCount],
-      ["Created At", user.createdAt ? new Date(String(user.createdAt)).toLocaleString() : "Not available"],
-      ["Updated At", user.updatedAt ? new Date(String(user.updatedAt)).toLocaleString() : "Not available"],
-    ];
-
-    const scholarHeaders = ["Scholar ID", "Name", "Department", "Research Area", "Phase", "Status"];
-    const scholarRows = assignedScholars.map((scholar) => [
-      scholar.scholarId,
-      scholar.name || "-",
-      scholar.department || "-",
-      scholar.researchArea || "-",
-      scholar.phase || "-",
-      scholar.status || "-",
-    ]);
-
-    return (
-      <div style={{ padding: "20px" }}>
-        <h2 style={{ color: "#0b6a55", marginBottom: "20px" }}>{sectionTitle}</h2>
-        <FormCard title="Profile Information">
-          <FormTable headers={["Field", "Value"]} rows={profileData} />
-        </FormCard>
-
-        <FormCard title="Assigned Scholars">
-          {isAssignedScholarsLoading ? (
-            <div style={{ padding: "16px", color: "#666" }}>Loading assigned scholars...</div>
-          ) : assignedScholars.length === 0 ? (
-            <div style={{ padding: "16px", color: "#666" }}>No scholars are currently assigned to this supervisor.</div>
-          ) : (
-            <FormTable headers={scholarHeaders} rows={scholarRows} />
-          )}
-        </FormCard>
-      </div>
-    );
+    return <ScholarProfile user={user} viewMode="supervisor" />;
   }
 
   if (activeSection === "biometric") {

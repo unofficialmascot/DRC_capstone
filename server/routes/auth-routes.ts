@@ -83,10 +83,12 @@ export function registerAuthRoutes(app: Express): void {
         user = await storage.getUserByScholarId(input.scholarId);
       } else if (input.employeeId) {
         user = await storage.getUserByEmployeeId(input.employeeId);
+      } else if (input.email) {
+        user = await storage.getUserByEmail(input.email);
       }
 
       if (!user) {
-        throw unauthorized("Invalid ID or password");
+        throw unauthorized("Invalid credentials");
       }
 
       const passwordValid = await verifyAndMigrateLegacyPassword(user, input.password);

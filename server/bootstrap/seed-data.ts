@@ -141,7 +141,7 @@ export async function seedData(): Promise<void> {
       interPercentage: "88%",
     });
 
-    const supervisorUser = await storage.createUser({
+    const supervisorUser1 = await storage.createUser({
       password: "password123",
       role: "supervisor",
       name: "Dr. Ramesh Kumar",
@@ -149,19 +149,34 @@ export async function seedData(): Promise<void> {
       phone: "9876543230",
     });
 
-    const supervisorEmployee = await storage.createEmployee({
+    const supervisorEmployee1 = await storage.createEmployee({
       employeeId: "EMP-SUPERVISOR-001",
-      userId: supervisorUser.id,
+      userId: supervisorUser1.id,
+      designation: "Associate Professor",
+      department: "Computer Science",
+    });
+
+    const supervisorUser2 = await storage.createUser({
+      password: "password123",
+      role: "supervisor",
+      name: "Dr. Special Supervisor",
+      email: "supervisor100@gitam.edu",
+      phone: "9876543232",
+    });
+
+    const supervisorEmployee2 = await storage.createEmployee({
+      employeeId: "EMP-SUPERVISOR-100",
+      userId: supervisorUser2.id,
       designation: "Associate Professor",
       department: "Computer Science",
     });
 
     await storage.updateScholarProfile("GITAM-SCH-2020-118", {
-      supervisorId: supervisorEmployee.employeeId,
+      supervisorId: supervisorEmployee1.employeeId,
     });
 
     await storage.updateScholarProfile("GITAM-SCH-2021-204", {
-      supervisorId: supervisorEmployee.employeeId,
+      supervisorId: supervisorEmployee2.employeeId,
     });
 
     const drcUser = await storage.createUser({

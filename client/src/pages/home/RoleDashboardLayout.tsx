@@ -81,8 +81,9 @@ export default function RoleDashboardLayout({
           onClick={onLogout}
           className="ml-3"
           data-testid="button-logout"
+          title="Logout"
         >
-          Logout
+          ⏻
         </ActionButton>
       </header>
 

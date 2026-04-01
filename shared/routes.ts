@@ -104,10 +104,11 @@ export const api = {
         .object({
           scholarId: z.string().optional(),
           employeeId: z.string().optional(),
+          email: z.string().email().optional(),
           password: z.string(),
         })
-        .refine((data) => data.scholarId || data.employeeId, {
-          message: 'Either scholarId or employeeId is required',
+        .refine((data) => data.scholarId || data.employeeId || data.email, {
+          message: 'Either scholarId, employeeId or email is required',
         }),
       responses: {
         200: publicUserSchema,

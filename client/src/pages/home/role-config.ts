@@ -62,8 +62,8 @@ export function getRoleConfig(role: string): RoleConfig {
         sidebarItems: [
           { route: "/supervisor/dashboard", label: "Dashboard" },
           { route: "/supervisor/profile", label: "Profile" },
-          { route: "/supervisor/rac-reviews", label: "RAC Reviews" },
           { route: "/supervisor/application-requests", label: "Application Requests", isHighlighted: true },
+          { route: "/supervisor/rac-reviews", label: "RAC Reviews" },
           { route: "/supervisor/biometric", label: "Biometric" },
           { route: "/supervisor/help-support", label: "Help & Support" },
         ],
@@ -92,11 +92,13 @@ export function getRoleConfig(role: string): RoleConfig {
     case "drc":
       return {
         role: "drc",
-        defaultPath: "/reviewer/meetings",
-        validPaths: ["/reviewer/dashboard", "/reviewer/meetings"],
+        defaultPath: "/reviewer/dashboard",
+        validPaths: ["/reviewer/dashboard", "/reviewer/meetings", "/reviewer/profile", "/reviewer/help-support"],
         sidebarItems: [
           { route: "/reviewer/dashboard", label: "Dashboard" },
+          { route: "/reviewer/profile", label: "Profile" },
           { route: "/reviewer/meetings", label: "Meetings", isHighlighted: true },
+          { route: "/reviewer/help-support", label: "Help & Support" },
         ],
       };
 
@@ -105,11 +107,13 @@ export function getRoleConfig(role: string): RoleConfig {
     case "doaa":
       return {
         role: role as RoleType,
-        defaultPath: "/reviewer/reviews",
-        validPaths: ["/reviewer/dashboard", "/reviewer/reviews"],
+        defaultPath: "/reviewer/dashboard",
+        validPaths: ["/reviewer/dashboard", "/reviewer/reviews", "/reviewer/profile", "/reviewer/help-support"],
         sidebarItems: [
           { route: "/reviewer/dashboard", label: "Dashboard" },
+          { route: "/reviewer/profile", label: "Profile" },
           { route: "/reviewer/reviews", label: role === "drc_convener" ? "Meeting Agenda" : "Pending Reviews", isHighlighted: true },
+          { route: "/reviewer/help-support", label: "Help & Support" },
         ],
       };
 

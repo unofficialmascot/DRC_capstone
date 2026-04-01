@@ -137,9 +137,41 @@ export class UserRepository {
     return newEmployee;
   }
 
+  private async ensureSupervisorHasSingleScholar(employeeId: string, currentScholarId?: string) {
+    if (!employeeId) {
+      return;
+    }
+
+    const assignedCount = await this.countAssignedScholars(employeeId);
+    if (assignedCount > 0) {
+      if (currentScholarId) {
+        const [currentScholar] = await db
+          .select()
+          .from(scholars)
+          .where(eq(scholars.scholarId, currentScholarId));
+
+        if (
+          currentScholar &&
+          (currentScholar.supervisorId === employeeId || currentScholar.coSupervisorId === employeeId)
+        ) {
+          return;
+        }
+      }
+
+      throw new Error("Supervisor is already assigned to a scholar and cannot be assigned to another scholar");
+    }
+  }
+
   async createScholarProfile(
     profile: typeof scholars.$inferInsert,
   ): Promise<typeof scholars.$inferSelect> {
+    if (profile.supervisorId) {
+      await this.ensureSupervisorHasSingleScholar(profile.supervisorId);
+    }
+    if (profile.coSupervisorId) {
+      await this.ensureSupervisorHasSingleScholar(profile.coSupervisorId);
+    }
+
     const [newProfile] = await db.insert(scholars).values(profile).returning();
     return newProfile;
   }
@@ -148,6 +180,13 @@ export class UserRepository {
     scholarId: string,
     updates: Partial<typeof scholars.$inferInsert>,
   ): Promise<typeof scholars.$inferSelect> {
+    if (updates.supervisorId) {
+      await this.ensureSupervisorHasSingleScholar(updates.supervisorId, scholarId);
+    }
+    if (updates.coSupervisorId) {
+      await this.ensureSupervisorHasSingleScholar(updates.coSupervisorId, scholarId);
+    }
+
     const [updatedProfile] = await db
       .update(scholars)
       .set(updates)
@@ -217,7 +256,8 @@ export class UserRepository {
           eq(scholars.supervisorId, employeeId),
           eq(scholars.coSupervisorId, employeeId),
         ),
-      );
+      )
+      .limit(1);
 
     return rows;
   }

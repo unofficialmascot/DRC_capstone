@@ -33,6 +33,8 @@ const reviewerPageBySegment: Record<string, string> = {
   dashboard: "dashboard",
   reviews: "reviews",
   meetings: "meetings",
+  profile: "profile",
+  "help-support": "help-support",
 };
 
 const chairmanSectionBySegment: Record<string, string> = {
@@ -86,12 +88,20 @@ export default function HomeDashboard({ user, onLogout }: { user: PublicUser; on
 
   const roleConfig = getRoleConfig(user.role);
 
-  const canSwitchRoles = user.role === 'supervisor' || user.role === 'drc_chairman' || user.role === 'drc';
+  const specialSupervisorEmail = "supervisor100@gitam.edu";
+  const isSpecialSupervisor = user.role === "supervisor" && user.email === specialSupervisorEmail;
+
+  // All supervisors are now fixed to supervisor role, except the special supervisor who can switch into DRC/IRC role views.
+  const canSwitchRoles = isSpecialSupervisor || user.role === "drc_chairman" || user.role === "drc";
+
   const availableViewRoles = canSwitchRoles ? (
-    user.role === 'supervisor' ? ['supervisor', 'drc', 'drc_convener'] :
-    user.role === 'drc_chairman' ? ['drc_chairman', 'drc'] :
-    user.role === 'drc' ? ['drc', 'supervisor', 'drc_convener'] :
-    [user.role]
+    isSpecialSupervisor
+      ? ["supervisor", "drc", "irc"]
+      : user.role === "drc_chairman"
+      ? ["drc_chairman", "drc"]
+      : user.role === "drc"
+      ? ["drc", "supervisor", "drc_convener"]
+      : [user.role]
   ) : [user.role];
 
   const viewRoleConfig = getRoleConfig(viewRole);
@@ -194,22 +204,30 @@ export default function HomeDashboard({ user, onLogout }: { user: PublicUser; on
     if (viewRole === "drc") {
       switch (reviewerPage) {
         case "dashboard":
-          return <ReviewerDashboard role={viewRole} />;
+          return <ReviewerDashboard role={viewRole} user={user} activeSection="dashboard" />;
         case "meetings":
           return <ReviewerMeetings role={viewRole} />;
+        case "profile":
+          return <ReviewerDashboard role={viewRole} user={user} activeSection="profile" />;
+        case "help-support":
+          return <ReviewerDashboard role={viewRole} user={user} activeSection="help-support" />;
         default:
-          return <ReviewerDashboard role={viewRole} />;
+          return <ReviewerDashboard role={viewRole} user={user} activeSection="dashboard" />;
       }
     }
 
     if (viewRole === "drc_convener" || viewRole === "irc" || viewRole === "doaa" || viewRole === "admin") {
       switch (reviewerPage) {
         case "dashboard":
-          return <ReviewerDashboard role={viewRole} />;
+          return <ReviewerDashboard role={viewRole} user={user} activeSection="dashboard" />;
         case "reviews":
           return <ReviewerApplications user={user} />;
+        case "profile":
+          return <ReviewerDashboard role={viewRole} user={user} activeSection="profile" />;
+        case "help-support":
+          return <ReviewerDashboard role={viewRole} user={user} activeSection="help-support" />;
         default:
-          return <ReviewerDashboard role={viewRole} />;
+          return <ReviewerDashboard role={viewRole} user={user} activeSection="dashboard" />;
       }
     }
 

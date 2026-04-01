@@ -1,7 +1,7 @@
 import { useSupervisors, useUser } from "@/hooks/use-users";
 import type { PublicUser } from "@/lib/types";
 
-export default function ScholarProfile({ user }: { user: PublicUser }) {
+export default function ScholarProfile({ user, viewMode = "scholar" }: { user: PublicUser; viewMode?: "scholar" | "supervisor" }) {
   const { data: freshUser } = useUser(user.id);
   const { data: supervisors = [] } = useSupervisors();
 
@@ -180,7 +180,9 @@ export default function ScholarProfile({ user }: { user: PublicUser }) {
           </div>
         </div>
       </div>
-      <div className="module-card">
+      {viewMode === "scholar" && (
+        <>
+          <div className="module-card">
         <div className="module-header">
           <h3>Fee & Payments Module</h3>
           <span className="module-subtitle">Fee Structure (Per Academic Year)</span>
@@ -459,6 +461,8 @@ export default function ScholarProfile({ user }: { user: PublicUser }) {
           </table>
         </div>
       </div>
+    </>
+  )}
     </div>
   );
 }
