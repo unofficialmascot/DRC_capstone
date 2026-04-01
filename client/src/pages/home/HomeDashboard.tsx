@@ -86,11 +86,13 @@ export default function HomeDashboard({ user, onLogout }: { user: PublicUser; on
 
   const roleConfig = getRoleConfig(user.role);
 
-  const canSwitchRoles = user.role === 'supervisor' || user.role === 'drc_chairman' || user.role === 'drc';
+  const canSwitchRoles = user.role === 'supervisor' || user.role === 'drc_chairman' || user.role === 'drc' || user.role === 'irc_chairman' || user.role === 'irc';
   const availableViewRoles = canSwitchRoles ? (
     user.role === 'supervisor' ? ['supervisor', 'drc', 'drc_convener'] :
     user.role === 'drc_chairman' ? ['drc_chairman', 'drc'] :
     user.role === 'drc' ? ['drc', 'supervisor', 'drc_convener'] :
+    user.role === 'irc_chairman' ? ['irc_chairman', 'irc'] :
+    user.role === 'irc' ? ['irc', 'irc_convener'] :
     [user.role]
   ) : [user.role];
 
@@ -184,9 +186,9 @@ export default function HomeDashboard({ user, onLogout }: { user: PublicUser; on
       return <SupervisorDashboard user={user} activeSection={supervisorSection as any} />;
     }
 
-    if (viewRole === "drc_chairman") {
+    if (viewRole === "drc_chairman" || viewRole === "irc_chairman") {
       if (chairmanSection === "minutes") {
-        return <ChairmanMinutes />;
+        return <ChairmanMinutes committee={viewRole === "irc_chairman" ? "IRC" : "DRC"} />;
       }
       return <ChairmanDashboard user={user} activeSection={chairmanSection as any} />;
     }
@@ -202,7 +204,7 @@ export default function HomeDashboard({ user, onLogout }: { user: PublicUser; on
       }
     }
 
-    if (viewRole === "drc_convener" || viewRole === "irc" || viewRole === "doaa" || viewRole === "admin") {
+    if (viewRole === "drc_convener" || viewRole === "irc_convener" || viewRole === "irc" || viewRole === "doaa" || viewRole === "admin") {
       switch (reviewerPage) {
         case "dashboard":
           return <ReviewerDashboard role={viewRole} />;

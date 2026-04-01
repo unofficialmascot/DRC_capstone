@@ -136,7 +136,7 @@ function getReviewerRolesForStage(stage: string | null): string[] {
   }
 
   if (stage === "irc") {
-    return ["irc"];
+    return ["irc", "irc_convener", "irc_chairman"];
   }
 
   if (stage === "doaa") {

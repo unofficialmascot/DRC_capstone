@@ -105,6 +105,8 @@ export default function LoginPage({ onLogin }: { onLogin: (user: PublicUser) => 
               <div style={{ marginBottom: "5px" }}><strong>EMP-DRC-CONVENER-001</strong> / password123 - DRC Convener</div>
               <div style={{ marginBottom: "5px" }}><strong>EMP-DRC-CHAIRMAN-001</strong> / password123 - DRC Chairman</div>
               <div style={{ marginBottom: "5px" }}><strong>EMP-IRC-001</strong> / password123 - IRC Member</div>
+              <div style={{ marginBottom: "5px" }}><strong>EMP-IRC-CONVENER-001</strong> / password123 - IRC Convener</div>
+              <div style={{ marginBottom: "5px" }}><strong>EMP-IRC-CHAIRMAN-001</strong> / password123 - IRC Chairman</div>
               <div><strong>EMP-DOAA-001</strong> / password123 - DoAA Officer</div>
             </div>
           </div>

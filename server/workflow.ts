@@ -26,7 +26,7 @@ const baseWorkflow: WorkflowDefinition = {
   stageRoles: {
     supervisor: ["supervisor"],
     drc: ["drc"],
-    irc: ["irc"],
+    irc: ["irc", "irc_convener", "irc_chairman"],
     doaa: ["doaa"],
     completed: [],
   },
@@ -39,7 +39,7 @@ const thesisSubmissionWorkflow: WorkflowDefinition = {
   stageRoles: {
     supervisor: ["supervisor"],
     drc: ["drc"],
-    irc: ["irc"],
+    irc: ["irc", "irc_convener", "irc_chairman"],
     doaa: ["doaa"],
     completed: [],
   },

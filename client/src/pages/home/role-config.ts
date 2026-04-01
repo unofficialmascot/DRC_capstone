@@ -7,6 +7,8 @@ export type RoleType =
   | "drc_convener"
   | "drc_chairman"
   | "irc"
+  | "irc_convener"
+  | "irc_chairman"
   | "doaa"
   | "admin";
 
@@ -102,6 +104,7 @@ export function getRoleConfig(role: string): RoleConfig {
 
     case "drc_convener":
     case "irc":
+    case "irc_convener":
     case "doaa":
       return {
         role: role as RoleType,
@@ -109,7 +112,27 @@ export function getRoleConfig(role: string): RoleConfig {
         validPaths: ["/reviewer/dashboard", "/reviewer/reviews"],
         sidebarItems: [
           { route: "/reviewer/dashboard", label: "Dashboard" },
-          { route: "/reviewer/reviews", label: role === "drc_convener" ? "Meeting Agenda" : "Pending Reviews", isHighlighted: true },
+          { route: "/reviewer/reviews", label: role === "drc_convener" || role === "irc_convener" ? "Meeting Agenda" : "Pending Reviews", isHighlighted: true },
+        ],
+      };
+
+    case "irc_chairman":
+      return {
+        role: "irc_chairman",
+        defaultPath: "/chairman/dashboard",
+        validPaths: [
+          "/chairman/dashboard",
+          "/chairman/rac-reviews",
+          "/chairman/profile",
+          "/chairman/extensions",
+          "/chairman/minutes",
+        ],
+        sidebarItems: [
+          { route: "/chairman/dashboard", label: "Dashboard" },
+          { route: "/chairman/rac-reviews", label: "RAC Reviews" },
+          { route: "/chairman/profile", label: "Profile" },
+          { route: "/chairman/extensions", label: "Extensions" },
+          { route: "/chairman/minutes", label: "Minutes", isHighlighted: true },
         ],
       };
 
@@ -149,6 +172,10 @@ export function getRoleLabel(role: string): string {
       return "DRC Chairman";
     case "irc":
       return "IRC Member";
+    case "irc_convener":
+      return "IRC Convener";
+    case "irc_chairman":
+      return "IRC Chairman";
     case "doaa":
       return "DoAA Officer";
     case "admin":

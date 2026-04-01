@@ -26,7 +26,12 @@ export function registerReviewRoutes(app: Express): void {
         throw unauthorized("User session is invalid");
       }
 
-      if (sessionUser.role === "drc_convener" || sessionUser.role === "drc_chairman") {
+      if (
+        sessionUser.role === "drc_convener"
+        || sessionUser.role === "drc_chairman"
+        || sessionUser.role === "irc_convener"
+        || sessionUser.role === "irc_chairman"
+      ) {
         throw forbidden("This role cannot submit member reviews");
       }
 
