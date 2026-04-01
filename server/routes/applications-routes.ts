@@ -66,7 +66,7 @@ export function registerApplicationRoutes(app: Express): void {
         throw badRequest("Scholar profile not found for current user");
       }
 
-      const eligibility = evaluateScholarApplicationEligibility({
+      const eligibility = await evaluateScholarApplicationEligibility({
         scholarId: sessionUser.scholarId,
       });
 
@@ -94,7 +94,7 @@ export function registerApplicationRoutes(app: Express): void {
     try {
       const input = api.applications.create.input.parse(req.body);
 
-      const eligibility = evaluateScholarApplicationEligibility({
+      const eligibility = await evaluateScholarApplicationEligibility({
         scholarId: input.scholarId,
       });
       const selectedEligibility = getEligibilityForApplicationType(eligibility, input.type);
