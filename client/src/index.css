@@ -49,3 +49,25 @@
   }
 }
 
+
+@layer components {
+  .scholar-section-title {
+    @apply mb-5 text-[#0b6a55];
+  }
+
+  .status-pill {
+    @apply inline-block rounded-full px-2 py-1 text-xs font-medium;
+  }
+
+  .status-pill-success {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .status-pill-warning {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+
+  .status-pill-neutral {
+    @apply bg-gray-100 text-gray-600;
+  }
+}

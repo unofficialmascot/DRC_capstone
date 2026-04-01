@@ -35,7 +35,7 @@ export default function RoleDashboardLayout({
   children,
 }: RoleDashboardLayoutProps) {
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <div className="flex min-h-screen flex-col">
       <header className="header">
         <button
           type="button"
@@ -46,7 +46,7 @@ export default function RoleDashboardLayout({
         >
           ☰
         </button>
-        <div className="logo"><span style={{ fontWeight: "bold", fontSize: "18px" }}>GITAM</span></div>
+        <div className="logo"><span className="text-[18px] font-bold">GITAM</span></div>
         <div className="title">G-Scholar Hub</div>
         <span className="role-label">{roleLabel}</span>
 
@@ -56,7 +56,7 @@ export default function RoleDashboardLayout({
           aria-label="Toggle notifications"
           aria-expanded={notificationsOpen}
           data-testid="button-notifications"
-          style={{ border: "none", background: "transparent", color: "#fff", fontSize: "20px", cursor: "pointer" }}
+          className="cursor-pointer border-none bg-transparent text-[20px] text-white"
         >
           🔔
         </button>
@@ -65,15 +65,7 @@ export default function RoleDashboardLayout({
           <select
             value={viewRole}
             onChange={(e) => onViewRoleChange?.(e.target.value)}
-            style={{
-              marginLeft: "12px",
-              padding: "4px 8px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-              background: "#fff",
-              color: "#000",
-              fontSize: "14px",
-            }}
+            className="ml-3 rounded border border-[#ccc] bg-white px-2 py-1 text-sm text-black"
           >
             {availableViewRoles.map((role) => (
               <option key={role} value={role}>
@@ -87,33 +79,25 @@ export default function RoleDashboardLayout({
           variant="secondary"
           size="md"
           onClick={onLogout}
-          style={{ marginLeft: "12px" }}
+          className="ml-3"
           data-testid="button-logout"
         >
           Logout
         </ActionButton>
       </header>
 
-      <div style={{ flex: 1, display: "flex" }}>
+      <div className="flex flex-1">
         {sidebarOpen && (
-          <aside style={{ width: "240px", background: "#fff", borderRight: "1px solid #e6e6e6", padding: "16px" }}>
-            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+          <aside className="w-[240px] border-r border-[#e6e6e6] bg-white p-4">
+            <ul className="m-0 list-none p-0">
               {sidebarItems.map((item) => (
-                <li key={item.route} style={{ marginBottom: "10px" }}>
+                <li key={item.route} className="mb-[10px]">
                   <button
                     type="button"
                     onClick={item.onClick}
-                    className={item.isActive ? "active" : ""}
-                    style={{
-                      width: "100%",
-                      padding: "10px",
-                      borderRadius: "6px",
-                      border: item.isActive ? "2px solid #0b6a55" : "1px solid #ddd",
-                      background: item.isActive ? "#e6f3ef" : "#fff",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      fontWeight: item.isActive ? 700 : 500,
-                    }}
+                    className={`w-full rounded-md px-[10px] py-[10px] text-left ${item.isActive
+                      ? "border-2 border-[#0b6a55] bg-[#e6f3ef] font-bold"
+                      : "border border-[#ddd] bg-white font-medium"}`}
                     aria-current={item.isActive ? "page" : undefined}
                     data-testid={`nav-${item.route.replace(/\//g, "-")}`}
                   >
@@ -125,7 +109,7 @@ export default function RoleDashboardLayout({
           </aside>
         )}
 
-        <main style={{ flex: 1, padding: "20px" }}>{children}</main>
+        <main className="flex-1 p-5">{children}</main>
       </div>
     </div>
   );
