@@ -11,6 +11,16 @@ import {
   type DrcMeetingAgenda,
 } from "@/hooks/use-application-reviews";
 import ApplicationDetailFormView from "@/components/applications/ApplicationDetailFormView";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { Application } from "@shared/schema";
 import type { PublicUser } from "@/lib/types";
@@ -23,6 +33,7 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
   const [meetingLocation, setMeetingLocation] = useState("");
   const [agendaPointInput, setAgendaPointInput] = useState("");
   const [extraPoints, setExtraPoints] = useState<string[]>([]);
+  const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false);
   const [latestAgenda, setLatestAgenda] = useState<DrcMeetingAgenda | null>(null);
   const { toast } = useToast();
 
@@ -203,6 +214,7 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
 
     closeMeetingMutation.mutate(latestAgenda.meeting.id, {
       onSuccess: () => {
+        setIsCloseDialogOpen(false);
         toast({
           title: "Success",
           description: "Meeting closed. You can schedule a new meeting now.",
@@ -347,7 +359,7 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
                 type="button"
                 className="submit-btn"
                 style={{ background: "#e67e22" }}
-                onClick={handleCloseMeeting}
+                onClick={() => setIsCloseDialogOpen(true)}
                 disabled={closeMeetingMutation.isPending}
                 data-testid="button-close-meeting"
               >
@@ -379,6 +391,29 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
             </>
           )}
         </div>
+      )}
+
+      {isDrcConvener && latestAgenda && !latestAgenda.meeting.closedAt && (
+        <AlertDialog open={isCloseDialogOpen} onOpenChange={setIsCloseDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Close meeting #{latestAgenda.meeting.id} now?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will close the active DRC meeting immediately. You can schedule a new meeting after this action.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={closeMeetingMutation.isPending}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleCloseMeeting}
+                disabled={closeMeetingMutation.isPending}
+                data-testid="button-confirm-close-meeting"
+              >
+                {closeMeetingMutation.isPending ? "Closing..." : "Confirm Close"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
 
       {!isDrcConvener && (

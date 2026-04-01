@@ -35,17 +35,6 @@ const applicationReviewResponseSchema = insertApplicationReviewSchema.extend({
   reviewDate: z.union([z.string(), z.date(), z.null()]).optional(),
 });
 
-const signatureResponseSchema = z.object({
-  signerId: z.string(),
-  signerName: z.string(),
-  signerRole: z.string(),
-  label: z.string(),
-  signedAt: z.union([z.string(), z.date(), z.null()]),
-  assetPath: z.union([z.string(), z.null()]),
-  metadata: z.unknown().nullable(),
-  isPending: z.boolean(),
-});
-
 const chairmanDashboardCategorySchema = z.enum([
   "total",
   "awarded",
@@ -193,9 +182,7 @@ export const api = {
       method: 'GET' as const,
       path: '/api/applications/:id',
       responses: {
-        200: insertApplicationSchema.extend({
-          signatures: z.array(signatureResponseSchema).optional(),
-        }),
+        200: insertApplicationSchema,
       },
     },
     getByStage: {
@@ -335,7 +322,6 @@ export const api = {
             meeting: insertDrcMeetingSchema,
             applications: z.array(insertApplicationSchema),
             extraPoints: z.array(insertDrcAgendaPointSchema),
-            signatures: z.array(signatureResponseSchema),
           }),
           z.null(),
         ]),
@@ -353,7 +339,6 @@ export const api = {
           meeting: insertDrcMeetingSchema,
           applications: z.array(insertApplicationSchema),
           extraPoints: z.array(insertDrcAgendaPointSchema),
-          signatures: z.array(signatureResponseSchema),
         }),
       },
     },
@@ -365,7 +350,6 @@ export const api = {
           meeting: insertDrcMeetingSchema,
           applications: z.array(insertApplicationSchema),
           extraPoints: z.array(insertDrcAgendaPointSchema),
-          signatures: z.array(signatureResponseSchema),
         }),
       },
     },
@@ -377,7 +361,6 @@ export const api = {
           meeting: insertDrcMeetingSchema,
           applications: z.array(insertApplicationSchema),
           extraPoints: z.array(insertDrcAgendaPointSchema),
-          signatures: z.array(signatureResponseSchema),
         }),
       },
     },

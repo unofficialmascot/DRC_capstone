@@ -163,31 +163,6 @@ export const drcChairmanDecisions = pgTable("drc_chairman_decisions", {
 });
 
 
-export const documentSignatures = pgTable(
-  "document_signatures",
-  {
-    id: serial("id").primaryKey(),
-    entityType: text("entity_type").notNull(),
-    entityId: integer("entity_id").notNull(),
-    signerId: text("signer_id").notNull(),
-    signerName: text("signer_name").notNull(),
-    signerRole: text("signer_role").notNull(),
-    label: text("label").notNull(),
-    signedAt: timestamp("signed_at"),
-    assetPath: text("asset_path"),
-    metadata: jsonb("metadata"),
-    createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow(),
-  },
-  (table) => ({
-    entityLookupIdx: index("document_signatures_entity_idx").on(table.entityType, table.entityId),
-    uniqueSignerPerEntity: uniqueIndex("document_signatures_entity_signer_idx").on(
-      table.entityType,
-      table.entityId,
-      table.signerId,
-    ),
-  }),
-);
 // === RESEARCH PROGRESS ===
 export const researchProgress = pgTable("research_progress", {
   id: serial("id").primaryKey(),
@@ -259,7 +234,6 @@ export const insertNoticeSchema = createInsertSchema(notices);
 export const insertNoticeDismissalSchema = createInsertSchema(noticeDismissals);
 export const insertDocumentSchema = createInsertSchema(documents);
 export const insertSupervisorChangeHistorySchema = createInsertSchema(supervisorChangeHistory);
-export const insertDocumentSignatureSchema = createInsertSchema(documentSignatures);
 
 // === TYPES ===
 export type User = typeof users.$inferSelect;
@@ -297,5 +271,3 @@ export type Document = typeof documents.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
 export type SupervisorChangeHistory = typeof supervisorChangeHistory.$inferSelect;
 export type InsertSupervisorChangeHistory = z.infer<typeof insertSupervisorChangeHistorySchema>;
-export type DocumentSignature = typeof documentSignatures.$inferSelect;
-export type InsertDocumentSignature = z.infer<typeof insertDocumentSignatureSchema>;

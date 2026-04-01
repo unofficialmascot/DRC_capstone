@@ -196,7 +196,16 @@ export function useOpenDrcMeeting(enabled = true) {
       });
 
       if (!res.ok) {
-        throw new Error("Failed to fetch open DRC meeting");
+        let message = "Failed to fetch open DRC meeting";
+        try {
+          const body = await res.json();
+          if (body && typeof body.message === "string") {
+            message = body.message;
+          }
+        } catch {
+          // Keep default message if response payload is not parseable JSON.
+        }
+        throw new Error(message);
       }
 
       return res.json();
@@ -238,7 +247,16 @@ export function useDrcMeetingsList(enabled = true) {
       });
 
       if (!res.ok) {
-        throw new Error("Failed to fetch DRC meetings");
+        let message = "Failed to fetch DRC meetings";
+        try {
+          const body = await res.json();
+          if (body && typeof body.message === "string") {
+            message = body.message;
+          }
+        } catch {
+          // Keep default message if response payload is not parseable JSON.
+        }
+        throw new Error(message);
       }
 
       return res.json();

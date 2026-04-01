@@ -14,6 +14,7 @@ import ScholarNoticeBoard from "@/pages/scholar/ScholarNoticeBoard";
 import ReviewerDashboard from "@/pages/reviewer/ReviewerDashboard";
 import ReviewerApplications from "@/pages/reviewer/ReviewerApplications";
 import ReviewerMeetings from "@/pages/reviewer/ReviewerMeetings";
+import ConvenerMeetingsHistory from "@/pages/reviewer/ConvenerMeetingsHistory";
 import ChairmanMinutes from "@/pages/reviewer/ChairmanMinutes";
 import ChairmanDashboard from "@/pages/reviewer/ChairmanDashboard";
 import SupervisorDashboard from "@/pages/supervisor/SupervisorDashboard";
@@ -33,6 +34,7 @@ const reviewerPageBySegment: Record<string, string> = {
   dashboard: "dashboard",
   reviews: "reviews",
   meetings: "meetings",
+  "meetings-history": "meetings-history",
   profile: "profile",
   "help-support": "help-support",
 };
@@ -222,6 +224,8 @@ export default function HomeDashboard({ user, onLogout }: { user: PublicUser; on
           return <ReviewerDashboard role={viewRole} user={user} activeSection="dashboard" />;
         case "reviews":
           return <ReviewerApplications user={user} />;
+        case "meetings-history":
+          return <ConvenerMeetingsHistory role={viewRole} />;
         case "profile":
           return <ReviewerDashboard role={viewRole} user={user} activeSection="profile" />;
         case "help-support":

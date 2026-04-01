@@ -1,5 +1,4 @@
 import PDFDocument from "pdfkit";
-import type { NormalizedSignature } from "../signature-resolver-service";
 
 interface AgendaApplication {
   id: number;
@@ -24,7 +23,6 @@ interface MeetingAgendaPayload {
   };
   applications: AgendaApplication[];
   extraPoints: AgendaPoint[];
-  signatures?: NormalizedSignature[];
 }
 
 export async function buildDrcAgendaPdf(
@@ -84,33 +82,7 @@ export async function buildDrcAgendaPdf(
       });
     }
 
-    renderSignaturesSection(doc, agenda.signatures ?? []);
-
     doc.end();
-  });
-}
-
-export function renderSignaturesSection(
-  doc: PDFKit.PDFDocument,
-  signatures: NormalizedSignature[],
-): void {
-  doc.moveDown(2);
-  doc.fontSize(12).text("Signatures", { underline: true });
-  doc.moveDown(0.8);
-
-  if (signatures.length === 0) {
-    doc.fontSize(11).text("Pending signature");
-    return;
-  }
-
-  signatures.forEach((signature, index) => {
-    const statusLine = signature.signedAt
-      ? `${signature.signerName} (${signature.signerRole}) — ${formatDateTime(new Date(signature.signedAt))}`
-      : "Pending signature";
-
-    doc
-      .fontSize(11)
-      .text(`${index + 1}. ${signature.label}: ${statusLine}`);
   });
 }
 

@@ -108,11 +108,20 @@ export function getRoleConfig(role: string): RoleConfig {
       return {
         role: role as RoleType,
         defaultPath: "/reviewer/dashboard",
-        validPaths: ["/reviewer/dashboard", "/reviewer/reviews", "/reviewer/profile", "/reviewer/help-support"],
+        validPaths: [
+          "/reviewer/dashboard",
+          "/reviewer/reviews",
+          "/reviewer/meetings-history",
+          "/reviewer/profile",
+          "/reviewer/help-support",
+        ],
         sidebarItems: [
           { route: "/reviewer/dashboard", label: "Dashboard" },
           { route: "/reviewer/profile", label: "Profile" },
           { route: "/reviewer/reviews", label: role === "drc_convener" ? "Meeting Agenda" : "Pending Reviews", isHighlighted: true },
+          ...(role === "drc_convener"
+            ? [{ route: "/reviewer/meetings-history", label: "Meetings History", isHighlighted: true }]
+            : []),
           { route: "/reviewer/help-support", label: "Help & Support" },
         ],
       };
