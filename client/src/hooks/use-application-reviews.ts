@@ -183,6 +183,7 @@ export function useScheduleDrcMeeting() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["applications", "stage", "drc"] });
       queryClient.invalidateQueries({ queryKey: ["drc-meetings", "open"] });
+      queryClient.invalidateQueries({ queryKey: ["drc-meetings", "list"] });
     },
   });
 }
@@ -234,6 +235,8 @@ export function useCloseDrcMeeting() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["drc-meetings", "open"] });
+      queryClient.invalidateQueries({ queryKey: ["drc-meetings", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["applications", "stage", "drc"] });
     },
   });
 }
