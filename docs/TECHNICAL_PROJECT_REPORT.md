@@ -114,7 +114,145 @@ sequenceDiagram
 
 ## 4. Data Model and Schema Engineering
 
-The schema is centered around role-partitioned identities and workflow records.
+The schema is centered around role-partitioned identities and workflow records. The current schema contains 16 tables organized into five logical domains: **Identity & Access**, **Scholar Lifecycle**, **Application Workflows**, **DRC Meetings**, and **Documents & Notifications**.
+
+### 4.0 Schema Overview Diagram
+
+```mermaid
+erDiagram
+  %% Identity & Access Domain
+  users ||--o| employees : "user_id"
+  users ||--o| scholars : "user_id"
+  users ||--o| employeeRoles : "user_id"
+  
+  %% Scholar Lifecycle
+  scholars {
+    text scholar_id PK
+    int user_id FK
+    text supervisorId FK
+    text coSupervisorId FK
+    jsonb supervisorChangeHistory "audit trail"
+  }
+  scholars ||--o| supervisorChangeHistory_DEPRECATED : "scholar_id (legacy)"
+  
+  %% Application Workflow
+  scholars ||--o{ applications : "scholar_id"
+  applications {
+    int id PK
+    text scholar_id FK
+    text type
+    text status
+    text currentStage
+    jsonb details "form data"
+  }
+  applications ||--o{ applicationReviews : "id"
+  applications ||--o{ applicationDocuments : "id"
+  
+  %% Reviews
+  employees ||--o{ applicationReviews : "reviewer_id"
+  applicationReviews {
+    int id PK
+    int applicationId FK
+    text reviewerId FK
+    text stage
+    text decision
+    text remarks
+  }
+  
+  %% Documents
+  scholars ||--o{ documents : "scholar_id"
+  documents {
+    int id PK
+    text scholar_id FK
+    text documentType
+    text fileName
+    text filePath
+  }
+  applicationDocuments ||--o| documents : "documentId"
+  applicationDocuments {
+    int id PK
+    int applicationId FK
+    int documentId FK
+    text attachedBy
+  }
+  
+  %% DRC Meetings
+  employees ||--o{ drcMeetings : "scheduledBy"
+  drcMeetings {
+    int id PK
+    timestamp meetingDate
+    text scheduledBy FK
+    jsonb agendaPoints "consolidated"
+    timestamp minutesGeneratedAt "consolidated"
+    text minutesGeneratedBy "consolidated"
+  }
+  drcMeetings ||--o{ drcMeetingApplications : "id"
+  drcMeetings ||--o{ drcMinuteItems : "id"
+  drcMeetings ||--o{ drcChairmanDecisions : "id"
+  
+  %% Meeting Applications
+  drcMeetingApplications {
+    int id PK
+    int meetingId FK
+    int applicationId FK
+  }
+  applications ||--o{ drcMeetingApplications : "id"
+  
+  %% Meeting Minutes
+  drcMinuteItems {
+    int id PK
+    int meetingId FK
+    int applicationId FK
+    int approvalCount
+    int rejectionCount
+    jsonb memberSummary "vote summary"
+  }
+  
+  %% Chairman Decisions
+  employees ||--o{ drcChairmanDecisions : "chairman_id"
+  drcChairmanDecisions {
+    int id PK
+    int meetingId FK
+    int applicationId FK
+    text chairmanId FK
+    text decision
+    text remarks
+  }
+  
+  %% Notifications
+  notices {
+    int id PK
+    text title
+    text content
+    text notificationType
+    int relatedApplicationId "optional FK"
+    int relatedMeetingId "optional FK"
+  }
+  users ||--o{ noticeDismissals : "user_id"
+  notices ||--o{ noticeDismissals : "notice_id"
+  noticeDismissals {
+    int id PK
+    int userId FK
+    int noticeId FK
+    timestamp dismissedAt
+  }
+  
+  %% Research Progress
+  scholars ||--o| researchProgress : "scholar_id"
+  researchProgress {
+    int id PK
+    text scholar_id FK "unique"
+    int completedReviews
+    int publications
+  }
+```
+
+**Key Design Characteristics:**
+
+- **Consolidation**: `supervisorChangeHistory`, `agendaPoints`, and meeting minutes metadata are now stored as JSONB fields in parent tables (scholars, drcMeetings) instead of separate tables.
+- **No FK Constraints**: Database foreign keys are not enforced; referential integrity is maintained at the application layer.
+- **JSONB for Flexibility**: `applications.details`, `drcMinuteItems.memberSummary`, and `scholars.supervisorChangeHistory` store structured but schema-free data.
+- **Audit Trails**: `applicationReviews` is immutable; `supervisorChangeHistory` preserves all supervisor changes with timestamps.
 
 ### 4.1 Identity Partitioning
 
@@ -128,16 +266,22 @@ This split avoids polymorphic null-heavy tables and supports role-specific joins
 
 - `applications`: type, status, currentStage, details JSONB, finalOutcome.
 - `application_reviews`: immutable per-stage review decisions.
-- `supervisor_change_history`: audit trail for approved supervisor changes.
+- `applicationDocuments`: link applications to required documents.
 
 Notably, `details` is JSONB for flexible form payloads without forcing schema migrations for every form variant.
 
+The `supervisorChangeHistory` audit trail is now consolidated as a JSONB field within the `scholars` table, preserving the full chain of supervisor changes with timestamps while reducing schema complexity.
+
 ### 4.3 DRC Meeting Subdomain
 
-- `drc_meetings`, `drc_meeting_applications`, `drc_agenda_points`.
-- `drc_meeting_minutes`, `drc_minute_items`, `drc_chairman_decisions`.
+- `drc_meetings`: meeting lifecycle (scheduled date, open/closed state). Now includes:
+  - `agendaPoints` (JSONB array) - replaces former `drc_agenda_points` table
+  - `minutesGeneratedAt` + `minutesGeneratedBy` (timestamp fields) - replace former `drc_meeting_minutes` table
+- `drc_meeting_applications`: N-to-N junction: which applications are discussed in which meetings.
+- `drc_minute_items`: per-application summary in meeting minutes (approval/rejection vote counts, member votes).
+- `drc_chairman_decisions`: chairman's terminal decision after DRC member votes.
 
-This models meeting lifecycle from scheduling to closure, then post-meeting chairman-level finalization.
+This design models meeting lifecycle from scheduling to closure, then post-meeting chairman-level finalization, with consolidation of metadata reducing join complexity.
 
 ### 4.4 Notification and Document Subsystems
 
