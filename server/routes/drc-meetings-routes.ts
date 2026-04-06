@@ -18,6 +18,10 @@ import {
   buildDrcAgendaPdfFilename,
 } from "../services/pdf/drc-agenda-pdf-service";
 import {
+  generateMeetingMinutesPdf,
+  buildMeetingMinutesPdfFilename,
+} from "../services/pdf/drc-minutes-pdf-service";
+import {
   handleRouteError,
   parsePositiveIntParam,
   unauthorized,
@@ -203,6 +207,42 @@ export function registerDrcMeetingRoutes(app: Express): void {
       const meetingId = parsePositiveIntParam(req.params.id, "meeting id");
       const agenda = await closeDrcMeeting(req.session.userId, meetingId);
       res.json(agenda);
+    } catch (error) {
+      return handleRouteError(res, error);
+    }
+  });
+
+  app.get("/api/drc-chairman/minutes/:meetingId/pdf", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        throw unauthorized("Not authenticated");
+      }
+
+      const meetingId = parsePositiveIntParam(req.params.meetingId, "meeting id");
+      const details = await getChairmanMinutesDetails(req.session.userId, meetingId);
+
+      // Resolve chairman name for the footer
+      const chairman = await storage.getUserWithScholar(req.session.userId);
+      const chairmanName = chairman?.name ?? undefined;
+
+      const pdfBuffer = await generateMeetingMinutesPdf({
+        meeting: details.meeting,
+        minutes: {
+          generatedBy: details.minutes.minutesGeneratedBy || details.meeting.closedBy || "Unknown",
+          generatedAt: details.minutes.minutesGeneratedAt,
+        },
+        items: details.items as Parameters<typeof generateMeetingMinutesPdf>[0]["items"],
+        chairmanName,
+      });
+
+      const filename = buildMeetingMinutesPdfFilename(
+        details.meeting.id,
+        details.meeting.meetingDate,
+      );
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.send(pdfBuffer);
     } catch (error) {
       return handleRouteError(res, error);
     }

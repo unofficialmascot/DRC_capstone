@@ -253,6 +253,27 @@ export class ApplicationRepository {
       .orderBy(applicationReviews.reviewDate);
   }
 
+  async getReviewForApplicationStage(
+    applicationId: number,
+    reviewerId: string,
+    stage: string,
+  ): Promise<ApplicationReview | undefined> {
+    const [review] = await db
+      .select()
+      .from(applicationReviews)
+      .where(
+        and(
+          eq(applicationReviews.applicationId, applicationId),
+          eq(applicationReviews.reviewerId, reviewerId),
+          eq(applicationReviews.stage, stage),
+        ),
+      )
+      .orderBy(desc(applicationReviews.reviewDate), desc(applicationReviews.id))
+      .limit(1);
+
+    return review;
+  }
+
   async createReview(review: InsertApplicationReview): Promise<ApplicationReview> {
     const [newReview] = await db.insert(applicationReviews).values(review).returning();
     return newReview;

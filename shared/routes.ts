@@ -7,8 +7,6 @@ import {
   insertDrcChairmanDecisionSchema,
   insertNoticeSchema,
   insertDrcMeetingSchema,
-  insertDrcAgendaPointSchema,
-  insertDrcMeetingMinutesSchema,
   insertDrcMinuteItemSchema,
 } from './schema';
 
@@ -46,6 +44,18 @@ const applicationResponseSchema = insertApplicationSchema.extend({
 
 const applicationReviewResponseSchema = insertApplicationReviewSchema.extend({
   reviewDate: z.union([z.string(), z.date(), z.null()]).optional(),
+});
+
+// Consolidated schemas (formerly separate tables)
+const agendaPointSchema = z.object({
+  point: z.string(),
+  createdAt: z.string(), // ISO timestamp
+});
+
+const meetingMinutesSchema = z.object({
+  meetingId: z.number(),
+  minutesGeneratedAt: z.union([z.string(), z.date(), z.null()]).optional(),
+  minutesGeneratedBy: z.string().nullable(),
 });
 
 const chairmanDashboardCategorySchema = z.enum([
@@ -338,7 +348,7 @@ export const api = {
           z.object({
             meeting: insertDrcMeetingSchema,
             applications: z.array(insertApplicationSchema),
-            extraPoints: z.array(insertDrcAgendaPointSchema),
+            extraPoints: z.array(agendaPointSchema),
           }),
           z.null(),
         ]),
@@ -355,7 +365,7 @@ export const api = {
         201: z.object({
           meeting: insertDrcMeetingSchema,
           applications: z.array(insertApplicationSchema),
-          extraPoints: z.array(insertDrcAgendaPointSchema),
+          extraPoints: z.array(agendaPointSchema),
         }),
       },
     },
@@ -366,7 +376,7 @@ export const api = {
         200: z.object({
           meeting: insertDrcMeetingSchema,
           applications: z.array(insertApplicationSchema),
-          extraPoints: z.array(insertDrcAgendaPointSchema),
+          extraPoints: z.array(agendaPointSchema),
         }),
       },
     },
@@ -377,7 +387,7 @@ export const api = {
         200: z.object({
           meeting: insertDrcMeetingSchema,
           applications: z.array(insertApplicationSchema),
-          extraPoints: z.array(insertDrcAgendaPointSchema),
+          extraPoints: z.array(agendaPointSchema),
         }),
       },
     },
@@ -412,7 +422,7 @@ export const api = {
         200: z.array(
           z.object({
             meeting: insertDrcMeetingSchema,
-            minutes: insertDrcMeetingMinutesSchema,
+            minutes: meetingMinutesSchema,
           }),
         ),
       },
@@ -423,7 +433,7 @@ export const api = {
       responses: {
         200: z.object({
           meeting: insertDrcMeetingSchema,
-          minutes: insertDrcMeetingMinutesSchema,
+          minutes: meetingMinutesSchema,
           items: z.array(
             insertDrcMinuteItemSchema.extend({
               application: insertApplicationSchema.nullable(),
@@ -445,6 +455,13 @@ export const api = {
           application: insertApplicationSchema,
           chairmanDecision: insertDrcChairmanDecisionSchema,
         }),
+      },
+    },
+    minutesPdf: {
+      method: 'GET' as const,
+      path: '/api/drc-chairman/minutes/:meetingId/pdf',
+      responses: {
+        200: z.any(),
       },
     },
   }

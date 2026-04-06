@@ -2,6 +2,18 @@ import { useState } from "react";
 import type { CSSProperties } from "react";
 import type { PublicUser } from "@/lib/types";
 import { SignatureBlock } from "@/components/forms/SignatureBlock";
+import { EligibilityChecklistSection } from "@/components/forms/EligibilityChecklistSection";
+import { useApplicationEligibility } from "@/hooks/use-applications";
+import { APP_SETTINGS } from "@shared/app-settings";
+
+const RE_REGISTRATION_CRITERIA = [
+  { codes: ["FEE_DUES_OUTSTANDING"], label: "No outstanding fee dues" },
+  { codes: ["ACADEMIC_PERCENTAGE_TOO_LOW", "ACADEMIC_PERCENTAGE_UNAVAILABLE"], label: "Minimum 70% academic percentage" },
+  { codes: ["INSUFFICIENT_RAC_MEETINGS"], label: "At least 2 RAC meetings attended" },
+  { codes: ["SCHOLAR_NOT_ACTIVE"], label: "Scholar status is Active", visibleByDefault: false },
+  { codes: ["PENDING_REPORTS_EXIST"], label: "No pending reports", visibleByDefault: false },
+  { codes: ["ACTIVE_APPLICATION_EXISTS"], label: "No active application of this type", visibleByDefault: false },
+];
 
 export default function ReRegistrationForm({
   user,
@@ -53,6 +65,16 @@ export default function ReRegistrationForm({
     conferencesCommunicatedIntl: "0",
     conferencesCommunicatedNatl: "0",
   });
+
+  const { data: eligibilityData, isLoading: isEligibilityLoading } = useApplicationEligibility();
+
+  const reRegEligibility = eligibilityData?.items.find(
+    (item) => item.applicationType === "Re-Registration",
+  );
+  const eligibilityMode = eligibilityData?.mode ?? APP_SETTINGS.applicationEligibilityMode;
+  const failingCodes = new Set(
+    (reRegEligibility?.reasons ?? []).map((r) => r.code),
+  );
 
   const tableStyle: CSSProperties = {
     width: "100%",
@@ -168,6 +190,17 @@ export default function ReRegistrationForm({
         </div>
         <div style={{ textAlign: "center", fontSize: "18px", fontWeight: "bold", margin: "25px 0", color: "#0b6a55", textDecoration: "underline" }}>
           PH.D. RE-REGISTRATION FORM
+        </div>
+
+        <div style={{ marginBottom: "20px", padding: "16px", border: "1px solid #eee", borderRadius: "10px" }}>
+          <EligibilityChecklistSection
+            criteria={RE_REGISTRATION_CRITERIA}
+            failingCodes={failingCodes}
+            isLoading={isEligibilityLoading}
+            eligibilityMode={eligibilityMode}
+            titleStyle={{ fontWeight: "bold", marginBottom: "15px", paddingBottom: "8px", borderBottom: "1px solid #eee", color: "#0b6a55", fontSize: "16px" }}
+            wrapperStyle={{}}
+          />
         </div>
 
         <table style={tableStyle}>

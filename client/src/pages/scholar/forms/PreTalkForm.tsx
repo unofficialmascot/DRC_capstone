@@ -1,6 +1,20 @@
 import { useState } from "react";
 import { useSupervisors } from "@/hooks/use-users";
 import type { PublicUser } from "@/lib/types";
+import { EligibilityChecklistSection } from "@/components/forms/EligibilityChecklistSection";
+import { useApplicationEligibility } from "@/hooks/use-applications";
+import { APP_SETTINGS } from "@shared/app-settings";
+
+const PRE_TALK_CRITERIA = [
+  { codes: ["FEE_DUES_OUTSTANDING"], label: "No outstanding fee dues" },
+  { codes: ["ACADEMIC_PERCENTAGE_TOO_LOW", "ACADEMIC_PERCENTAGE_UNAVAILABLE"], label: "Minimum 70% academic percentage" },
+  { codes: ["INSUFFICIENT_RAC_MEETINGS"], label: "At least 2 RAC meetings attended" },
+  { codes: ["SCHOLAR_NOT_ACTIVE"], label: "Scholar status is Active", visibleByDefault: false },
+  { codes: ["INSUFFICIENT_REVIEWS"], label: "Required reviews completed", visibleByDefault: false },
+  { codes: ["PENDING_REPORTS_EXIST"], label: "No pending reports", visibleByDefault: false },
+  { codes: ["MISSING_VERIFIED_DOCUMENTS"], label: "Required documents verified (progress report, coursework marks memo)", visibleByDefault: false },
+  { codes: ["ACTIVE_APPLICATION_EXISTS"], label: "No active application of this type", visibleByDefault: false },
+];
 
 export default function PreTalkForm({
   user,
@@ -14,6 +28,15 @@ export default function PreTalkForm({
   isSubmitting: boolean;
 }) {
   const { data: supervisors = [] } = useSupervisors();
+  const { data: eligibilityData, isLoading: isEligibilityLoading } = useApplicationEligibility();
+
+  const preTalkEligibility = eligibilityData?.items.find(
+    (item) => item.applicationType === "Pre-Talk",
+  );
+  const eligibilityMode = eligibilityData?.mode ?? APP_SETTINGS.applicationEligibilityMode;
+  const failingCodes = new Set(
+    (preTalkEligibility?.reasons ?? []).map((r) => r.code),
+  );
 
   const [publicationDetails, setPublicationDetails] = useState({
     publicationsConferencesNational: "0",
@@ -116,6 +139,17 @@ export default function PreTalkForm({
         <div style={{ fontWeight: "bold", color: "#666", marginTop: "10px" }}>
           Research Form - V: Ph.D. Pre-Submission Talk Report
         </div>
+      </div>
+
+      <div style={{ marginBottom: "24px", padding: "20px", border: "1px solid #eee", borderRadius: "10px" }}>
+        <EligibilityChecklistSection
+          criteria={PRE_TALK_CRITERIA}
+          failingCodes={failingCodes}
+          isLoading={isEligibilityLoading}
+          eligibilityMode={eligibilityMode}
+          titleStyle={{ fontWeight: "bold", marginBottom: "15px", paddingBottom: "8px", borderBottom: "1px solid #eee", color: "#0b6a55", fontSize: "16px" }}
+          wrapperStyle={{}}
+        />
       </div>
 
       <div style={sectionHeaderStyle}>Part A: To be filled in by the Research Scholar</div>

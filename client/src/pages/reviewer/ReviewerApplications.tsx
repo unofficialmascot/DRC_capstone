@@ -394,8 +394,8 @@ export default function ReviewerApplications({
             <>
               <div style={{ marginBottom: "8px" }}><strong>Extra Agenda Points:</strong></div>
               <ul style={{ margin: "0 0 0 18px", padding: 0 }}>
-                {latestAgenda.extraPoints.map((point) => (
-                  <li key={point.id} style={{ marginBottom: "6px" }}>{point.point}</li>
+                {latestAgenda.extraPoints.map((point, idx) => (
+                  <li key={`${idx}-${point.point}`} style={{ marginBottom: "6px" }}>{point.point}</li>
                 ))}
               </ul>
             </>

@@ -12,8 +12,8 @@ interface AgendaApplication {
 }
 
 interface AgendaPoint {
-  id: number;
   point: string;
+  createdAt?: string; // ISO timestamp (optional, for consolidated format)
 }
 
 interface MeetingAgendaPayload {

@@ -85,6 +85,93 @@ test("submitApplicationReview throws 403 when supervisor is not assigned", async
   );
 });
 
+test("submitApplicationReview throws 400 when the same reviewer already reviewed the current stage", async () => {
+  await withMockedStorage(
+    {
+      getApplicationById: async () => ({
+        id: 11,
+        scholarId: "GITAM-SCH-2020-118",
+        type: "Extension",
+        status: "Pending",
+        currentStage: "drc",
+        details: {},
+      }),
+      getEmployee: async () => ({
+        id: 8,
+        employeeId: "EMP-DRC-001",
+      }),
+      getReviewForApplicationStage: async () => ({
+        id: 99,
+        applicationId: 11,
+        reviewerId: "EMP-DRC-001",
+        stage: "drc",
+        decision: "approved",
+        remarks: "Already reviewed",
+        reviewDate: new Date(),
+      }),
+    },
+    async () => {
+      await assert.rejects(
+        () =>
+          submitApplicationReview(11, {
+            reviewerId: "EMP-DRC-001",
+            decision: "approved",
+            remarks: "Approve again",
+          }),
+        (error: unknown) => {
+          assert.ok(error instanceof ApiError);
+          assert.equal(error.status, 400);
+          assert.equal(error.message, "You have already reviewed this application at this stage");
+          return true;
+        },
+      );
+    },
+  );
+});
+
+test("submitApplicationReview maps duplicate review database errors to 400", async () => {
+  await withMockedStorage(
+    {
+      getApplicationById: async () => ({
+        id: 12,
+        scholarId: "GITAM-SCH-2020-118",
+        type: "Extension",
+        status: "Pending",
+        currentStage: "drc",
+        details: {},
+      }),
+      getEmployee: async () => ({
+        id: 9,
+        employeeId: "EMP-DRC-001",
+      }),
+      getReviewForApplicationStage: async () => undefined,
+      createReview: async () => {
+        const error = new Error("duplicate key value violates unique constraint");
+        (error as Error & { code?: string; constraint?: string }).code = "23505";
+        (error as Error & { code?: string; constraint?: string }).constraint =
+          "application_reviews_application_reviewer_stage_idx";
+        throw error;
+      },
+    },
+    async () => {
+      await assert.rejects(
+        () =>
+          submitApplicationReview(12, {
+            reviewerId: "EMP-DRC-001",
+            decision: "approved",
+            remarks: "Approve again",
+          }),
+        (error: unknown) => {
+          assert.ok(error instanceof ApiError);
+          assert.equal(error.status, 400);
+          assert.equal(error.message, "You have already reviewed this application at this stage");
+          return true;
+        },
+      );
+    },
+  );
+});
+
 test("submitApplicationReview returns updated app and review on success", async () => {
   let updatedStage: unknown;
   let updatedStatus: unknown;
@@ -105,6 +192,7 @@ test("submitApplicationReview returns updated app and review on success", async 
         employeeId: "EMP-SUPERVISOR-001",
       }),
       isSupervisorForScholar: async () => true,
+      getReviewForApplicationStage: async () => undefined,
       createReview: async (payload: unknown) => payload,
       updateApplication: async (
         _applicationId: number,
@@ -154,6 +242,7 @@ test("submitApplicationReview updates scholar extension data on terminal approva
         id: 4,
         employeeId: "EMP-DOAA-001",
       }),
+      getReviewForApplicationStage: async () => undefined,
       getUserByScholarId: async () => ({
         id: 1,
         scholarId: "GITAM-SCH-2020-118",
@@ -217,6 +306,7 @@ test("submitApplicationReview updates supervisor and writes history on terminal 
         id: 4,
         employeeId: "EMP-DOAA-001",
       }),
+      getReviewForApplicationStage: async () => undefined,
       getUserByEmployeeId: async () => ({
         id: 22,
         employeeId: "EMP-SUPERVISOR-002",
@@ -285,6 +375,7 @@ test("submitApplicationReview updates scholar phase/status on terminal thesis-su
         id: 5,
         employeeId: "EMP-DOAA-001",
       }),
+      getReviewForApplicationStage: async () => undefined,
       getUserByScholarId: async () => ({
         id: 1,
         scholarId: "GITAM-SCH-2020-118",

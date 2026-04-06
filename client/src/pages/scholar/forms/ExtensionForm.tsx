@@ -2,6 +2,19 @@ import { useState } from "react";
 import type { CSSProperties } from "react";
 import type { PublicUser } from "@/lib/types";
 import { SignatureBlock } from "@/components/forms/SignatureBlock";
+import { EligibilityChecklistSection } from "@/components/forms/EligibilityChecklistSection";
+import { useApplicationEligibility } from "@/hooks/use-applications";
+import { APP_SETTINGS } from "@shared/app-settings";
+
+const EXTENSION_CRITERIA = [
+  { codes: ["FEE_DUES_OUTSTANDING"], label: "No outstanding fee dues" },
+  { codes: ["ACADEMIC_PERCENTAGE_TOO_LOW", "ACADEMIC_PERCENTAGE_UNAVAILABLE"], label: "Minimum 70% academic percentage" },
+  { codes: ["INSUFFICIENT_RAC_MEETINGS"], label: "At least 2 RAC meetings attended" },
+  { codes: ["SCHOLAR_NOT_ACTIVE"], label: "Scholar status is Active", visibleByDefault: false },
+  { codes: ["MAX_EXTENSION_REACHED"], label: "Extension limit not exceeded (max 24 months)", visibleByDefault: false },
+  { codes: ["MISSING_VERIFIED_DOCUMENTS"], label: "Required documents verified (progress report, journal publication proofs)", visibleByDefault: false },
+  { codes: ["ACTIVE_APPLICATION_EXISTS"], label: "No active application of this type", visibleByDefault: false },
+];
 
 export default function ExtensionForm({
   user,
@@ -32,6 +45,16 @@ export default function ExtensionForm({
     publicationsSciJournalsNational: "0",
     publicationsSciJournalsInternational: "0",
   });
+
+  const { data: eligibilityData, isLoading: isEligibilityLoading } = useApplicationEligibility();
+
+  const extensionEligibility = eligibilityData?.items.find(
+    (item) => item.applicationType === "Extension",
+  );
+  const eligibilityMode = eligibilityData?.mode ?? APP_SETTINGS.applicationEligibilityMode;
+  const failingCodes = new Set(
+    (extensionEligibility?.reasons ?? []).map((r) => r.code),
+  );
 
   const cardStyle: CSSProperties = {
     maxWidth: "900px",
@@ -117,6 +140,17 @@ export default function ExtensionForm({
 
       <div style={{ textAlign: "center", fontSize: "18px", fontWeight: "bold", margin: "25px 0", color: "#0b6a55", textDecoration: "underline" }}>
         PH.D. RESEARCH SCHOLAR DATA SHEET FOR EXTENSION OF PH.D. DURATION
+      </div>
+
+      <div style={{ ...sectionStyle, marginBottom: "24px" }}>
+        <EligibilityChecklistSection
+          criteria={EXTENSION_CRITERIA}
+          failingCodes={failingCodes}
+          isLoading={isEligibilityLoading}
+          eligibilityMode={eligibilityMode}
+          titleStyle={sectionTitleStyle}
+          wrapperStyle={{}}
+        />
       </div>
 
       <div style={sectionStyle}>

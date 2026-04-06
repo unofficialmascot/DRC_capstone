@@ -99,6 +99,7 @@ export function registerApplicationRoutes(app: Express): void {
 
   app.post(api.applications.create.path, async (req, res) => {
     try {
+      if (!req.session.userId) throw unauthorized("Not authenticated");
       const input = api.applications.create.input.parse(req.body);
       const { attachmentDocumentIds = [], ...applicationInput } = input;
 

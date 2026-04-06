@@ -6,7 +6,6 @@ import {
   scholars,
   employees,
   employeeRoles,
-  supervisorChangeHistory,
   type Scholar,
   type User,
   type InsertUser,
@@ -344,12 +343,19 @@ export class UserRepository {
     applicationId: number;
     previousSupervisorId?: string | null;
     newSupervisorId: string;
-  }): Promise<typeof supervisorChangeHistory.$inferSelect> {
-    const [historyRow] = await db
-      .insert(supervisorChangeHistory)
-      .values(entry)
-      .returning();
+  }): Promise<void> {
+    const historyEntry = {
+      applicationId: entry.applicationId,
+      previousSupervisorId: entry.previousSupervisorId || null,
+      newSupervisorId: entry.newSupervisorId,
+      changedAt: new Date().toISOString(),
+    };
 
-    return historyRow;
+    await db
+      .update(scholars)
+      .set({
+        supervisorChangeHistory: sql`supervisor_change_history || ${JSON.stringify([historyEntry])}::jsonb`,
+      })
+      .where(eq(scholars.scholarId, entry.scholarId));
   }
 }

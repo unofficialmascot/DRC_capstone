@@ -70,6 +70,11 @@ export interface IStorage {
   ): Promise<Array<Document & { requirementCode: string | null; attachedBy: string; attachedAt: Date | string | null }>>;
 
   getReviewsForApplication(applicationId: number): Promise<ApplicationReview[]>;
+  getReviewForApplicationStage(
+    applicationId: number,
+    reviewerId: string,
+    stage: string,
+  ): Promise<ApplicationReview | undefined>;
   createReview(review: InsertApplicationReview): Promise<ApplicationReview>;
   isSupervisorForScholar(employeeId: string, scholarId: string): Promise<boolean>;
   createScholarProfile(
@@ -222,6 +227,14 @@ export class DatabaseStorage implements IStorage {
 
   async getReviewsForApplication(applicationId: number): Promise<ApplicationReview[]> {
     return this.applications.getReviewsForApplication(applicationId);
+  }
+
+  async getReviewForApplicationStage(
+    applicationId: number,
+    reviewerId: string,
+    stage: string,
+  ): Promise<ApplicationReview | undefined> {
+    return this.applications.getReviewForApplicationStage(applicationId, reviewerId, stage);
   }
 
   async createReview(review: InsertApplicationReview): Promise<ApplicationReview> {

@@ -54,6 +54,7 @@ function buildScholarSelect(includeFeesDue: boolean) {
     interBoard: scholars.interBoard,
     interPercentage: scholars.interPercentage,
     hasFeesDue: includeFeesDue ? scholars.hasFeesDue : sql<boolean>`false`,
+    supervisorChangeHistory: scholars.supervisorChangeHistory,
     createdAt: scholars.createdAt,
     updatedAt: scholars.updatedAt,
   };

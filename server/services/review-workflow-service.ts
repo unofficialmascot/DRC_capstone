@@ -69,13 +69,30 @@ export async function submitApplicationReview(
     }
   }
 
-  const review = await storage.createReview({
+  const existingReview = await storage.getReviewForApplicationStage(
     applicationId,
-    reviewerId: input.reviewerId,
-    stage: application.currentStage,
-    decision: input.decision,
-    remarks: input.remarks,
-  });
+    input.reviewerId,
+    application.currentStage,
+  );
+  if (existingReview) {
+    throw badRequest("You have already reviewed this application at this stage");
+  }
+
+  let review;
+  try {
+    review = await storage.createReview({
+      applicationId,
+      reviewerId: input.reviewerId,
+      stage: application.currentStage,
+      decision: input.decision,
+      remarks: input.remarks,
+    });
+  } catch (error) {
+    if (isDuplicateReviewError(error)) {
+      throw badRequest("You have already reviewed this application at this stage");
+    }
+    throw error;
+  }
 
   try {
     await recordApprovalSignature(applicationId, application.details, {
@@ -120,6 +137,24 @@ export async function submitApplicationReview(
   });
 
   return { review, application: updatedApp };
+}
+
+function isDuplicateReviewError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const maybeDatabaseError = error as {
+    code?: string;
+    constraint?: string;
+    message?: string;
+  };
+
+  return (
+    maybeDatabaseError.code === "23505" &&
+    (maybeDatabaseError.constraint === "application_reviews_application_reviewer_stage_idx" ||
+      maybeDatabaseError.message?.includes("application_reviews_application_reviewer_stage_idx") === true)
+  );
 }
 
 async function recordApprovalSignature(

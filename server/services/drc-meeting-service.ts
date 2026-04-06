@@ -1,4 +1,5 @@
 import { DrcMeetingRepository } from "../repositories/drc-meeting-repository";
+import { UserRepository } from "../repositories/user-repository";
 import { storage } from "../storage";
 import { evaluateWorkflowDecision, getWorkflowDefinition, type WorkflowStage } from "../workflow";
 import { badRequest, forbidden, notFound } from "../routes/http";
@@ -7,6 +8,8 @@ import { applicationReviews, applications, employeeRoles, employees, scholars, u
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { emitRoleNotification } from "./notification-service";
 import { applyApprovedChanges } from "./review-workflow-service";
+
+const userRepository = new UserRepository();
 
 const drcMeetingRepository = new DrcMeetingRepository();
 
@@ -261,19 +264,59 @@ export async function getChairmanMinutesDetails(
     throw notFound("Minutes not found for this meeting");
   }
 
-  const [applications, items, chairmanDecisions] = await Promise.all([
+  const [meetingApplications, items, chairmanDecisions] = await Promise.all([
     drcMeetingRepository.getMeetingApplications(meetingId),
     drcMeetingRepository.getMinuteItemsByMeetingId(meetingId),
     drcMeetingRepository.getChairmanDecisionsByMeetingId(meetingId),
   ]);
 
-  const decisionMap = new Map(chairmanDecisions.map((decision) => [decision.applicationId, decision]));
+  // Collect all unique reviewer IDs across all minute items
+  const allReviewerIds = new Set<string>();
+  for (const item of items) {
+    const summary = (item.memberSummary ?? []) as Array<{ reviewerId: string }>;
+    for (const entry of summary) {
+      if (entry.reviewerId) allReviewerIds.add(entry.reviewerId);
+    }
+  }
 
-  const minuteItems = items.map((item) => ({
-    ...item,
-    application: applications.find((application) => application.id === item.applicationId),
-    chairmanDecision: decisionMap.get(item.applicationId) ?? null,
-  }));
+  // Resolve reviewer names in parallel
+  const nameMap = new Map<string, string>();
+  await Promise.all(
+    Array.from(allReviewerIds).map(async (reviewerId) => {
+      try {
+        const user = await userRepository.getUserByEmployeeId(reviewerId);
+        if (user?.name) nameMap.set(reviewerId, user.name);
+      } catch {
+        // name stays undefined — display falls back to reviewerId on the client
+      }
+    }),
+  );
+
+  const decisionMap = new Map(
+    chairmanDecisions.map((decision) => [decision.applicationId, decision]),
+  );
+
+  const minuteItems = items.map((item) => {
+    const rawSummary = (item.memberSummary ?? []) as Array<{
+      reviewerId: string;
+      decision: string;
+      remarks: string | null;
+      reviewDate: string | Date | null;
+    }>;
+
+    const enrichedSummary = rawSummary.map((entry) => ({
+      ...entry,
+      reviewerName: nameMap.get(entry.reviewerId) ?? entry.reviewerId,
+      isAutoApproved: entry.remarks === "Auto-approved on meeting close",
+    }));
+
+    return {
+      ...item,
+      memberSummary: enrichedSummary,
+      application: meetingApplications.find((a) => a.id === item.applicationId) ?? null,
+      chairmanDecision: decisionMap.get(item.applicationId) ?? null,
+    };
+  });
 
   return {
     meeting,

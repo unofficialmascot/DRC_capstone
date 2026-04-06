@@ -3,13 +3,14 @@ import type { CSSProperties } from "react";
 import { useSupervisors } from "@/hooks/use-users";
 import type { PublicUser } from "@/lib/types";
 import { SignatureBlock } from "@/components/forms/SignatureBlock";
+import { EligibilityChecklistSection } from "@/components/forms/EligibilityChecklistSection";
 import { useApplicationEligibility } from "@/hooks/use-applications";
 import { APP_SETTINGS } from "@shared/app-settings";
 
-const SUPERVISOR_CHANGE_CRITERIA: { code: string; label: string }[] = [
-  { code: "SCHOLAR_NOT_ACTIVE", label: "Scholar status is Active" },
-  { code: "FEE_DUES_OUTSTANDING", label: "No outstanding fee dues" },
-  { code: "INSUFFICIENT_RAC_MEETINGS", label: "At least 2 RAC meetings attended" },
+const SUPERVISOR_CHANGE_CRITERIA = [
+  { codes: ["FEE_DUES_OUTSTANDING"], label: "No outstanding fee dues" },
+  { codes: ["INSUFFICIENT_RAC_MEETINGS"], label: "At least 2 RAC meetings attended" },
+  { codes: ["SCHOLAR_NOT_ACTIVE"], label: "Scholar status is Active", visibleByDefault: false },
 ];
 
 export default function SupervisorChangeForm({
@@ -169,40 +170,14 @@ export default function SupervisorChangeForm({
       </div>
 
       <div style={{ ...sectionStyle, marginBottom: "24px" }}>
-        <div style={sectionTitleStyle}>Eligibility Checklist</div>
-        <p style={{ fontSize: "13px", color: "#666", marginBottom: "12px" }}>
-          {eligibilityMode === "enforced"
-            ? "Enforced mode — unmet criteria can block submission."
-            : "Advisory mode — unmet criteria will not block submission at this time."}
-        </p>
-        {isEligibilityLoading ? (
-          <p style={{ fontSize: "13px", color: "#888" }}>Checking eligibility…</p>
-        ) : (
-          <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "8px" }}>
-            {SUPERVISOR_CHANGE_CRITERIA.map((criterion) => {
-              const passes = !failingCodes.has(criterion.code);
-              return (
-                <li
-                  key={criterion.code}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    padding: "8px 12px",
-                    borderRadius: "6px",
-                    background: passes ? "#f0faf5" : "#fff8f0",
-                    border: `1px solid ${passes ? "#b7e4cf" : "#f6d8ae"}`,
-                    fontSize: "14px",
-                    color: passes ? "#0b6a55" : "#b45309",
-                  }}
-                >
-                  <span style={{ fontSize: "16px", lineHeight: 1 }}>{passes ? "✓" : "✗"}</span>
-                  <span>{criterion.label}</span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <EligibilityChecklistSection
+          criteria={SUPERVISOR_CHANGE_CRITERIA}
+          failingCodes={failingCodes}
+          isLoading={isEligibilityLoading}
+          eligibilityMode={eligibilityMode}
+          titleStyle={sectionTitleStyle}
+          wrapperStyle={{}}
+        />
       </div>
 
       <div style={sectionStyle}>

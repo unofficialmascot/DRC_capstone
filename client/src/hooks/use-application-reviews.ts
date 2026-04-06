@@ -2,10 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import type {
   Application,
-  DrcAgendaPoint,
   DrcChairmanDecision,
   DrcMeeting,
-  DrcMeetingMinutes,
   DrcMinuteItem,
   Notice,
 } from "@shared/schema";
@@ -24,12 +22,16 @@ export interface ScheduleMeetingInput {
 export interface DrcMeetingAgenda {
   meeting: DrcMeeting;
   applications: Application[];
-  extraPoints: DrcAgendaPoint[];
+  extraPoints: Array<{ point: string; createdAt: string }>;
 }
 
 export interface ChairmanMinutesMeeting {
   meeting: DrcMeeting;
-  minutes: DrcMeetingMinutes;
+  minutes: {
+    meetingId: number;
+    minutesGeneratedAt: Date | null;
+    minutesGeneratedBy: string | null;
+  };
 }
 
 export interface ChairmanMinuteItem extends DrcMinuteItem {
@@ -39,7 +41,11 @@ export interface ChairmanMinuteItem extends DrcMinuteItem {
 
 export interface ChairmanMinutesDetails {
   meeting: DrcMeeting;
-  minutes: DrcMeetingMinutes;
+  minutes: {
+    meetingId: number;
+    minutesGeneratedAt: Date | null;
+    minutesGeneratedBy: string | null;
+  };
   items: ChairmanMinuteItem[];
 }
 
@@ -244,6 +250,8 @@ export function useCloseDrcMeeting() {
 export function useDrcMeetingsList(enabled = true) {
   return useQuery({
     queryKey: ["drc-meetings", "list"],
+    retry: 1,
+    retryDelay: 500,
     queryFn: async (): Promise<DrcMeeting[]> => {
       const res = await fetch(api.drcMeetings.list.path, {
         credentials: "include",

@@ -15,6 +15,8 @@ npm run db:push          # apply schema to DB (TLS bypass for local dev)
 
 Always run `npm run check` and `npm run test:backend` before opening a PR. See [CONTRIBUTING.md](../CONTRIBUTING.md) for full setup instructions and the PR checklist.
 
+**Test framework:** Node.js built-in `node:test` + `node:assert/strict` — not Jest or Vitest. Test files live co-located with source (`*.test.ts`). Mocks use manual prototype/property patching with restore in `finally` — see existing test files for the `withMockedStorage` / `withMockedRepositoryPrototype` pattern.
+
 ## Architecture
 
 Three-tier backend layered strictly: routes → services → repositories.
@@ -51,6 +53,7 @@ throw unauthorized("Not authenticated");
 throw badRequest("Invalid stage");
 throw forbidden("Not assigned to this scholar");
 ```
+Call `handleRouteError(res, error)` in **every** route catch block — it handles `ApiError`, `ZodError`, and generic errors distinctly. Use `parsePositiveIntParam(req.params.id)` for integer route params; it rejects `0`, floats, and `Infinity` (returns 400 otherwise).
 
 ### Auth & Session
 - Authenticate via `req.session.userId` (set at login)
@@ -62,6 +65,10 @@ throw forbidden("Not assigned to this scholar");
 - Schema changes: edit `shared/schema.ts`, then run `npm run db:push` (dev) or add a new migration in `migrations/`
 - Use Drizzle query builder directly in repository classes; import `db` from `server/db`
 - Path aliases: `@/` → `client/src/`, `@shared/` → `shared/`
+- **No FK constraints in the DB** — cross-table references are logical only (no `.references()` calls). Deleting a parent record will not cascade.
+- `status` and `currentStage` on `applications` are plain `text()` — no Postgres enum constraint. Typos will silently persist.
+- `details: jsonb` on `applications` is an untyped escape hatch (`z.record(z.unknown())`). Type safety is lost for per-application-type form data.
+- Response schemas in `shared/routes.ts` use `.passthrough()` — do not add strict parsing that would reject extra DB columns.
 
 ### Frontend Data Fetching
 - All server calls go through TanStack Query hooks in `client/src/hooks/`
@@ -74,6 +81,9 @@ Employees can have additional roles stored in `employeeRoles` and exposed as `av
 
 ### Notifications
 `emitRoleNotification()` in `notification-service.ts` is skipped in `NODE_ENV=test` — do not add workarounds for this in tests.
+
+### Environment Variables
+Required: `DATABASE_URL`, `SESSION_SECRET`. Optional: `PORT` (default `5000`), `NODE_ENV`, `DB_SSL_CA_FILE` + `NODE_EXTRA_CA_CERTS` (managed Postgres TLS). Google OAuth (needed only if Google login is used): `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI` (defaults to `http://localhost:5000/api/auth/google/callback`). OAuth vars are resolved lazily — app starts without them but any `/api/auth/google/…` request will throw.
 
 ## Existing Documentation
 

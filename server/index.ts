@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
+import MemoryStore from "memorystore";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -50,11 +51,16 @@ function resolveSessionSecret(): string {
   return "gscholar-hub-secret-key-2024";
 }
 
+const SessionStore = MemoryStore(session);
+
 app.use(
   session({
     secret: resolveSessionSecret(),
     resave: false,
     saveUninitialized: false,
+    store: new SessionStore({
+      checkPeriod: 86400000, // prune expired entries every 24h
+    }),
     cookie: {
       secure: isProduction,
       sameSite: "lax",

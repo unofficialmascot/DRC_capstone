@@ -79,28 +79,14 @@ export const scholars = pgTable("scholars", {
   // Administrative
   hasFeesDue: boolean("has_fees_due").notNull().default(false),
 
+  // Supervisor change history audit trail
+  supervisorChangeHistory: jsonb("supervisor_change_history").$type<unknown>(),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const supervisorChangeHistory = pgTable("supervisor_change_history", {
-  id: serial("id").primaryKey(),
-  scholarId: text("scholar_id").notNull(),
-  applicationId: integer("application_id").notNull(),
-  previousSupervisorId: text("previous_supervisor_id"),
-  newSupervisorId: text("new_supervisor_id").notNull(),
-  changedAt: timestamp("changed_at").defaultNow(),
-});
 
-// === RAC MEMBERS ===
-// DRC, IRC, DoAA members assigned to scholars (exactly 2 members per scholar)
-export const racMembers = pgTable("rac_members", {
-  id: serial("id").primaryKey(),
-  scholarId: text("scholar_id").notNull(),
-  employeeId: text("employee_id").notNull(), // Reference to employees table
-  memberRole: text("member_role").notNull(), // 'drc', 'irc', 'doaa'
-  assignedOn: timestamp("assigned_on").defaultNow(),
-});
 
 
 
@@ -118,15 +104,27 @@ export const applications = pgTable("applications", {
 
 // === APPLICATION REVIEWS ===
 // Each approval step creates a review record
-export const applicationReviews = pgTable("application_reviews", {
-  id: serial("id").primaryKey(),
-  applicationId: integer("application_id").notNull(),
-  reviewerId: text("reviewer_id").notNull(),
-  stage: text("stage").notNull(), // 'drc', 'irc', 'doaa'
-  decision: text("decision").notNull(), // 'approved', 'rejected'
-  remarks: text("remarks").notNull(),
-  reviewDate: timestamp("review_date").defaultNow(),
-});
+export const applicationReviews = pgTable(
+  "application_reviews",
+  {
+    id: serial("id").primaryKey(),
+    applicationId: integer("application_id").notNull(),
+    reviewerId: text("reviewer_id").notNull(),
+    stage: text("stage").notNull(), // 'drc', 'irc', 'doaa'
+    decision: text("decision").notNull(), // 'approved', 'rejected'
+    remarks: text("remarks").notNull(),
+    reviewDate: timestamp("review_date").defaultNow(),
+  },
+  (table) => ({
+    applicationIdx: index("application_reviews_application_idx").on(table.applicationId),
+    reviewerIdx: index("application_reviews_reviewer_idx").on(table.reviewerId),
+    uniqueStageVote: uniqueIndex("application_reviews_application_reviewer_stage_idx").on(
+      table.applicationId,
+      table.reviewerId,
+      table.stage,
+    ),
+  }),
+);
 
 export const applicationDocuments = pgTable(
   "application_documents",
@@ -156,6 +154,13 @@ export const drcMeetings = pgTable("drc_meetings", {
   scheduledAt: timestamp("scheduled_at").defaultNow(),
   closedAt: timestamp("closed_at"),
   closedBy: text("closed_by"), // employee_id
+  
+  // Agenda points for this meeting
+  agendaPoints: jsonb("agenda_points").$type<unknown>(),
+  
+  // Minutes generation tracking
+  minutesGeneratedAt: timestamp("minutes_generated_at"),
+  minutesGeneratedBy: text("minutes_generated_by"), // employee_id (convener)
 });
 
 export const drcMeetingApplications = pgTable("drc_meeting_applications", {
@@ -165,19 +170,7 @@ export const drcMeetingApplications = pgTable("drc_meeting_applications", {
   addedAt: timestamp("added_at").defaultNow(),
 });
 
-export const drcAgendaPoints = pgTable("drc_agenda_points", {
-  id: serial("id").primaryKey(),
-  meetingId: integer("meeting_id").notNull(),
-  point: text("point").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
 
-export const drcMeetingMinutes = pgTable("drc_meeting_minutes", {
-  id: serial("id").primaryKey(),
-  meetingId: integer("meeting_id").notNull(),
-  generatedBy: text("generated_by").notNull(), // employee_id (convener)
-  generatedAt: timestamp("generated_at").defaultNow(),
-});
 
 export const drcMinuteItems = pgTable("drc_minute_items", {
   id: serial("id").primaryKey(),
@@ -265,14 +258,11 @@ export const insertApplicationReviewSchema = createInsertSchema(applicationRevie
 export const insertApplicationDocumentSchema = createInsertSchema(applicationDocuments);
 export const insertDrcMeetingSchema = createInsertSchema(drcMeetings);
 export const insertDrcMeetingApplicationSchema = createInsertSchema(drcMeetingApplications);
-export const insertDrcAgendaPointSchema = createInsertSchema(drcAgendaPoints);
-export const insertDrcMeetingMinutesSchema = createInsertSchema(drcMeetingMinutes);
 export const insertDrcMinuteItemSchema = createInsertSchema(drcMinuteItems);
 export const insertDrcChairmanDecisionSchema = createInsertSchema(drcChairmanDecisions);
 export const insertNoticeSchema = createInsertSchema(notices);
 export const insertNoticeDismissalSchema = createInsertSchema(noticeDismissals);
 export const insertDocumentSchema = createInsertSchema(documents);
-export const insertSupervisorChangeHistorySchema = createInsertSchema(supervisorChangeHistory);
 
 // === TYPES ===
 export type User = typeof users.$inferSelect;
@@ -290,10 +280,7 @@ export type DrcMeeting = typeof drcMeetings.$inferSelect;
 export type InsertDrcMeeting = z.infer<typeof insertDrcMeetingSchema>;
 export type DrcMeetingApplication = typeof drcMeetingApplications.$inferSelect;
 export type InsertDrcMeetingApplication = z.infer<typeof insertDrcMeetingApplicationSchema>;
-export type DrcAgendaPoint = typeof drcAgendaPoints.$inferSelect;
-export type InsertDrcAgendaPoint = z.infer<typeof insertDrcAgendaPointSchema>;
-export type DrcMeetingMinutes = typeof drcMeetingMinutes.$inferSelect;
-export type InsertDrcMeetingMinutes = z.infer<typeof insertDrcMeetingMinutesSchema>;
+
 export type DrcMinuteItem = typeof drcMinuteItems.$inferSelect;
 export type InsertDrcMinuteItem = z.infer<typeof insertDrcMinuteItemSchema>;
 export type DrcChairmanDecision = typeof drcChairmanDecisions.$inferSelect;
@@ -312,5 +299,3 @@ export type InsertNoticeDismissal = z.infer<typeof insertNoticeDismissalSchema>;
 export type ResearchProgress = typeof researchProgress.$inferSelect;
 export type Document = typeof documents.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
-export type SupervisorChangeHistory = typeof supervisorChangeHistory.$inferSelect;
-export type InsertSupervisorChangeHistory = z.infer<typeof insertSupervisorChangeHistorySchema>;

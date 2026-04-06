@@ -81,7 +81,10 @@ export function registerAuthRoutes(app: Express): void {
       }
 
       req.session.userId = user.id;
-      return res.redirect("/");
+      req.session.save((err) => {
+        if (err) return handleRouteError(res, err);
+        return res.redirect("/");
+      });
     } catch (error) {
       return handleRouteError(res, error);
     }
@@ -118,7 +121,10 @@ export function registerAuthRoutes(app: Express): void {
         username: getUsername(user),
         ...(availableRoles ? { availableRoles } : {}),
       };
-      res.json(userWithUsername);
+      req.session.save((err) => {
+        if (err) return handleRouteError(res, err);
+        res.json(userWithUsername);
+      });
     } catch (error) {
       return handleRouteError(res, error, "Invalid input");
     }

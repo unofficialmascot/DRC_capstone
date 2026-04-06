@@ -3,10 +3,8 @@ import { db } from "../db";
 import {
   applications,
   applicationReviews,
-  drcAgendaPoints,
   drcChairmanDecisions,
   drcMeetingApplications,
-  drcMeetingMinutes,
   drcMeetings,
   drcMinuteItems,
   noticeDismissals,
@@ -15,10 +13,8 @@ import {
   users,
   type Application,
   type ApplicationReview,
-  type DrcAgendaPoint,
   type DrcChairmanDecision,
   type DrcMeeting,
-  type DrcMeetingMinutes,
   type DrcMinuteItem,
   type Notice,
   type NotificationType,
@@ -60,20 +56,25 @@ export class DrcMeetingRepository {
   async addAgendaPoints(
     meetingId: number,
     points: string[],
-  ): Promise<DrcAgendaPoint[]> {
+  ): Promise<Array<{ point: string; createdAt: string }>> {
     if (points.length === 0) {
       return [];
     }
 
-    return db
-      .insert(drcAgendaPoints)
-      .values(
-        points.map((point) => ({
-          meetingId,
-          point,
-        })),
-      )
+    const newItems = points.map((point) => ({
+      point,
+      createdAt: new Date().toISOString(),
+    }));
+
+    const [meeting] = await db
+      .update(drcMeetings)
+      .set({
+        agendaPoints: sql`agenda_points || ${JSON.stringify(newItems)}::jsonb`,
+      })
+      .where(eq(drcMeetings.id, meetingId))
       .returning();
+
+    return (meeting.agendaPoints as typeof newItems) || [];
   }
 
   async getPendingDrcApplications(): Promise<Application[]> {
@@ -195,12 +196,13 @@ export class DrcMeetingRepository {
     });
   }
 
-  async getAgendaPoints(meetingId: number): Promise<DrcAgendaPoint[]> {
-    return db
+  async getAgendaPoints(meetingId: number): Promise<Array<{ point: string; createdAt: string }>> {
+    const [meeting] = await db
       .select()
-      .from(drcAgendaPoints)
-      .where(eq(drcAgendaPoints.meetingId, meetingId))
-      .orderBy(drcAgendaPoints.id);
+      .from(drcMeetings)
+      .where(eq(drcMeetings.id, meetingId));
+
+    return (meeting?.agendaPoints as Array<{ point: string; createdAt: string }>) || [];
   }
 
   async getDrcReviewsByApplicationIds(applicationIds: number[]): Promise<ApplicationReview[]> {
@@ -223,20 +225,25 @@ export class DrcMeetingRepository {
   async createMeetingMinutes(input: {
     meetingId: number;
     generatedBy: string;
-  }): Promise<DrcMeetingMinutes> {
-    const [minutes] = await db
-      .insert(drcMeetingMinutes)
-      .values(input)
-      .onConflictDoUpdate({
-        target: drcMeetingMinutes.meetingId,
-        set: {
-          generatedBy: input.generatedBy,
-          generatedAt: new Date(),
-        },
+  }): Promise<{
+    meetingId: number;
+    minutesGeneratedAt: Date | null;
+    minutesGeneratedBy: string | null;
+  }> {
+    const [meeting] = await db
+      .update(drcMeetings)
+      .set({
+        minutesGeneratedAt: new Date(),
+        minutesGeneratedBy: input.generatedBy,
       })
-      .returning();
+      .where(eq(drcMeetings.id, input.meetingId))
+      .returning({
+        meetingId: drcMeetings.id,
+        minutesGeneratedAt: drcMeetings.minutesGeneratedAt,
+        minutesGeneratedBy: drcMeetings.minutesGeneratedBy,
+      });
 
-    return minutes;
+    return meeting;
   }
 
   async replaceMinuteItems(
@@ -265,13 +272,23 @@ export class DrcMeetingRepository {
     );
   }
 
-  async getMeetingMinutesByMeetingId(meetingId: number): Promise<DrcMeetingMinutes | undefined> {
-    const [minutes] = await db
-      .select()
-      .from(drcMeetingMinutes)
-      .where(eq(drcMeetingMinutes.meetingId, meetingId));
+  async getMeetingMinutesByMeetingId(
+    meetingId: number,
+  ): Promise<{
+    meetingId: number;
+    minutesGeneratedAt: Date | null;
+    minutesGeneratedBy: string | null;
+  } | undefined> {
+    const [meeting] = await db
+      .select({
+        meetingId: drcMeetings.id,
+        minutesGeneratedAt: drcMeetings.minutesGeneratedAt,
+        minutesGeneratedBy: drcMeetings.minutesGeneratedBy,
+      })
+      .from(drcMeetings)
+      .where(eq(drcMeetings.id, meetingId));
 
-    return minutes;
+    return meeting;
   }
 
   async getMinuteItemsByMeetingId(meetingId: number): Promise<DrcMinuteItem[]> {
