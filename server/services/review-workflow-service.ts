@@ -31,6 +31,28 @@ export async function submitApplicationReview(
     throw notFound("Reviewer not found");
   }
 
+  let reviewerProfile: {
+    name?: string | null;
+    role?: string | null;
+    avatarUrl?: string | null;
+  } = {};
+
+  const profileGetter = (storage as unknown as { getUserByEmployeeId?: unknown }).getUserByEmployeeId;
+  if (typeof profileGetter === "function") {
+    try {
+      const userRecord = await storage.getUserByEmployeeId(input.reviewerId);
+      if (userRecord) {
+        reviewerProfile = {
+          name: userRecord.name,
+          role: userRecord.role,
+          avatarUrl: userRecord.avatarUrl,
+        };
+      }
+    } catch {
+      reviewerProfile = {};
+    }
+  }
+
   const workflow = getWorkflowDefinition(application.type);
   const currentStage = application.currentStage as WorkflowStage;
   if (!workflow.stages.includes(currentStage)) {
@@ -54,6 +76,20 @@ export async function submitApplicationReview(
     decision: input.decision,
     remarks: input.remarks,
   });
+
+  try {
+    await recordApprovalSignature(applicationId, application.details, {
+      stage: application.currentStage,
+      reviewerId: input.reviewerId,
+      reviewerName: reviewerProfile.name ?? input.reviewerId,
+      reviewerRole: reviewerProfile.role ?? application.currentStage,
+      signatureImageUrl: reviewerProfile.avatarUrl ?? null,
+      signedAt: review.reviewDate,
+    });
+  } catch {
+    // Signature capture is best-effort. Approval workflow must continue even when
+    // a profile image/signature cannot be resolved or persisted.
+  }
 
   if (currentStage === "drc") {
     return { review, application };
@@ -84,6 +120,65 @@ export async function submitApplicationReview(
   });
 
   return { review, application: updatedApp };
+}
+
+async function recordApprovalSignature(
+  applicationId: number,
+  details: unknown,
+  input: {
+    stage: string;
+    reviewerId: string;
+    reviewerName?: string | null;
+    reviewerRole?: string | null;
+    signatureImageUrl?: string | null;
+    signedAt?: Date | string | null;
+  },
+) {
+  const baseDetails = details && typeof details === "object" && !Array.isArray(details)
+    ? (details as Record<string, unknown>)
+    : {};
+
+  const existingSignatures = Array.isArray(baseDetails.approvalSignatures)
+    ? (baseDetails.approvalSignatures as Array<Record<string, unknown>>)
+    : [];
+
+  const filtered = existingSignatures.filter((entry) => {
+    if (!entry || typeof entry !== "object") {
+      return false;
+    }
+
+    return !(
+      String(entry.stage ?? "") === input.stage &&
+      String(entry.reviewerId ?? "") === input.reviewerId
+    );
+  });
+
+  const stageLabel = input.stage === "supervisor"
+    ? "Research Supervisor"
+    : input.stage === "drc"
+    ? "DRC Reviewer"
+    : input.stage === "irc"
+    ? "IRC Reviewer"
+    : input.stage === "doaa"
+    ? "DoAA Reviewer"
+    : `${input.stage.toUpperCase()} Reviewer`;
+
+  filtered.push({
+    stage: input.stage,
+    reviewerId: input.reviewerId,
+    label: stageLabel,
+    signerName: input.reviewerName ?? input.reviewerId,
+    signerRole: input.reviewerRole ?? "Reviewer",
+    signatureImageUrl: input.signatureImageUrl ?? null,
+    signedAt: input.signedAt ?? new Date().toISOString(),
+  });
+
+  await storage.updateApplication(applicationId, {
+    details: {
+      ...baseDetails,
+      approvalSignatures: filtered,
+    },
+  });
 }
 
 async function emitReviewNotifications(input: {
@@ -146,7 +241,7 @@ function getReviewerRolesForStage(stage: string | null): string[] {
   return [];
 }
 
-async function applyApprovedChanges(application: {
+export async function applyApprovedChanges(application: {
   id: number;
   scholarId: string;
   type: string;
@@ -192,7 +287,17 @@ async function applySupervisorChangeApproval(
   }
 
   const proposedSupervisor = await storage.getUserByEmployeeId(proposedSupervisorId);
-  if (!proposedSupervisor || proposedSupervisor.role !== "supervisor") {
+  if (!proposedSupervisor) {
+    throw badRequest("Proposed supervisor is invalid");
+  }
+
+  const isSupervisor = await storage.userHasAnyRole(
+    proposedSupervisor.id,
+    ["supervisor"],
+    proposedSupervisor.role,
+  );
+
+  if (!isSupervisor) {
     throw badRequest("Proposed supervisor is invalid");
   }
 

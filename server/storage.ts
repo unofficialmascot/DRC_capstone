@@ -7,7 +7,9 @@ import {
   type User,
   type InsertUser,
   type Application,
+  type ApplicationDocument,
   type InsertApplication,
+  type InsertApplicationDocument,
   type ApplicationReview,
   type InsertApplicationReview,
   type Document,
@@ -18,6 +20,7 @@ import type { AssignedScholarSummary } from "./repositories/user-repository";
 import { ApplicationRepository } from "./repositories/application-repository";
 import { DocumentRepository } from "./repositories/document-repository";
 import { ResearchRepository } from "./repositories/research-repository";
+import { DrcMeetingRepository } from "./repositories/drc-meeting-repository";
 
 export interface SupervisorOption {
   employeeId: string;
@@ -35,6 +38,8 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: Partial<InsertUser>): Promise<User>;
+  getUserRoles(userId: number, baseRole?: string): Promise<string[]>;
+  userHasAnyRole(userId: number, roles: string[], baseRole?: string): Promise<boolean>;
 
   getEmployee(employeeId: string): Promise<typeof employees.$inferSelect | undefined>;
   createEmployee(emp: typeof employees.$inferInsert): Promise<typeof employees.$inferSelect>;
@@ -52,9 +57,17 @@ export interface IStorage {
   getApplicationById(id: number): Promise<Application | undefined>;
   getApplicationsByStage(stage: string): Promise<Application[]>;
   getApplicationsForSupervisor(employeeId: string): Promise<Application[]>;
+  getApplicationsBySupervision(employeeId: string): Promise<Application[]>;
   createApplication(app: InsertApplication): Promise<Application>;
   updateApplication(id: number, updates: Partial<InsertApplication>): Promise<Application>;
   deleteApplication(id: number): Promise<void>;
+  attachDocumentsToApplication(
+    applicationId: number,
+    attachments: Array<Pick<InsertApplicationDocument, "documentId" | "requirementCode" | "attachedBy">>,
+  ): Promise<void>;
+  getApplicationDocuments(
+    applicationId: number,
+  ): Promise<Array<Document & { requirementCode: string | null; attachedBy: string; attachedAt: Date | string | null }>>;
 
   getReviewsForApplication(applicationId: number): Promise<ApplicationReview[]>;
   createReview(review: InsertApplicationReview): Promise<ApplicationReview>;
@@ -69,12 +82,14 @@ export interface IStorage {
 
   getDocuments(scholarId: string): Promise<Document[]>;
   getDocumentById(id: number): Promise<Document | undefined>;
+  getDocumentsByIds(ids: number[]): Promise<Document[]>;
   createDocument(doc: InsertDocument): Promise<Document>;
   updateDocument(id: number, updates: Partial<InsertDocument>): Promise<Document>;
   deleteDocument(id: number): Promise<void>;
 
   getResearchProgress(scholarId: string): Promise<typeof researchProgress.$inferSelect | undefined>;
   createResearchProgress(stats: typeof researchProgress.$inferInsert): Promise<typeof researchProgress.$inferSelect>;
+  countRacMeetingsForScholar(scholarId: string): Promise<number>;
 
 }
 
@@ -83,6 +98,7 @@ export class DatabaseStorage implements IStorage {
   private readonly applications = new ApplicationRepository();
   private readonly documents = new DocumentRepository();
   private readonly research = new ResearchRepository();
+  private readonly drcMeetings = new DrcMeetingRepository();
 
   async getUser(id: number): Promise<User | undefined> {
     return this.users.getUser(id);
@@ -120,6 +136,14 @@ export class DatabaseStorage implements IStorage {
 
   async updateUser(id: number, updates: Partial<InsertUser>): Promise<User> {
     return this.users.updateUser(id, updates);
+  }
+
+  async getUserRoles(userId: number, baseRole?: string): Promise<string[]> {
+    return this.users.getEmployeeRolesByUserId(userId, baseRole);
+  }
+
+  async userHasAnyRole(userId: number, roles: string[], baseRole?: string): Promise<boolean> {
+    return this.users.userHasAnyRole(userId, roles, baseRole);
   }
 
   async getEmployee(employeeId: string): Promise<typeof employees.$inferSelect | undefined> {
@@ -167,6 +191,10 @@ export class DatabaseStorage implements IStorage {
     return this.applications.getApplicationsForSupervisor(employeeId);
   }
 
+  async getApplicationsBySupervision(employeeId: string): Promise<Application[]> {
+    return this.applications.getApplicationsBySupervision(employeeId);
+  }
+
   async createApplication(app: InsertApplication): Promise<Application> {
     return this.applications.createApplication(app);
   }
@@ -177,6 +205,19 @@ export class DatabaseStorage implements IStorage {
 
   async deleteApplication(id: number): Promise<void> {
     return this.applications.deleteApplication(id);
+  }
+
+  async attachDocumentsToApplication(
+    applicationId: number,
+    attachments: Array<Pick<InsertApplicationDocument, "documentId" | "requirementCode" | "attachedBy">>,
+  ): Promise<void> {
+    return this.applications.attachDocumentsToApplication(applicationId, attachments);
+  }
+
+  async getApplicationDocuments(
+    applicationId: number,
+  ): Promise<Array<Document & { requirementCode: string | null; attachedBy: string; attachedAt: Date | string | null }>> {
+    return this.applications.getApplicationDocuments(applicationId);
   }
 
   async getReviewsForApplication(applicationId: number): Promise<ApplicationReview[]> {
@@ -212,6 +253,10 @@ export class DatabaseStorage implements IStorage {
     return this.documents.getDocumentById(id);
   }
 
+  async getDocumentsByIds(ids: number[]): Promise<Document[]> {
+    return this.documents.getDocumentsByIds(ids);
+  }
+
   async createDocument(doc: InsertDocument): Promise<Document> {
     return this.documents.createDocument(doc);
   }
@@ -234,6 +279,10 @@ export class DatabaseStorage implements IStorage {
     stats: typeof researchProgress.$inferInsert,
   ): Promise<typeof researchProgress.$inferSelect> {
     return this.research.createResearchProgress(stats);
+  }
+
+  async countRacMeetingsForScholar(scholarId: string): Promise<number> {
+    return this.drcMeetings.countRacMeetingsForScholar(scholarId);
   }
 
 }

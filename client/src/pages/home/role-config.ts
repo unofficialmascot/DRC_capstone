@@ -93,10 +93,17 @@ export function getRoleConfig(role: string): RoleConfig {
       return {
         role: "drc",
         defaultPath: "/reviewer/dashboard",
-        validPaths: ["/reviewer/dashboard", "/reviewer/meetings", "/reviewer/profile", "/reviewer/help-support"],
+        validPaths: [
+          "/reviewer/dashboard",
+          "/reviewer/reviews",
+          "/reviewer/meetings",
+          "/reviewer/profile",
+          "/reviewer/help-support",
+        ],
         sidebarItems: [
           { route: "/reviewer/dashboard", label: "Dashboard" },
           { route: "/reviewer/profile", label: "Profile" },
+          { route: "/reviewer/reviews", label: "Reviews", isHighlighted: true },
           { route: "/reviewer/meetings", label: "Meetings", isHighlighted: true },
           { route: "/reviewer/help-support", label: "Help & Support" },
         ],

@@ -21,6 +21,7 @@ const publicUserSchema = userResponseSchema.omit({ password: true }).extend({
   username: z.string().optional(),
   scholarId: z.string().optional().nullable(),
   employeeId: z.string().optional().nullable(),
+  availableRoles: z.array(z.string()).optional(),
 }).passthrough();
 
 const documentResponseSchema = insertDocumentSchema.extend({
@@ -30,6 +31,18 @@ const documentResponseSchema = insertDocumentSchema.extend({
   verifiedBy: z.union([z.string(), z.null()]),
   verifiedAt: z.union([z.string(), z.date(), z.null()]),
 });
+
+const applicationAttachedDocumentSchema = documentResponseSchema.extend({
+  requirementCode: z.union([z.string(), z.null()]).optional(),
+  attachedBy: z.union([z.string(), z.null()]).optional(),
+  attachedAt: z.union([z.string(), z.date(), z.null()]).optional(),
+});
+
+const applicationResponseSchema = insertApplicationSchema.extend({
+  submissionDate: z.union([z.string(), z.date(), z.null()]).optional(),
+  scholar: z.record(z.unknown()).optional(),
+  documents: z.array(applicationAttachedDocumentSchema).optional(),
+}).passthrough();
 
 const applicationReviewResponseSchema = insertApplicationReviewSchema.extend({
   reviewDate: z.union([z.string(), z.date(), z.null()]).optional(),
@@ -160,15 +173,19 @@ export const api = {
         scholarId: z.coerce.string().optional(),
       }).optional(),
       responses: {
-        200: z.array(insertApplicationSchema),
+        200: z.array(applicationResponseSchema),
       },
     },
     create: {
       method: 'POST' as const,
       path: '/api/applications',
-      input: insertApplicationSchema.omit({ id: true, submissionDate: true, currentStage: true, status: true, finalOutcome: true }),
+      input: insertApplicationSchema
+        .omit({ id: true, submissionDate: true, currentStage: true, status: true, finalOutcome: true })
+        .extend({
+          attachmentDocumentIds: z.array(z.number().int().positive()).optional(),
+        }),
       responses: {
-        201: insertApplicationSchema,
+        201: applicationResponseSchema,
       },
     },
     eligibility: {
@@ -182,14 +199,14 @@ export const api = {
       method: 'GET' as const,
       path: '/api/applications/:id',
       responses: {
-        200: insertApplicationSchema,
+        200: applicationResponseSchema,
       },
     },
     getByStage: {
       method: 'GET' as const,
       path: '/api/applications/stage/:stage',
       responses: {
-        200: z.array(insertApplicationSchema),
+        200: z.array(applicationResponseSchema),
       },
     },
     reviews: {
@@ -210,7 +227,7 @@ export const api = {
       responses: {
         200: z.object({
           review: applicationReviewResponseSchema,
-          application: insertApplicationSchema,
+          application: applicationResponseSchema,
         }),
       },
     },

@@ -1,0 +1,4 @@
+{
+  "applicationSubmissionMode": "unlimited", // unlimited or none or single-active-per-type
+  "applicationEligibilityMode": "enforced" // advisory or enforced
+}

@@ -22,6 +22,7 @@ import {
   parsePositiveIntParam,
   unauthorized,
 } from "./http";
+import { storage } from "../storage";
 
 export function registerDrcMeetingRoutes(app: Express): void {
   app.get("/api/drc-chairman/dashboard", async (req, res) => {
@@ -215,7 +216,11 @@ export function registerDrcMeetingRoutes(app: Express): void {
 
       const meetingId = parsePositiveIntParam(req.params.id, "meeting id");
       const agenda = await getDrcMeetingAgenda(req.session.userId, meetingId);
-      const pdfBuffer = await buildDrcAgendaPdf(agenda);
+      const convener = await storage.getUserByEmployeeId(agenda.meeting.scheduledBy);
+      const pdfBuffer = await buildDrcAgendaPdf(agenda, {
+        convenerName: convener?.name,
+        convenerSignatureImageUrl: convener?.avatarUrl ?? null,
+      });
       const filename = buildDrcAgendaPdfFilename(
         agenda.meeting.id,
         new Date(agenda.meeting.meetingDate),

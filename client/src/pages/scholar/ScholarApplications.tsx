@@ -137,9 +137,11 @@ export default function ScholarApplications({ user }: { user: PublicUser }) {
     eligibilityByType.get(type) ?? {
       applicationType: type,
       eligible: true,
-      mode: "advisory" as const,
+      mode: APP_SETTINGS.applicationEligibilityMode,
       reasons: [],
     };
+
+  const eligibilityMode = eligibilityData?.mode ?? APP_SETTINGS.applicationEligibilityMode;
 
   const submissionsDisabled = APP_SETTINGS.applicationSubmissionMode === "none";
   const enforceSingleActivePerType =
@@ -265,13 +267,15 @@ export default function ScholarApplications({ user }: { user: PublicUser }) {
               marginBottom: "12px",
               padding: "10px 12px",
               borderRadius: "6px",
-              backgroundColor: "#eef7ff",
-              color: "#0b4f82",
-              border: "1px solid #cfe6fb",
+              backgroundColor: eligibilityMode === "enforced" ? "#fff4e5" : "#eef7ff",
+              color: eligibilityMode === "enforced" ? "#9a3412" : "#0b4f82",
+              border: `1px solid ${eligibilityMode === "enforced" ? "#f6d8ae" : "#cfe6fb"}`,
               fontSize: "12px",
             }}
           >
-            Eligibility checks are currently in advisory mode. Status badges are visible now, and blocking rules can be enabled later.
+            {eligibilityMode === "enforced"
+              ? "Eligibility checks are enforced. Ineligible applications will be blocked from submission."
+              : "Eligibility checks are in advisory mode. Status badges are visible, but unmet criteria will not block submission."}
           </div>
           {submissionsDisabled && (
             <div style={{ marginBottom: "12px", color: "#c0392b", fontWeight: 600 }}>

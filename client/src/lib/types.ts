@@ -4,4 +4,5 @@ export type PublicUser = Omit<DbUser, "password"> &
   Partial<Scholar> & {
     employeeId?: string | null;
     username?: string;
+    availableRoles?: string[];
   };

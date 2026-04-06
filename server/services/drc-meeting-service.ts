@@ -3,9 +3,10 @@ import { storage } from "../storage";
 import { evaluateWorkflowDecision, getWorkflowDefinition, type WorkflowStage } from "../workflow";
 import { badRequest, forbidden, notFound } from "../routes/http";
 import { db } from "../db";
-import { applications, scholars, users } from "@shared/schema";
-import { and, eq, ne } from "drizzle-orm";
+import { applicationReviews, applications, employeeRoles, employees, scholars, users } from "@shared/schema";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { emitRoleNotification } from "./notification-service";
+import { applyApprovedChanges } from "./review-workflow-service";
 
 const drcMeetingRepository = new DrcMeetingRepository();
 
@@ -24,6 +25,19 @@ interface ChairmanDashboardRow {
   scholarName: string;
   department: string | null;
   status: string;
+}
+
+async function hasAnyRole(userId: number, baseRole: string, roles: string[]): Promise<boolean> {
+  const hasRoleMethod = (storage as unknown as { userHasAnyRole?: unknown }).userHasAnyRole;
+  if (typeof hasRoleMethod === "function") {
+    try {
+      return await storage.userHasAnyRole(userId, roles, baseRole);
+    } catch {
+      return roles.includes(baseRole);
+    }
+  }
+
+  return roles.includes(baseRole);
 }
 
 export interface ScheduleDrcMeetingInput {
@@ -165,7 +179,7 @@ export async function getDrcMeetingAgenda(
 }
 
 export async function getOpenDrcMeetingAgenda(sessionUserId: number) {
-  await assertDrcConvener(sessionUserId);
+  await assertDrcMeetingViewer(sessionUserId);
 
   const openMeeting = await drcMeetingRepository.getOpenMeeting();
   if (!openMeeting) {
@@ -207,6 +221,7 @@ export async function closeDrcMeeting(
   }
 
   await drcMeetingRepository.closeMeeting(meetingId, convener.employeeId);
+  await autoApproveMissingDrcVotes(meetingId);
   await generateMinutesForMeeting(meetingId, convener.employeeId);
   return getAgendaByMeetingId(meetingId);
 }
@@ -315,6 +330,11 @@ export async function submitChairmanApplicationDecision(
     finalOutcome: workflowResult.finalOutcome,
   });
 
+  // Apply business logic changes when application is fully approved
+  if (workflowResult.isTerminal && workflowResult.finalOutcome === "Approved") {
+    await applyApprovedChanges(updatedApplication);
+  }
+
   const chairmanDecision = await drcMeetingRepository.upsertChairmanDecision({
     meetingId: input.meetingId,
     applicationId: input.applicationId,
@@ -362,7 +382,9 @@ async function assertDrcConvener(sessionUserId: number): Promise<{ employeeId: s
     throw notFound("User not found");
   }
 
-  if (user.role !== "drc_convener" && user.role !== "admin") {
+  const canManageMeetings = await hasAnyRole(user.id, user.role, ["drc_convener", "admin"]);
+
+  if (!canManageMeetings) {
     throw forbidden("Only DRC convener can schedule DRC meetings");
   }
 
@@ -379,7 +401,9 @@ async function assertDrcMeetingViewer(sessionUserId: number): Promise<void> {
     throw notFound("User not found");
   }
 
-  if (!["drc", "drc_convener", "drc_chairman", "admin"].includes(user.role)) {
+  const canViewMeetings = await hasAnyRole(user.id, user.role, ["drc", "drc_convener", "drc_chairman", "admin"]);
+
+  if (!canViewMeetings) {
     throw forbidden("Only DRC members can access meeting agendas");
   }
 }
@@ -390,7 +414,9 @@ async function assertDrcChairman(sessionUserId: number): Promise<{ employeeId: s
     throw notFound("User not found");
   }
 
-  if (user.role !== "drc_chairman" && user.role !== "admin") {
+  const canApproveMinutes = await hasAnyRole(user.id, user.role, ["drc_chairman", "admin"]);
+
+  if (!canApproveMinutes) {
     throw forbidden("Only DRC chairman can approve meeting minutes");
   }
 
@@ -446,6 +472,61 @@ async function generateMinutesForMeeting(meetingId: number, generatedBy: string)
     notificationType: "minutes_generated",
     relatedMeetingId: meetingId,
   });
+}
+
+async function autoApproveMissingDrcVotes(meetingId: number): Promise<void> {
+  const meetingApplications = await drcMeetingRepository.getMeetingApplications(meetingId);
+  if (meetingApplications.length === 0) {
+    return;
+  }
+
+  const applicationIds = meetingApplications.map((application) => application.id);
+  const reviews = await drcMeetingRepository.getDrcReviewsByApplicationIds(applicationIds);
+
+  const reviewedByApplication = new Map<number, Set<string>>();
+  for (const review of reviews) {
+    const reviewerSet = reviewedByApplication.get(review.applicationId) ?? new Set<string>();
+    reviewerSet.add(review.reviewerId);
+    reviewedByApplication.set(review.applicationId, reviewerSet);
+  }
+
+  const drcMembers = await db
+    .select({
+      employeeId: employees.employeeId,
+    })
+    .from(employees)
+    .innerJoin(employeeRoles, eq(employeeRoles.userId, employees.userId))
+    .where(inArray(employeeRoles.role, ["drc", "drc_convener"]));
+
+  if (drcMembers.length === 0) {
+    return;
+  }
+
+  const autoApprovals: Array<typeof applicationReviews.$inferInsert> = [];
+  for (const applicationId of applicationIds) {
+    const reviewerSet = reviewedByApplication.get(applicationId) ?? new Set<string>();
+
+    for (const member of drcMembers) {
+      if (!member.employeeId || reviewerSet.has(member.employeeId)) {
+        continue;
+      }
+
+      autoApprovals.push({
+        applicationId,
+        reviewerId: member.employeeId,
+        stage: "drc",
+        decision: "approved",
+        remarks: "Auto-approved on meeting close",
+        reviewDate: new Date(),
+      });
+    }
+  }
+
+  if (autoApprovals.length === 0) {
+    return;
+  }
+
+  await db.insert(applicationReviews).values(autoApprovals);
 }
 
 async function getDistinctScholarRowsByApplication(input: {

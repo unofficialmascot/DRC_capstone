@@ -6,6 +6,7 @@ export interface SignatureEntry {
   signerName: string;
   signerRole: string;
   signedAt?: string | Date | null;
+  signatureImageUrl?: string | null;
   isPending?: boolean;
   footer?: ReactNode;
 }
@@ -31,7 +32,23 @@ export function SignatureBlock({ signatures }: { signatures: SignatureEntry[] })
         return (
           <div key={signature.label} style={cardStyle}>
             <div style={{ fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>{signature.label}</div>
-            <div style={{ borderBottom: "1px solid #333", height: "36px", marginBottom: "8px" }} />
+            <div
+              style={{
+                borderBottom: "1px solid #333",
+                minHeight: "36px",
+                marginBottom: "8px",
+                display: "flex",
+                alignItems: "flex-end",
+              }}
+            >
+              {!isPending && signature.signatureImageUrl ? (
+                <img
+                  src={signature.signatureImageUrl}
+                  alt={`${signature.signerName} signature`}
+                  style={{ maxHeight: "34px", maxWidth: "100%", objectFit: "contain" }}
+                />
+              ) : null}
+            </div>
             <div style={{ fontSize: "13px", color: "#222" }}>
               {isPending ? "Pending signature" : signature.signerName}
             </div>

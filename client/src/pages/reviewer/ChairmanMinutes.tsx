@@ -59,6 +59,25 @@ export default function ChairmanMinutes() {
       applicationId,
       decision,
       remarks,
+    }, {
+      onSuccess: () => {
+        toast({
+          title: "Success",
+          description: `Application ${decision === "approved" ? "approved" : "rejected"} successfully to next stage!`,
+        });
+        setRemarksByApp((current) => {
+          const updated = { ...current };
+          delete updated[applicationId];
+          return updated;
+        });
+      },
+      onError: (error: Error) => {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to submit chairman decision",
+          variant: "destructive",
+        });
+      },
     });
   };
 

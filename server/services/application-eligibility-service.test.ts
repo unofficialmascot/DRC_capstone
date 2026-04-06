@@ -49,6 +49,8 @@ test("eligibility engine loads scholar data once and reports advisory reasons wi
       return {
         profile: {
           lifecycleStatus: "Active",
+          tenthPercentage: "92%",
+          interPercentage: "89%",
         },
         progress: {
           completedReviews: 0,
@@ -57,6 +59,7 @@ test("eligibility engine loads scholar data once and reports advisory reasons wi
         },
         documents: [],
         priorApplications: [makeApplication({ type: "Pre-Talk", status: "Pending" })],
+        racMeetingsCount: 0,
       };
     },
   });
@@ -78,6 +81,8 @@ test("eligibility engine enforces blocking rules when mode is enforced", async (
     dataLoader: async () => ({
       profile: {
         lifecycleStatus: "Active",
+        tenthPercentage: "92%",
+        interPercentage: "89%",
       },
       progress: {
         completedReviews: 2,
@@ -86,6 +91,7 @@ test("eligibility engine enforces blocking rules when mode is enforced", async (
       },
       documents: [makeDocument({ documentType: "progress_report", isVerified: false })],
       priorApplications: [],
+      racMeetingsCount: 2,
     }),
   });
 
@@ -93,4 +99,68 @@ test("eligibility engine enforces blocking rules when mode is enforced", async (
   assert.ok(extension);
   assert.equal(extension.eligible, false);
   assert.ok(extension.reasons.some((reason) => reason.code === "MISSING_VERIFIED_DOCUMENTS"));
+});
+
+test("eligibility engine blocks when academic average is below configured threshold", async () => {
+  const { evaluateScholarApplicationEligibility } = await import("./application-eligibility-service");
+  const result = await evaluateScholarApplicationEligibility({
+    scholarId: "GITAM-SCH-2020-118",
+    mode: "enforced",
+    dataLoader: async () => ({
+      profile: {
+        lifecycleStatus: "Active",
+        tenthPercentage: "60%",
+        interPercentage: "65%",
+      },
+      progress: {
+        completedReviews: 2,
+        pendingReports: 0,
+        publications: 3,
+      },
+      documents: [makeDocument({ documentType: "resume", isVerified: true })],
+      priorApplications: [],
+      racMeetingsCount: 2,
+    }),
+  });
+
+  const supervisorChange = result.items.find((item) => item.applicationType === "Supervisor Change");
+  assert.ok(supervisorChange);
+  assert.equal(supervisorChange.eligible, true, "Supervisor Change should not require academic percentage check");
+
+  // Other application types still enforce the academic percentage rule
+  const extension = result.items.find((item) => item.applicationType === "Extension");
+  assert.ok(extension);
+  assert.equal(extension.eligible, false);
+  assert.ok(extension.reasons.some((reason) => reason.code === "ACADEMIC_PERCENTAGE_TOO_LOW"));
+});
+
+test("eligibility engine reports missing academic percentage records", async () => {
+  const { evaluateScholarApplicationEligibility } = await import("./application-eligibility-service");
+  const result = await evaluateScholarApplicationEligibility({
+    scholarId: "GITAM-SCH-2020-118",
+    mode: "enforced",
+    dataLoader: async () => ({
+      profile: {
+        lifecycleStatus: "Active",
+      },
+      progress: {
+        completedReviews: 2,
+        pendingReports: 0,
+        publications: 3,
+      },
+      documents: [makeDocument({ documentType: "resume", isVerified: true })],
+      priorApplications: [],
+      racMeetingsCount: 2,
+    }),
+  });
+
+  const supervisorChange = result.items.find((item) => item.applicationType === "Supervisor Change");
+  assert.ok(supervisorChange);
+  assert.equal(supervisorChange.eligible, true, "Supervisor Change should not require academic percentage records");
+
+  // Other application types still enforce the academic percentage rule
+  const preTalk = result.items.find((item) => item.applicationType === "Pre-Talk");
+  assert.ok(preTalk);
+  assert.equal(preTalk.eligible, false);
+  assert.ok(preTalk.reasons.some((reason) => reason.code === "ACADEMIC_PERCENTAGE_UNAVAILABLE"));
 });

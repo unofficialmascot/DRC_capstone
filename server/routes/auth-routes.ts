@@ -16,6 +16,19 @@ function getUsername(user: Pick<AuthIdentity, "employeeId" | "scholarId" | "emai
   return user.employeeId ?? user.scholarId ?? user.email;
 }
 
+async function getAvailableRoles(user: { id: number; role: string; employeeId?: string | null }): Promise<string[] | undefined> {
+  if (!user.employeeId) {
+    return undefined;
+  }
+
+  const roles = await storage.getUserRoles(user.id, user.role);
+  if (roles.length === 0) {
+    return [user.role];
+  }
+
+  return roles;
+}
+
 async function verifyAndMigrateLegacyPassword(
   user: Pick<AuthIdentity, "id" | "password">,
   inputPassword: string,
@@ -99,9 +112,11 @@ export function registerAuthRoutes(app: Express): void {
 
       req.session.userId = user.id;
       const { password: _, ...userWithoutPassword } = user;
+      const availableRoles = await getAvailableRoles(userWithoutPassword as { id: number; role: string; employeeId?: string | null });
       const userWithUsername = {
         ...userWithoutPassword,
         username: getUsername(user),
+        ...(availableRoles ? { availableRoles } : {}),
       };
       res.json(userWithUsername);
     } catch (error) {
@@ -128,9 +143,11 @@ export function registerAuthRoutes(app: Express): void {
         throw notFound("User not found");
       }
       const { password: _, ...userWithoutPassword } = user;
+      const availableRoles = await getAvailableRoles(userWithoutPassword as { id: number; role: string; employeeId?: string | null });
       const userWithUsername = {
         ...userWithoutPassword,
         username: getUsername(user),
+        ...(availableRoles ? { availableRoles } : {}),
       };
       res.json(userWithUsername);
     } catch (error) {

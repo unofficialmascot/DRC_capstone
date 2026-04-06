@@ -1,4 +1,6 @@
 import PDFDocument from "pdfkit";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 interface AgendaApplication {
   id: number;
@@ -25,8 +27,14 @@ interface MeetingAgendaPayload {
   extraPoints: AgendaPoint[];
 }
 
+interface AgendaSignatureInfo {
+  convenerName?: string;
+  convenerSignatureImageUrl?: string | null;
+}
+
 export async function buildDrcAgendaPdf(
   agenda: MeetingAgendaPayload,
+  signatureInfo?: AgendaSignatureInfo,
 ): Promise<Buffer> {
   const doc = new PDFDocument({
     size: "A4",
@@ -82,8 +90,65 @@ export async function buildDrcAgendaPdf(
       });
     }
 
-    doc.end();
+    doc.moveDown(2);
+
+    const lineY = doc.y;
+    doc
+      .moveTo(360, lineY + 36)
+      .lineTo(540, lineY + 36)
+      .strokeColor("#333")
+      .stroke();
+
+    loadSignatureImage(signatureInfo?.convenerSignatureImageUrl)
+      .then((imageBuffer) => {
+        if (imageBuffer) {
+          doc.image(imageBuffer, 365, lineY + 2, {
+            fit: [170, 30],
+          });
+        }
+      })
+      .catch(() => {
+        // Ignore image load issues and keep plain signature line fallback.
+      })
+      .finally(() => {
+        doc
+          .fontSize(10)
+          .fillColor("#222")
+          .text(`Signature of DRC Convener${signatureInfo?.convenerName ? ` (${signatureInfo.convenerName})` : ""}`, 360, lineY + 42, {
+            width: 180,
+            align: "center",
+          });
+
+        doc.end();
+      });
   });
+}
+
+async function loadSignatureImage(signatureUrl?: string | null): Promise<Buffer | null> {
+  if (!signatureUrl || !signatureUrl.trim()) {
+    return null;
+  }
+
+  const source = signatureUrl.trim();
+
+  if (source.startsWith("http://") || source.startsWith("https://")) {
+    const response = await fetch(source);
+    if (!response.ok) {
+      return null;
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  }
+
+  const normalized = source.startsWith("/") ? source.slice(1) : source;
+  const relative = normalized.startsWith("uploads/") ? normalized : `uploads/${normalized}`;
+  const absolute = path.resolve(process.cwd(), relative);
+
+  try {
+    return await readFile(absolute);
+  } catch {
+    return null;
+  }
 }
 
 export function buildDrcAgendaPdfFilename(meetingId: number, meetingDate: Date): string {

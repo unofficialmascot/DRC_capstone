@@ -24,8 +24,15 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import type { Application } from "@shared/schema";
 import type { PublicUser } from "@/lib/types";
+import type { RoleType } from "@/pages/home/role-config";
 
-export default function ReviewerApplications({ user }: { user: PublicUser }) {
+export default function ReviewerApplications({
+  user,
+  role,
+}: {
+  user: PublicUser;
+  role?: RoleType;
+}) {
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [remarks, setRemarks] = useState("");
   const [meetingDate, setMeetingDate] = useState("");
@@ -37,11 +44,14 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
   const [latestAgenda, setLatestAgenda] = useState<DrcMeetingAgenda | null>(null);
   const { toast } = useToast();
 
-  const isDrcConvener = user.role === "drc_convener";
-  const roleLabel = isDrcConvener ? "DRC Convener" : user.role.toUpperCase();
+  const effectiveRole = role ?? (user.role as RoleType);
+  const isDrcConvener = effectiveRole === "drc_convener";
+  const isDrcMember = effectiveRole === "drc";
+  const isDrcReviewer = isDrcMember || isDrcConvener;
+  const roleLabel = isDrcConvener ? "DRC Convener" : effectiveRole.toUpperCase();
   const reviewerKey = user.employeeId || user.scholarId || user.username || user.email;
 
-  const { data: pendingApps = [], isLoading } = useApplicationsByStage(isDrcConvener ? "" : user.role) as {
+  const { data: pendingApps = [], isLoading } = useApplicationsByStage(isDrcConvener ? "" : effectiveRole) as {
     data: Application[] | undefined;
     isLoading: boolean;
   };
@@ -74,7 +84,7 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
   };
   const scheduleMeetingMutation = useScheduleDrcMeeting();
   const closeMeetingMutation = useCloseDrcMeeting();
-  const { data: openMeetingAgenda, isLoading: isOpenMeetingLoading } = useOpenDrcMeeting(isDrcConvener);
+  const { data: openMeetingAgenda, isLoading: isOpenMeetingLoading } = useOpenDrcMeeting(isDrcReviewer);
   const displayApplication = (selectedApplicationDetail ?? selectedApp) as Application | null;
 
   useEffect(() => {
@@ -416,8 +426,71 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
         </AlertDialog>
       )}
 
+      {isDrcReviewer && hasOpenMeeting && latestAgenda && (
+        <div style={{ background: "#fff", borderRadius: "10px", border: "1px solid #e6e6e6", overflow: "hidden", marginBottom: "20px" }}>
+          <div style={{ padding: "16px", borderBottom: "1px solid #edf0f2", background: "#f8fafc" }}>
+            <h3 style={{ margin: 0, color: "#0b6a55" }}>Active DRC Meeting #{latestAgenda.meeting.id}</h3>
+            <div style={{ fontSize: "13px", color: "#666", marginTop: "6px" }}>
+              Meeting Date: {new Date(latestAgenda.meeting.meetingDate as unknown as string).toLocaleString()}
+            </div>
+          </div>
+
+          {latestAgenda.applications.length === 0 ? (
+            <div style={{ padding: "20px", color: "#666" }}>No applications are currently part of this active meeting.</div>
+          ) : (
+            <table className="info-table">
+              <thead>
+                <tr>
+                  <th>Scholar</th>
+                  <th>Type</th>
+                  <th>Submitted</th>
+                  <th>Status</th>
+                  <th>Stage</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {latestAgenda.applications.map((app) => (
+                  <tr key={app.id}>
+                    <td>{getScholarLabel(app.scholarId)}</td>
+                    <td>{app.type}</td>
+                    <td>{new Date(app.submissionDate as unknown as string).toLocaleDateString()}</td>
+                    <td>
+                      <span
+                        className="pill"
+                        style={{
+                          background: "#f39c12",
+                          color: "white",
+                          padding: "4px 10px",
+                          borderRadius: "15px",
+                          fontSize: "13px",
+                        }}
+                      >
+                        Awaiting Review
+                      </span>
+                    </td>
+                    <td style={{ textTransform: "capitalize" }}>{app.currentStage}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="submit-btn"
+                        onClick={() => setSelectedApp(app)}
+                        style={{ padding: "6px 12px", fontSize: "13px" }}
+                        data-testid={`button-review-active-${app.id}`}
+                      >
+                        Review Application
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
       {!isDrcConvener && (
-        isLoading ? (
+        isDrcReviewer && hasOpenMeeting ? null : isLoading ? (
           <div style={{ textAlign: "center", padding: "40px" }}>Loading...</div>
         ) : pendingApps.length === 0 ? (
           <div style={{ textAlign: "center", padding: "40px", color: "#666", background: "#fff", borderRadius: "10px", border: "1px solid #e6e6e6" }}>
@@ -476,7 +549,7 @@ export default function ReviewerApplications({ user }: { user: PublicUser }) {
         )
       )}
 
-      {!isDrcConvener && selectedApp && (
+      {selectedApp && (
         <div className="modal-overlay active" onClick={() => setSelectedApp(null)}>
           <div
             className="modal-content"

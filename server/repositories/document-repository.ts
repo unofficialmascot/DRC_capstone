@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "../db";
 import { documents, type Document, type InsertDocument } from "@shared/schema";
 
@@ -10,6 +10,14 @@ export class DocumentRepository {
   async getDocumentById(id: number): Promise<Document | undefined> {
     const [doc] = await db.select().from(documents).where(eq(documents.id, id));
     return doc;
+  }
+
+  async getDocumentsByIds(ids: number[]): Promise<Document[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    return db.select().from(documents).where(inArray(documents.id, ids));
   }
 
   async createDocument(doc: InsertDocument): Promise<Document> {

@@ -26,7 +26,17 @@ export function registerReviewRoutes(app: Express): void {
         throw unauthorized("User session is invalid");
       }
 
-      if (sessionUser.role === "drc_convener" || sessionUser.role === "drc_chairman") {
+      const hasRoleMethod = (storage as unknown as { userHasAnyRole?: unknown }).userHasAnyRole;
+      let isChairman = sessionUser.role === "drc_chairman";
+      if (typeof hasRoleMethod === "function") {
+        try {
+          isChairman = await storage.userHasAnyRole(sessionUser.id, ["drc_chairman"], sessionUser.role);
+        } catch {
+          isChairman = sessionUser.role === "drc_chairman";
+        }
+      }
+
+      if (isChairman) {
         throw forbidden("This role cannot submit member reviews");
       }
 

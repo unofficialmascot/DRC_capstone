@@ -1,16 +1,26 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, or } from "drizzle-orm";
 import { db } from "../db";
 import {
   applications,
+  applicationDocuments,
   applicationReviews,
   documents,
   scholars,
   users,
+  type Document,
   type Application,
+  type InsertApplicationDocument,
   type ApplicationReview,
   type InsertApplication,
   type InsertApplicationReview,
 } from "@shared/schema";
+import { getScholarSelectFields } from "./scholar-compat";
+
+export type AttachedApplicationDocument = Document & {
+  requirementCode: string | null;
+  attachedBy: string;
+  attachedAt: Date | string | null;
+};
 
 export class ApplicationRepository {
   async getApplications(scholarId?: string): Promise<Application[]> {
@@ -26,8 +36,13 @@ export class ApplicationRepository {
   }
 
   async getApplicationById(id: number): Promise<Application | undefined> {
+    const scholarFields = await getScholarSelectFields();
     const [result] = await db
-      .select()
+      .select({
+        applications,
+        scholars: scholarFields,
+        users,
+      })
       .from(applications)
       .leftJoin(scholars, eq(scholars.scholarId, applications.scholarId))
       .leftJoin(users, eq(users.id, scholars.userId))
@@ -37,11 +52,15 @@ export class ApplicationRepository {
       return undefined;
     }
 
-    const scholarDocuments = await db
-      .select()
-      .from(documents)
-      .where(eq(documents.scholarId, result.applications.scholarId))
-      .orderBy(desc(documents.uploadedAt));
+    const attachedDocuments = await this.getApplicationDocuments(result.applications.id);
+
+    const scholarDocuments = attachedDocuments.length > 0
+      ? attachedDocuments
+      : await db
+          .select()
+          .from(documents)
+          .where(eq(documents.scholarId, result.applications.scholarId))
+          .orderBy(desc(documents.uploadedAt));
 
     const scholarData =
       result.scholars && result.users
@@ -61,8 +80,13 @@ export class ApplicationRepository {
   }
 
   async getApplicationsByStage(stage: string): Promise<Application[]> {
+    const scholarFields = await getScholarSelectFields();
     const results = await db
-      .select()
+      .select({
+        applications,
+        scholars: scholarFields,
+        users,
+      })
       .from(applications)
       .leftJoin(scholars, eq(scholars.scholarId, applications.scholarId))
       .leftJoin(users, eq(users.id, scholars.userId))
@@ -91,8 +115,12 @@ export class ApplicationRepository {
   }
 
   async getApplicationsForSupervisor(employeeId: string): Promise<Application[]> {
+    const scholarFields = await getScholarSelectFields();
     const results = await db
-      .select()
+      .select({
+        applications,
+        scholars: scholarFields,
+      })
       .from(applications)
       .innerJoin(scholars, and(eq(scholars.scholarId, applications.scholarId)))
       .where(
@@ -110,6 +138,43 @@ export class ApplicationRepository {
           result.scholars.coSupervisorId === employeeId,
       )
       .map((result) => result.applications);
+  }
+
+  async getApplicationsBySupervision(employeeId: string): Promise<Application[]> {
+    const scholarFields = await getScholarSelectFields();
+    const results = await db
+      .select({
+        applications,
+        scholars: scholarFields,
+        users,
+      })
+      .from(applications)
+      .innerJoin(scholars, eq(scholars.scholarId, applications.scholarId))
+      .leftJoin(users, eq(users.id, scholars.userId))
+      .where(
+        or(
+          eq(scholars.supervisorId, employeeId),
+          eq(scholars.coSupervisorId, employeeId),
+        ),
+      )
+      .orderBy(desc(applications.submissionDate));
+
+    return results.map((result) => {
+      const scholarData =
+        result.scholars && result.users
+          ? {
+              ...result.scholars,
+              name: result.users.name,
+              email: result.users.email,
+              phone: result.users.phone,
+            }
+          : undefined;
+
+      return {
+        ...result.applications,
+        scholar: scholarData,
+      } as any;
+    });
   }
 
   async createApplication(app: InsertApplication): Promise<Application> {
@@ -131,7 +196,53 @@ export class ApplicationRepository {
   }
 
   async deleteApplication(id: number): Promise<void> {
+    await db.delete(applicationDocuments).where(eq(applicationDocuments.applicationId, id));
     await db.delete(applications).where(eq(applications.id, id));
+  }
+
+  async attachDocumentsToApplication(
+    applicationId: number,
+    attachments: Array<Pick<InsertApplicationDocument, "documentId" | "requirementCode" | "attachedBy">>,
+  ): Promise<void> {
+    if (attachments.length === 0) {
+      return;
+    }
+
+    await db.insert(applicationDocuments).values(
+      attachments.map((attachment) => ({
+        applicationId,
+        documentId: attachment.documentId,
+        requirementCode: attachment.requirementCode ?? null,
+        attachedBy: attachment.attachedBy ?? "scholar",
+      })),
+    );
+  }
+
+  async getApplicationDocuments(applicationId: number): Promise<AttachedApplicationDocument[]> {
+    const rows = await db
+      .select({
+        id: documents.id,
+        scholarId: documents.scholarId,
+        documentType: documents.documentType,
+        category: documents.category,
+        fileName: documents.fileName,
+        filePath: documents.filePath,
+        fileSize: documents.fileSize,
+        mimeType: documents.mimeType,
+        uploadedAt: documents.uploadedAt,
+        isVerified: documents.isVerified,
+        verifiedBy: documents.verifiedBy,
+        verifiedAt: documents.verifiedAt,
+        requirementCode: applicationDocuments.requirementCode,
+        attachedBy: applicationDocuments.attachedBy,
+        attachedAt: applicationDocuments.attachedAt,
+      })
+      .from(applicationDocuments)
+      .innerJoin(documents, eq(documents.id, applicationDocuments.documentId))
+      .where(eq(applicationDocuments.applicationId, applicationId))
+      .orderBy(desc(applicationDocuments.attachedAt), desc(documents.uploadedAt));
+
+    return rows;
   }
 
   async getReviewsForApplication(applicationId: number): Promise<ApplicationReview[]> {

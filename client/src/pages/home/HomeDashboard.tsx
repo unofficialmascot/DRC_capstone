@@ -89,22 +89,18 @@ export default function HomeDashboard({ user, onLogout }: { user: PublicUser; on
   const supervisorSection = supervisorSectionBySegment[segment] || "dashboard";
 
   const roleConfig = getRoleConfig(user.role);
+  const availableViewRoles = Array.from(
+    new Set(
+      (user.availableRoles && user.availableRoles.length > 0 ? user.availableRoles : [user.role]).filter(Boolean),
+    ),
+  );
+  const canSwitchRoles = availableViewRoles.length > 1;
 
-  const specialSupervisorEmail = "supervisor100@gitam.edu";
-  const isSpecialSupervisor = user.role === "supervisor" && user.email === specialSupervisorEmail;
-
-  // All supervisors are now fixed to supervisor role, except the special supervisor who can switch into DRC/IRC role views.
-  const canSwitchRoles = isSpecialSupervisor || user.role === "drc_chairman" || user.role === "drc";
-
-  const availableViewRoles = canSwitchRoles ? (
-    isSpecialSupervisor
-      ? ["supervisor", "drc", "irc"]
-      : user.role === "drc_chairman"
-      ? ["drc_chairman", "drc"]
-      : user.role === "drc"
-      ? ["drc", "supervisor", "drc_convener"]
-      : [user.role]
-  ) : [user.role];
+  useEffect(() => {
+    if (!availableViewRoles.includes(viewRole)) {
+      setViewRole(user.role);
+    }
+  }, [availableViewRoles, user.role, viewRole]);
 
   const viewRoleConfig = getRoleConfig(viewRole);
 
@@ -207,6 +203,8 @@ export default function HomeDashboard({ user, onLogout }: { user: PublicUser; on
       switch (reviewerPage) {
         case "dashboard":
           return <ReviewerDashboard role={viewRole} user={user} activeSection="dashboard" />;
+        case "reviews":
+          return <ReviewerApplications user={user} role={viewRole as any} />;
         case "meetings":
           return <ReviewerMeetings role={viewRole} />;
         case "profile":
@@ -223,7 +221,7 @@ export default function HomeDashboard({ user, onLogout }: { user: PublicUser; on
         case "dashboard":
           return <ReviewerDashboard role={viewRole} user={user} activeSection="dashboard" />;
         case "reviews":
-          return <ReviewerApplications user={user} />;
+          return <ReviewerApplications user={user} role={viewRole as any} />;
         case "meetings-history":
           return <ConvenerMeetingsHistory role={viewRole} />;
         case "profile":

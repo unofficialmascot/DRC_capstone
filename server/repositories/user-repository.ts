@@ -1,15 +1,33 @@
 import bcrypt from "bcryptjs";
-import { and, eq, or, sql } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 import { db } from "../db";
 import {
   users,
   scholars,
   employees,
+  employeeRoles,
   supervisorChangeHistory,
   type Scholar,
   type User,
   type InsertUser,
 } from "@shared/schema";
+import { getScholarSelectFields, sanitizeScholarWrite } from "./scholar-compat";
+
+const EMPLOYEE_ROLES = [
+  "supervisor",
+  "drc",
+  "drc_convener",
+  "drc_chairman",
+  "irc",
+  "doaa",
+  "admin",
+] as const;
+
+type EmployeeRoleName = (typeof EMPLOYEE_ROLES)[number];
+
+function isEmployeeRole(role: string): role is EmployeeRoleName {
+  return (EMPLOYEE_ROLES as readonly string[]).includes(role);
+}
 
 export interface SupervisorOption {
   employeeId: string;
@@ -36,8 +54,13 @@ export class UserRepository {
   async getUserWithScholar(
     id: number,
   ): Promise<(User & Partial<Scholar> & Partial<typeof employees.$inferSelect>) | undefined> {
+    const scholarFields = await getScholarSelectFields();
     const [record] = await db
-      .select()
+      .select({
+        users,
+        scholars: scholarFields,
+        employees,
+      })
       .from(users)
       .leftJoin(scholars, eq(scholars.userId, users.id))
       .leftJoin(employees, eq(employees.userId, users.id))
@@ -61,8 +84,12 @@ export class UserRepository {
   async getUserByScholarId(
     scholarId: string,
   ): Promise<(User & Partial<Scholar>) | undefined> {
+    const scholarFields = await getScholarSelectFields();
     const [record] = await db
-      .select()
+      .select({
+        users,
+        scholars: scholarFields,
+      })
       .from(users)
       .leftJoin(scholars, eq(scholars.userId, users.id))
       .where(eq(scholars.scholarId, scholarId));
@@ -145,8 +172,9 @@ export class UserRepository {
     const assignedCount = await this.countAssignedScholars(employeeId);
     if (assignedCount > 0) {
       if (currentScholarId) {
+        const scholarFields = await getScholarSelectFields();
         const [currentScholar] = await db
-          .select()
+          .select(scholarFields)
           .from(scholars)
           .where(eq(scholars.scholarId, currentScholarId));
 
@@ -165,6 +193,9 @@ export class UserRepository {
   async createScholarProfile(
     profile: typeof scholars.$inferInsert,
   ): Promise<typeof scholars.$inferSelect> {
+    const scholarFields = await getScholarSelectFields();
+    const writeProfile = await sanitizeScholarWrite(profile);
+
     if (profile.supervisorId) {
       await this.ensureSupervisorHasSingleScholar(profile.supervisorId);
     }
@@ -172,7 +203,10 @@ export class UserRepository {
       await this.ensureSupervisorHasSingleScholar(profile.coSupervisorId);
     }
 
-    const [newProfile] = await db.insert(scholars).values(profile).returning();
+    const [newProfile] = await db
+      .insert(scholars)
+      .values(writeProfile)
+      .returning(scholarFields);
     return newProfile;
   }
 
@@ -180,6 +214,9 @@ export class UserRepository {
     scholarId: string,
     updates: Partial<typeof scholars.$inferInsert>,
   ): Promise<typeof scholars.$inferSelect> {
+    const scholarFields = await getScholarSelectFields();
+    const writeUpdates = await sanitizeScholarWrite(updates);
+
     if (updates.supervisorId) {
       await this.ensureSupervisorHasSingleScholar(updates.supervisorId, scholarId);
     }
@@ -189,15 +226,16 @@ export class UserRepository {
 
     const [updatedProfile] = await db
       .update(scholars)
-      .set(updates)
+      .set(writeUpdates)
       .where(eq(scholars.scholarId, scholarId))
-      .returning();
+      .returning(scholarFields);
     return updatedProfile;
   }
 
   async isSupervisorForScholar(employeeId: string, scholarId: string): Promise<boolean> {
+    const scholarFields = await getScholarSelectFields();
     const [scholar] = await db
-      .select()
+      .select(scholarFields)
       .from(scholars)
       .where(eq(scholars.scholarId, scholarId));
 
@@ -218,9 +256,48 @@ export class UserRepository {
       })
       .from(employees)
       .innerJoin(users, eq(users.id, employees.userId))
-      .where(and(eq(users.role, "supervisor")));
+      .leftJoin(employeeRoles, and(eq(employeeRoles.userId, users.id), eq(employeeRoles.role, "supervisor")))
+      .where(sql`${users.role} = 'supervisor' OR ${employeeRoles.id} IS NOT NULL`);
 
     return rows;
+  }
+
+  async getEmployeeRolesByUserId(userId: number, baseRole?: string): Promise<string[]> {
+    const rows = await db
+      .select({ role: employeeRoles.role })
+      .from(employeeRoles)
+      .where(eq(employeeRoles.userId, userId));
+
+    const dedupedRoles = new Set<string>();
+    for (const row of rows) {
+      if (row.role) {
+        dedupedRoles.add(row.role);
+      }
+    }
+
+    if (baseRole && isEmployeeRole(baseRole)) {
+      dedupedRoles.add(baseRole);
+    }
+
+    return Array.from(dedupedRoles);
+  }
+
+  async userHasAnyRole(userId: number, roles: string[], baseRole?: string): Promise<boolean> {
+    if (roles.length === 0) {
+      return false;
+    }
+
+    if (baseRole && roles.includes(baseRole)) {
+      return true;
+    }
+
+    const [match] = await db
+      .select({ id: employeeRoles.id })
+      .from(employeeRoles)
+      .where(and(eq(employeeRoles.userId, userId), inArray(employeeRoles.role, roles)))
+      .limit(1);
+
+    return Boolean(match);
   }
 
   async countAssignedScholars(employeeId: string): Promise<number> {

@@ -27,6 +27,20 @@ export const employees = pgTable("employees", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const employeeRoles = pgTable(
+  "employee_roles",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").notNull(),
+    role: text("role").notNull(),
+    assignedAt: timestamp("assigned_at").defaultNow(),
+  },
+  (table) => ({
+    userIdx: index("employee_roles_user_idx").on(table.userId),
+    uniqueUserRole: uniqueIndex("employee_roles_user_role_idx").on(table.userId, table.role),
+  }),
+);
+
 // === SCHOLARS ===
 // Scholar-specific data - separated from users
 export const scholars = pgTable("scholars", {
@@ -61,7 +75,10 @@ export const scholars = pgTable("scholars", {
   tenthPercentage: text("tenth_percentage"),
   interBoard: text("inter_board"),
   interPercentage: text("inter_percentage"),
-  
+
+  // Administrative
+  hasFeesDue: boolean("has_fees_due").notNull().default(false),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -110,6 +127,26 @@ export const applicationReviews = pgTable("application_reviews", {
   remarks: text("remarks").notNull(),
   reviewDate: timestamp("review_date").defaultNow(),
 });
+
+export const applicationDocuments = pgTable(
+  "application_documents",
+  {
+    id: serial("id").primaryKey(),
+    applicationId: integer("application_id").notNull(),
+    documentId: integer("document_id").notNull(),
+    requirementCode: text("requirement_code"),
+    attachedBy: text("attached_by").notNull().default("scholar"),
+    attachedAt: timestamp("attached_at").defaultNow(),
+  },
+  (table) => ({
+    applicationIdx: index("application_documents_application_idx").on(table.applicationId),
+    documentIdx: index("application_documents_document_idx").on(table.documentId),
+    uniqueApplicationDocument: uniqueIndex("application_documents_application_document_idx").on(
+      table.applicationId,
+      table.documentId,
+    ),
+  }),
+);
 
 // === DRC MEETINGS / AGENDA ===
 export const drcMeetings = pgTable("drc_meetings", {
@@ -219,11 +256,13 @@ export const documents = pgTable("documents", {
 
 // === SCHEMAS ===
 export const insertUserSchema = createInsertSchema(users);
+export const insertEmployeeRoleSchema = createInsertSchema(employeeRoles);
 export const insertApplicationSchema = createInsertSchema(applications, {
   details: z.record(z.unknown()).optional(), // Explicitly allow any object for details field
   submissionDate: z.union([z.string(), z.date()]).optional(), // API returns dates as strings
 });
 export const insertApplicationReviewSchema = createInsertSchema(applicationReviews);
+export const insertApplicationDocumentSchema = createInsertSchema(applicationDocuments);
 export const insertDrcMeetingSchema = createInsertSchema(drcMeetings);
 export const insertDrcMeetingApplicationSchema = createInsertSchema(drcMeetingApplications);
 export const insertDrcAgendaPointSchema = createInsertSchema(drcAgendaPoints);
@@ -239,10 +278,14 @@ export const insertSupervisorChangeHistorySchema = createInsertSchema(supervisor
 export type User = typeof users.$inferSelect;
 export type Scholar = typeof scholars.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type EmployeeRole = typeof employeeRoles.$inferSelect;
+export type InsertEmployeeRole = z.infer<typeof insertEmployeeRoleSchema>;
 export type Application = typeof applications.$inferSelect;
 export type InsertApplication = z.infer<typeof insertApplicationSchema>;
 export type ApplicationReview = typeof applicationReviews.$inferSelect;
 export type InsertApplicationReview = z.infer<typeof insertApplicationReviewSchema>;
+export type ApplicationDocument = typeof applicationDocuments.$inferSelect;
+export type InsertApplicationDocument = z.infer<typeof insertApplicationDocumentSchema>;
 export type DrcMeeting = typeof drcMeetings.$inferSelect;
 export type InsertDrcMeeting = z.infer<typeof insertDrcMeetingSchema>;
 export type DrcMeetingApplication = typeof drcMeetingApplications.$inferSelect;

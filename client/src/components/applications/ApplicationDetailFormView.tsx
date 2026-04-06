@@ -1,5 +1,7 @@
 import type { Application } from "@shared/schema";
 import type { CSSProperties } from "react";
+import ApplicationEnclosuresPanel from "./ApplicationEnclosuresPanel";
+import { SignatureBlock, type SignatureEntry } from "@/components/forms/SignatureBlock";
 
 type ApplicationDetailFormViewProps = {
   application: Application;
@@ -35,6 +37,40 @@ function getDetails(application: Application): Record<string, unknown> {
   return application.details && typeof application.details === "object" && !Array.isArray(application.details)
     ? (application.details as Record<string, unknown>)
     : {};
+}
+
+function getRecordedSignatures(application: Application): SignatureEntry[] {
+  const details = getDetails(application);
+  const candidate = details.approvalSignatures;
+  if (!Array.isArray(candidate)) {
+    return [];
+  }
+
+  return candidate
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") {
+        return null;
+      }
+
+      const record = entry as Record<string, unknown>;
+      const label = String(record.label ?? "Approval");
+      const signerName = String(record.signerName ?? "Approved");
+      const signerRole = String(record.signerRole ?? "Reviewer");
+      const signedAt = record.signedAt ? String(record.signedAt) : null;
+      const signatureImageUrl = record.signatureImageUrl ? String(record.signatureImageUrl) : null;
+
+      const signatureEntry: SignatureEntry = {
+        label,
+        signerName,
+        signerRole,
+        signedAt,
+        signatureImageUrl,
+        isPending: !signedAt,
+      };
+
+      return signatureEntry;
+    })
+    .filter((entry): entry is SignatureEntry => entry !== null);
 }
 
 function renderField(label: string, value: unknown) {
@@ -477,6 +513,21 @@ export default function ApplicationDetailFormView({
   application,
   scholarDisplayName,
 }: ApplicationDetailFormViewProps) {
+  const signatures = getRecordedSignatures(application);
+  const attachedDocuments = Array.isArray((application as Application & { documents?: unknown }).documents)
+    ? ((application as Application & {
+        documents?: Array<{
+          id: number;
+          fileName: string;
+          documentType: string;
+          category: string;
+          uploadedAt?: string;
+          isVerified?: boolean;
+          requirementCode?: string | null;
+        }>;
+      }).documents ?? [])
+    : [];
+
   return (
     <div style={{ maxHeight: "60vh", overflowY: "auto", paddingRight: "8px" }}>
       <div style={{ marginBottom: "12px", fontSize: "14px", color: "#555" }}>
@@ -484,6 +535,8 @@ export default function ApplicationDetailFormView({
       </div>
 
       <ApplicationTypeSection application={application} />
+      {signatures.length > 0 ? <SignatureBlock signatures={signatures} /> : null}
+      <ApplicationEnclosuresPanel details={application.details} documents={attachedDocuments} />
     </div>
   );
 }

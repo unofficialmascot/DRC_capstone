@@ -23,6 +23,7 @@ import {
   type Notice,
   type NotificationType,
 } from "@shared/schema";
+import { getScholarSelectFields } from "./scholar-compat";
 
 export class DrcMeetingRepository {
   async createMeeting(input: {
@@ -76,8 +77,13 @@ export class DrcMeetingRepository {
   }
 
   async getPendingDrcApplications(): Promise<Application[]> {
+    const scholarFields = await getScholarSelectFields();
     const rows = await db
-      .select()
+      .select({
+        applications,
+        scholars: scholarFields,
+        users,
+      })
       .from(applications)
       .leftJoin(scholars, eq(scholars.scholarId, applications.scholarId))
       .leftJoin(users, eq(users.id, scholars.userId))
@@ -103,6 +109,16 @@ export class DrcMeetingRepository {
         scholar: scholarData,
       } as any;
     });
+  }
+
+  async countRacMeetingsForScholar(scholarId: string): Promise<number> {
+    const [result] = await db
+      .select({ count: sql<number>`count(distinct ${drcMeetingApplications.meetingId})` })
+      .from(drcMeetingApplications)
+      .innerJoin(applications, eq(applications.id, drcMeetingApplications.applicationId))
+      .where(eq(applications.scholarId, scholarId));
+
+    return Number(result?.count ?? 0);
   }
 
   async getMeetingById(id: number): Promise<DrcMeeting | undefined> {
@@ -143,8 +159,14 @@ export class DrcMeetingRepository {
   }
 
   async getMeetingApplications(meetingId: number): Promise<Application[]> {
+    const scholarFields = await getScholarSelectFields();
     const rows = await db
-      .select()
+      .select({
+        drcMeetingApplications,
+        applications,
+        scholars: scholarFields,
+        users,
+      })
       .from(drcMeetingApplications)
       .innerJoin(applications, eq(applications.id, drcMeetingApplications.applicationId))
       .leftJoin(scholars, eq(scholars.scholarId, applications.scholarId))

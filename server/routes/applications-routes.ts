@@ -12,6 +12,14 @@ import { badRequest, forbidden, handleRouteError, notFound, parseIdParam, unauth
 export function registerApplicationRoutes(app: Express): void {
   app.get(api.applications.list.path, async (req, res) => {
     try {
+      if (req.session.userId) {
+        const sessionUser = await storage.getUserWithScholar(req.session.userId);
+        if (sessionUser?.role === "supervisor" && sessionUser.employeeId) {
+          const apps = await storage.getApplicationsBySupervision(sessionUser.employeeId);
+          return res.json(apps);
+        }
+      }
+
       const scholarId = req.query.scholarId ? String(req.query.scholarId) : undefined;
       const apps = await storage.getApplications(scholarId);
       res.json(apps);
@@ -67,6 +75,7 @@ export function registerApplicationRoutes(app: Express): void {
 
       const eligibility = await evaluateScholarApplicationEligibility({
         scholarId: sessionUser.scholarId,
+        mode: APP_SETTINGS.applicationEligibilityMode,
       });
 
       return res.json(eligibility);
@@ -91,15 +100,17 @@ export function registerApplicationRoutes(app: Express): void {
   app.post(api.applications.create.path, async (req, res) => {
     try {
       const input = api.applications.create.input.parse(req.body);
+      const { attachmentDocumentIds = [], ...applicationInput } = input;
 
       const eligibility = await evaluateScholarApplicationEligibility({
-        scholarId: input.scholarId,
+        scholarId: applicationInput.scholarId,
+        mode: APP_SETTINGS.applicationEligibilityMode,
       });
-      const selectedEligibility = getEligibilityForApplicationType(eligibility, input.type);
+      const selectedEligibility = getEligibilityForApplicationType(eligibility, applicationInput.type);
 
       if (selectedEligibility && !selectedEligibility.eligible && eligibility.mode === "enforced") {
         throw badRequest(
-          `You are not eligible to submit ${input.type} at this time`,
+          `You are not eligible to submit ${applicationInput.type} at this time`,
           selectedEligibility.reasons,
         );
       }
@@ -109,30 +120,48 @@ export function registerApplicationRoutes(app: Express): void {
       }
 
       if (APP_SETTINGS.applicationSubmissionMode === "single-active-per-type") {
-        const scholarApplications = await storage.getApplications(input.scholarId);
+        const scholarApplications = await storage.getApplications(applicationInput.scholarId);
         const hasActiveSameType = scholarApplications.some(
           (application) =>
-            application.type === input.type &&
+            application.type === applicationInput.type &&
             application.status !== "Approved" &&
             application.status !== "Rejected",
         );
 
         if (hasActiveSameType) {
           throw badRequest(
-            `An active ${input.type} application already exists for this scholar`,
+            `An active ${applicationInput.type} application already exists for this scholar`,
           );
         }
       }
 
-      const scholarDocuments = await storage.getDocuments(input.scholarId);
-      const enclosureSnapshot = buildApplicationEnclosureSnapshot(input.type, scholarDocuments);
+      const selectedDocuments = attachmentDocumentIds.length > 0
+        ? await storage.getDocumentsByIds(attachmentDocumentIds)
+        : [];
+
+      if (selectedDocuments.length !== attachmentDocumentIds.length) {
+        throw badRequest("One or more selected documents could not be found");
+      }
+
+      const hasForeignDocument = selectedDocuments.some(
+        (document) => document.scholarId !== applicationInput.scholarId,
+      );
+      if (hasForeignDocument) {
+        throw forbidden("You can only attach documents from your own Doc Hub");
+      }
+
+      const scholarDocuments = attachmentDocumentIds.length > 0
+        ? selectedDocuments
+        : await storage.getDocuments(applicationInput.scholarId);
+
+      const enclosureSnapshot = buildApplicationEnclosureSnapshot(applicationInput.type, scholarDocuments);
       const baseDetails =
-        input.details && typeof input.details === "object" && !Array.isArray(input.details)
-          ? input.details
+        applicationInput.details && typeof applicationInput.details === "object" && !Array.isArray(applicationInput.details)
+          ? applicationInput.details
           : {};
 
       const newApp = await storage.createApplication({
-        ...input,
+        ...applicationInput,
         details: enclosureSnapshot
           ? {
               ...baseDetails,
@@ -142,6 +171,18 @@ export function registerApplicationRoutes(app: Express): void {
         currentStage: "supervisor",
         status: "Pending",
       });
+
+      if (selectedDocuments.length > 0) {
+        await storage.attachDocumentsToApplication(
+          newApp.id,
+          selectedDocuments.map((document) => ({
+            documentId: document.id,
+            attachedBy: "scholar",
+            requirementCode: null,
+          })),
+        );
+      }
+
       res.status(201).json(newApp);
     } catch (error) {
       return handleRouteError(res, error, "Invalid input");
